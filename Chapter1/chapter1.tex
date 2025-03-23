@@ -1,0 +1,98 @@
+%!TEX root = ../thesis.tex
+%*******************************************************************************
+%*********************************** First Chapter *****************************
+%*******************************************************************************
+
+\chapter{Introduction}  %Title of the First Chapter
+
+\ifpdf
+    \graphicspath{{Chapter1/Figs/Raster/}{Chapter1/Figs/PDF/}{Chapter1/Figs/}}
+\else
+    \graphicspath{{Chapter1/Figs/Vector/}{Chapter1/Figs/}}
+\fi
+
+
+%********************************** %First Section  **************************************
+% \section{What is loren ipsum? Title with math \texorpdfstring{$\sigma$}{[sigma]}} %Section - 1.1 
+
+Machine learning has revolutionised the way we approach modelling and decision making in many fields, ranging from healthcare to scientific discovery. Modern algorithms are fundamentally defining a new approach to how we analyse data and derive insights from complex systems. While the entire gamut of machine learning applications and methodologies are vast and varied, there is often a common thread among them: the ability to obtain samples from complex, high-dimensional probability distributions. The ability to obtain samples from these complex distributions has allowed us to develop powerful applications, such as image synthesis, protein structure prediction, and drug design, to name a few. A large family of methods focus on the task of \textit{generative modelling}, which is the task of estimating a probability distribution when provided with samples from it, in order to obtain new, novel samples. The approaches have evolved from one-shot sampling approaches such as GANs to iterative samplers like diffusion models, dramatically improving the quality of samples at the expense of speed. Another family of ML algorithms focus on the task of \textit{obtaining samples from unnormalised probability distributions} where we can only evaluate the density of a given sample. Here, classical MCMC techniques remain indispensable, though there have been recent innovations in neural sampling algorithms that boost efficiency and accuracy. 
+
+The ability to estimate complex probability distributions and draw samples has the potential to unlock really impactful downstream applications as well. Many modern \textit{Bayesian inference} algorithms really on approximating quantities of interest using high-quality samples from the posterior distribution. While MCMC methods like HMC and NUTS provide this quality at an exorbitant cost, variational and Gaussian approximations that enable efficient sampling are often quite competitive. The field of \textit{Reinforcement Learning (RL)} also makes heavy use of sampling algorithms for learning policies and exploring the state-action space. Even in the modern \textit{Large Language Model (LLM)} era, it has been shown that \textit{how we sample} matters enormously: strategies like nucleus and temperature sampling have boosted the generation of coherent yet diverse, interesting text.
+
+% In Bayesian inference, obtaining high-quality samples from the posterior distribution are indispensable, and while MCMC methods such as HMC and NUTS provide a gold-standard, variational methods offer faster if approximate solutions. Reinforcement Learning also makes heavy use of sampling algorithms for learning (Monte Carlo returns, policy gradients) and exploration (Thompson sampling, MCTS), and new methods are inserting MCMC samplers into RL for uncertainty-driven exploration. Even in large-scale language generation, it has been shown that {\em how we sample} matters enormously: strategies like nucleus and temperature sampling have boosted the generation of coherent yet diverse and interesting text.
+
+\nomenclature[z-gan]{$GAN$}{Generative Adversarial Network}
+\nomenclature[z-mcmc]{$MCMC$}{Markov Chain Monte Carlo}
+\nomenclature[z-hmc]{$HMC$}{Hamiltonian Monte Carlo}
+\nomenclature[z-nuts]{$NUTS$}{No U-Turn Sampler}
+\nomenclature[z-rl]{$RL$}{Reinforcement Learning}
+\nomenclature[z-vi]{$VI$}{Variational Inference}
+\nomenclature[z-cmcd]{$CMCD$}{Controlled Monte Carlo Diffusions}
+
+\nomenclature[z-ddpm]{$DDPM$}{Denoising Diffusion Probabilistic Models}
+
+
+
+Across these domains and applications, we see a common theme. High dimensionality is a difficult challenge to overcome: techniques that leverage gradients (Langevin, HMC) or adaptive truncation (nucleus sampling) can help tame the curse of dimensionality by guiding samples towards high-density regions. Secondly, there is always a trade-off between exactness and efficiency: e.g. exact MCMC vs faster VI in Bayesian inference algorithms, or exhaustive beam search vs stochastic sampling in text generation. Algorithms that can improve along these two axes have immense value in both allowing us to scale these techniques over larger and more complex data, as well as improve the accuracy of existing methods. While these fields are often explored independently in the literature, there has historically been cross-pollination between fields: ideas from statistical physics such as annealing and tempering now form the basis of the best sampling techniques; probabilistic inference tools such as HMC and VI have been adapted and scaled for deep learning; and better deep learning models contribute back to better neural samplers and generative models. As models and data grow in size, and our desire to apply machine learning to ever more ambitious domains grows, efficient and accurate sampling techniques will remain a crucial area of research.
+
+Furthermore, there have been many threads of promising research in the sampling literature, that approach the problem from different viewpoints. Denoising diffusion probabilistic models (DDPM) designed discrete Markov chains that gradually added noise to data and then learnt to reverse this noising process using variational inference. Score matching techniques were proposed independently that converted the task of learning probability distributions into learning the gradients of their logarithms, a quantity termed the "score". Simultaneously, there has been a resurgence in normalising flows and flow matching techniques, where algorithms attempt to learn continuous normalising flows to map different probability distributions to each other. In the statistical inference literature, methods involving Langevin dynamics have been quite popular, which is a classic MCMC technique that follows continuous-time Markov processes where the probability distribution of interest is the stationary distribution. This field is ever growing, and there are advancements across variational inference, optimal transport theory, and stochastic control, to name a few, that are often hard to view under a unifying lens. This is a problem that we hope to remedy in this thesis, by developing a theoretical framework that can recast ideas from disparate fields into a unified viewpoint.
+
+\section{Thesis outline and contributions}
+
+The goal of this thesis is twofold: we develop a strong underlying mathematical framework of stochastic calculus to unify sampling, generative modelling and conditional sampling algorithms under the umbrella of stochastic differential equations, and we propose a sampling-based viewpoint of Bayesian inference, allowing us to scale algorithms to massive datasets and models. The thesis is organised as follows.
+
+\begin{itemize}
+    \item Chapter 2 introduces the mathematical framework of stochastic calculus, introducing concepts that allow us to represent sampling, generative modelling and conditional generation as instantiations of stochastic differential equations. In this chapter, we spend some time showing how existing methods and algorithms are specific approximations of this unifying framework, and develop reasoning and intuitions for why a continuous-time, stochastic calculus framework is ideally suited to develop new theoretical results that result in practical algorithms.
+    \item In Chapter 3, we use our stochastic calculus framework to develop that Controlled Monte Carlo Diffusion (CMCD) sampler, an algorithm that connects heirarchical variational inference with diffusion models to adapt both forward and backward dynamics within diffusion processes, yielding an approach that has strong theoretical guarantees while maintaining remarkable practical efficiency. We then explore the related task of conditional sampling, i.e. the task of modifying sampling algorithms to target specific conditions, and unify existing approaches under a stochastic calculus framework through Doob's $h$-transform. 
+    \item Chapter 4 introduces a somewhat non-traditional viewpoint of Bayesian inference that approximates many components of the Bayesian methodology using a finite number of samples from the posterior distribution. Recognising that many practical Bayesian inference tasks do not necessarily require sampling from the full, exact posterior but instead can leverage high-dimensional Gaussian approximations, we dedicate this part of the thesis to scalable Gaussian sampling methodologies. We first show how Gaussian processes and Bayesian neural networks can be unified through the linearised Laplace approximation, allowing us to simplify the task of Bayesian inference to that of sampling from high-dimensional Gaussians. We then demonstrate the surprising empirical performance these linearised approximations, which despite their simplicity, offer highly competitive uncertainty quantification performance.
+    \item Chapter 5 is dedicated to the development of a family of Bayesian inference algorithms that can efficiently draw samples from very high-dimensional Gaussian distributions using stochastic optimisation techniques, and use these samples to tune model hyperparameters, providing a highly scalable approach to model selection. We develop theoretical bounds on the quality of model selection using a finite number of samples, as well as practical insights and suggestions for speeding up stochastic optimisation. Our algorithms demonstrate significant scalability improvements, successfully enabling Bayesian inference on large-scale neural networks such as ResNet-50 models on an Imagenet scale, as well as the ability to train and perform inference with Gaussian processes on millions of datapoints without any approximations.
+\end{itemize}
+
+\section{List of publications in the thesis}
+
+Here, I list the papers that form a part of this thesis.
+
+\begin{enumerate}
+    \item ``Transport meets Variational Inference: Controlled Monte Carlo Diffusions''. F. Vargas$^{*}$, \textbf{S. Padhy}$^{*}$, D. Blessing, N. Nüsken. In \textit{International Conference on Learning Representations (ICLR)}, 2024.
+    \item ``DEFT: Efficient Finetuning of Conditional Diffusion Models by Learning the Generalised $ h $-transform''. A. Denker$^{*}$, F. Vargas$^{*}$, \textbf{S. Padhy}$^{*}$, K. Didi$^{*}$, S. Mathis$^{*}$, V. Dutordoir, R. Barbano, E. Mathieu, U. Komorowska, P. Liò. In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2024.
+    \item ``Sampling-based inference for large linear models, with application to linearised Laplace''. J. Antorán$^{*}$, \textbf{S. Padhy}$^{*}$, R. Barbano, E. Nalisnick, D. Janz, J.M. Hernández-Lobato. In \textit{International Conference on Learning Representations (ICLR)}, 2023.
+    \item ``Sampling from Gaussian process posteriors using stochastic gradient descent''. J.A. Lin$^{*}$, J. Antorán$^{*}$, \textbf{S. Padhy}$^{*}$, D. Janz, J.M. Hernández-Lobato, A. Terenin. In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2023.
+    \item ``Stochastic Gradient Descent for Gaussian Processes Done Right''. J.A. Lin$^{*}$, \textbf{S. Padhy}$^{*}$, J. Antorán$^{*}$, A. Tripp, A. Terenin, C. Szepesvári, J.M. Hernández-Lobato, D. Janz. In \textit{International Conference on Learning Representations (ICLR)}, 2024.
+    \item ``Improving Linear System Solvers for Hyperparameter Optimisation in Iterative Gaussian Processes''. J.A. Lin, \textbf{S. Padhy}, B. Mlodozeniec, J. Antorán, J.M. Hernández-Lobato. In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2024.
+    \item ``Iterative Importance Fine-tuning of Diffusion Models''. A. Denker, \textbf{S. Padhy}, F. Vargas, J. Hertrich. In \textit{Frontiers in Probabilistic Inference workshop at International Conference on Learning Representations (ICLR)}, 2025.
+    \item ``No Trick, No Treat: Pursuits and Challenges Towards Simulation-free Training of Neural Samplers''. J. He, Y. Du, F. Vargas, D. Zhang, \textbf{S. Padhy}, R. OuYang, C. Gomes, J.M. Hernández-Lobato. In \textit{Frontiers in Probabilistic Inference workshop at International Conference on Learning Representations (ICLR)}, 2025.
+\end{enumerate}
+
+% Therefore, in the first part of this thesis, we develop a comprehensive mathematical framework grounded in stochastic calculus and optimal transport theory, and unify a large number of sampling-based approaches under this umbrella, showing how different modelling choices result in different trade-offs. We introduce the Controlled Monte Carlo Diffusion (CMCD) sampler, 
+
+% In the second part of this thesis, we introduce a somewhat non-traditional viewpoint of Bayesian inference that approximates many components of the Bayesian methodology using a finite number of samples from the posterior distribution. Recognising that many practical Bayesian inference tasks do not necessarily require sampling from the full, exact posterior but instead can leverage high-dimensional Gaussian approximations, we dedicate this part of the thesis to scalable Gaussian sampling methodologies. We first show how Gaussian processes and Bayesian neural networks can be unified through the linearised Laplace approximation, allowing us to simplify the task of Bayesian inference to that of sampling from high-dimensional Gaussians. We then demonstrate the surprising empirical performance these linearised approximations, which despite their simplicity, offer highly competitive uncertainty quantification performance. While sampling from a Gaussian approximation to the posterior distribution is valuable in itself, we further propose a family of algorithms that can tune model hyperparameters using these samples, providing a highly scalable approach to model selection, Our approaches demonstrate significant scalability improvements, successfully enabling Bayesian inference on large-scale neural networks such as ResNet-50 models on an Imagenet scale.
+
+% In summary, the purpose of this thesis is twofold: we first propose a unifying stochastic calculus framework for sampling and conditional generation, making significant theoretical contributions to the field and demonstrating corresponding empirical improvements. We then tackle a specific field of Bayesian inferenc
+
+% Sampling from probability distributions is a key component in a wide range of machine learning methodologies, ranging from probabilistic and generative modeling to Bayesian inference and uncertainty estimation. Generative models, for example, are tasked with the goal of learning how to approximate complicated data distributions and draw efficient and diverse samples from them, which has unlocked powerful advancements in image synthesis, vido generation, protein design, and drug discovery. Similary, modern large-scale Bayesian inference methods rely heavily on being able to efficiently approximate uncertainty in decision making using samples drawn from probability distributions, allowing us to optimise hyperparameters, quantify uncertainty in decision making and enable the deployment of machine learning algorithms in safety-critical fields.
+
+
+
+
+
+% (see 
+% Section~\ref{section1.3}). 
+Including versions of Lorem 
+Ipsum~\citep{AAB95,Con90,LM65}.
+
+% A {\em \LaTeX{} class file}\index{\LaTeX{} class file@LaTeX class file} is a file, which holds style information for a particular \LaTeX{}.
+
+
+% \begin{align}
+% CIF: \hspace*{5mm}F_0^j(a) = \frac{1}{2\pi \iota} \oint_{\gamma} \frac{F_0^j(z)}{z - a} dz
+% \end{align}
+
+% \nomenclature[z-cif]{$CIF$}{Cauchy's Integral Formula}                                % first letter Z is for Acronyms 
+% \nomenclature[a-F]{$F$}{complex function}                                                   % first letter A is for Roman symbols
+% \nomenclature[g-p]{$\pi$}{ $\simeq 3.14\ldots$}                                             % first letter G is for Greek Symbols
+% \nomenclature[g-i]{$\iota$}{unit imaginary number $\sqrt{-1}$}                      % first letter G is for Greek Symbols
+% \nomenclature[g-g]{$\gamma$}{a simply closed curve on a complex plane}  % first letter G is for Greek Symbols
+% \nomenclature[x-i]{$\oint_\gamma$}{integration around a curve $\gamma$} % first letter X is for Other Symbols
+% \nomenclature[r-j]{$j$}{superscript index}                                                       % first letter R is for superscripts
+% \nomenclature[s-0]{$0$}{subscript index}                                                        % first letter S is for subscripts
+

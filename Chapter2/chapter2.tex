@@ -1,0 +1,220 @@
+%!TEX root = ../thesis.tex
+%*******************************************************************************
+%****************************** Second Chapter *********************************
+%*******************************************************************************
+
+\chapter{An Introduction to Stochastic Calculus for Sampling}
+
+\ifpdf
+    \graphicspath{{Chapter2/Figs/Raster/}{Chapter2/Figs/PDF/}{Chapter2/Figs/}}
+\else
+    \graphicspath{{Chapter2/Figs/Vector/}{Chapter2/Figs/}}
+\fi
+
+% We have established that drawing samples from high-dimensional, complex probability distributions is a core challenge in deep learning. Fundamentally, the task of sampling has two distinct paradigms, both of which are extremely valuable in their application if tackled successfully. 
+
+In this chapter, we will introduce the task of sampling, and discuss some existing baselines in the domain, before turning our attention to the rich literature of diffusion models. We will draw connections from different threads of diffusions literature and unify under the stochastic calculus framework. For the remainder of the chapter, we will focus on an introduction to stochastic differential equations, and any relevant mathematical machinery, which will serve us well in the upcoming chapters.
+
+\section{The Sampling Problem}
+
+The task of sampling broadly has two paradigms. In the first situation, we don't have any existing samples from an unnormalised probability distribution, and we are only able to evaluate the unnormalised density $\hat{\pi}(x)$ and the gradient of the density $\nabla_x \hat{\pi}(x)$\footnote{The assumption is often made that one can evaluate the gradient of the log-density $\nabla_x \log \hat{\pi}$. These are equivalent assumptions, as by the chain rule of calculus we can write $\nabla_x \log \hat{\pi}(x) = \frac{1}{\hat{\pi}(x)} \nabla_x \hat{\pi}(x)$}. The task of \textit{unnormalised density sampling} focuses on learning to draw samples from this probability distribution (and often-times using these samples to estimate the normalising constant). In the second task of \textit{generative modelling}, we only have access to a training dataset of samples from our probability distribution of interest, i.e. $\mathcal{D}_{\text{train}} = \{x^{(i)}\}_{i=1}^{N_{\text{train}}}$, but not the ability to evaluate the density or its gradients. The task therefore focuses on using these samples to learn parametrised approximations to our probability distribution of interest, allowing us to draw novel samples from this approximation, and sometimes allowing us to estimate the density $\hat{\pi}(x)$.
+
+
+% First, the task of \textit{generative modeling}, where one attempts to construct a parametrised approximation to an unknown probability distribution $\pi$ using existing samples from the distribution. Second, the task of \textit{sampling from unnormalised probability distributions}, where we are only able to evaluate the unnormalised density of a sample $\hat{\pi}$, and must learn how to draw samples from this probability distribution. 
+
+In this thesis, we will focus on a framework for designing sampling algorithms that has found great success across a variety of algorithms, whether implicitly or as an explicit design. In simple terms, we design (or learn) a mapping between a simple base distribution $\pi_0$ and the distribution of interest $\hat{\pi}$. By design, it is easy to obtain samples $z \sim \pi_0$, and we attempt to learn a mapping $p_{\theta}(x \mid z)$ that transports these samples to samples from the distribution of interest $\hat{\pi}$. Simultaneously, in many algorithms, we learn a reverse mapping $q_{\phi}(z \mid x)$ that takes samples $x \sim \hat{\pi}$ and maps them back to $\pi_0$. We will make this framework more concrete in Chapter 3, but in the next few sections, we explore a number of baselines that either implicitly or explicitly fall under this umbrella, showing how this framework is alluring for both its simplicity and flexibility.
+
+% A very successful strategy for both paradigms has been to design (or learn) a mapping between a simple base distribution $\pi_0$ and the distribution of interest. Going forward, if we assume samples $z \sim \pi_0$ and $x \sim \hat{\pi}$, our goal can be accomplished if we have algorithms that can learn a mapping taking samples $z$ and transporting them to $x$ through $p_{\theta}(x \mid z)$ and similarly, a mapping taking samples $x$ and transporting them to $z$ through $q_{\phi}(z \mid x)$. Let us first quickly a few existing methods that broadly lie under this framework, either implicitly or explicitly.
+
+\subsection{Unnormalised Density Sampling}
+
+\nomenclature[z-ebm]{$EBM$}{Energy-Based Model}
+
+When a probability distribution $\pi$ is known only up to a normalisation constant, drawing samples from it is often non-trivial. Such distributions arise quite regularly in Boltzmann distributions such as in statistical physics and graphical models, and in modern energy-based models (EBMs). This issue is also quite prevalent in Bayesian inference applications where sampling from the posterior distribution is intractable due to an inability to estimate the normalising constant. To make our notation concrete, we write down $\pi$ in terms of the unnormalised probability density $\hat{\pi}$ and the normalising constant $Z$ as
+
+\begin{equation}
+    \pi = \frac{\hat{\pi}}{Z}, \quad Z = \int \hat{\pi}(x) \mathrm{d}x .
+\end{equation}
+
+\subsubsection*{MCMC Algorithms and Langevin Dynamics}
+
+Markov Chain Monte Carlo (MCMC) methods are the most common family of algorithms that are used to tackle this problem, where one can construct a Markov chain with an equilibrium distribution that matches the target distribution. While the literature of MCMC algorithms is vast, and we could dedicate an entire chapter to summarising the recent advances, for the purpose of this thesis, we will focus on one specific algorithm: Langevin dynamics, which can exploit information about the gradient of the log-density of $\hat{\pi}$ to obtain high-quality samples compared to other MCMC variants. Specifically, assuming a sample from a simple distribution $x_0 \sim \pi_0$, we can follow the following iterative procedure
+
+\begin{equation}
+    x_{t+1} \leftarrow x_t + \Delta t \nabla_x \log \hat{\pi}(x) + \sqrt{2 \Delta t} \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, I), \quad t = 0, \ldots, T
+\end{equation}
+where $\Delta t$ is a small interval. When $\Delta t \rightarrow 0$ and $T \rightarrow \infty$, it can be shown that $x_T$ obtained by the procedure above converges to a sample from $\pi(x)$ under some regularity conditions. In fact, our choice of using $t$ to refer to the discrete index foreshadows what Langevin dynamics converges to in the continuous limit: a time-varying stochastic differential equation. While we will make this connection more concrete in a later section, this connection between Langevin dynamics and SDEs provides us with a compelling reason to consider a stochastic calculus framework for a unifying viewpoint of sampling. As we will see further in this chapter, Langevin dynamics is just one of many other algorithms that converge to SDEs in the infinite-step (or continuous time) limit. 
+
+In terms of our framework above, we can see that when $z = x_0$, we are describing a Markov chain that iteratively maps $z$ to $x = x_T$, with a mapping defined as follows
+\begin{align}
+    p_{\theta}(x \mid z) &= p(x \mid x_{T-1}) \left[ \prod_{t=1}^{T-1} p(x_{t} \mid x_{t-1}) \right] p(x_1 \mid z) \\
+    \text{with } p(x_t \mid x_{t-1}) &= \mathcal{N}(x_t; x_{t-1} + \Delta t \nabla_{x_{t-1}} \log \hat{\pi}(x_{t-1}), 2 \Delta t I)
+\end{align}
+and the parameters $\theta = \{\Delta t, T\}$.
+
+\subsection{Generative Modelling}
+
+In certain situations, we don't have access to the explicit form of $\hat{\pi}$, or the ability to take gradients of the density. Instead, we have access to a collection of samples from the density through a training dataset $\Dtrain = \{x^{(i)}\}_{i=1}^{N_{\text{train}}}$. We wish to learn a parametrised approximation to the density of interest $\pi_{\theta}$\footnote{For notational clarity, we refer to the parametrised marginal probability distribution over $x$ with $\pi_\theta$, and the corresponding parametrised conditional probability distribution mapping $z$ to $x$ as $p_\theta$.} for two goals: to draw new, novel samples from $\hat{\pi}$ and optionally, to be able to evaluate $\hat{\pi}$ on existing samples. This task is commonly called generative modelling, as we attempt to "generate" new samples from our unknown density by first "modelling" it through an existing training dataset. This paradigm has found immense success in the modern deep learning era, ranging from image synthesis to language modelling, as well as in scientific domains such as protein structure prediction and drug design.
+
+In terms of our framework, many algorithms find it an easier task to first learn a mapping $p_{\theta}(x \mid z)$ from training samples $x \sim \mathcal{D}_{\text{train}}$ to a latent space $z$ that has an easy-to-sample distribution $\pi_0$. Given this mapping, many algorithms focus on different approaches to learn the "reverse" mapping, i.e. $q_{\phi}(z \mid x)$, allowing us to generate novel samples by sampling from $\pi_0$ and mapping it to the data distribution $\hat{\pi}$ through $q_{\phi}$. The specific design choices of $p_{\theta}$ and $q_{\phi}$ cover a large family of algorithms, which we briefly discuss below, before focusing on a specific choice of \textit{iterative} or \textit{heirarchical} mapping algorithms that cover diffusion models for the rest of thesis.
+
+\subsubsection*{Variational Auto-Encoders (VAEs)}
+
+\nomenclature[z-vae]{$VAE$}{Variational Auto-Encoder}
+
+VAEs parametrise $p_{\theta}$ (termed the decoder) from the latent space $z$ to the data $x$ with a neural network, allowing us to map individual datapoints from $x^{(i)} \sim \Dtrain$ to corresponding latent variables $z^{(i)}$. The issue arises when we attempt to recover an $x$ corresponding to a sample $z \sim \pi_0$, as $p(z \mid x)$ is intractable due to the integral involved in the marginal likelihood term $p_{\phi}(x)$, as can be seen from Bayes' rule
+\begin{equation}
+    p(z \mid x) = \frac{p_{\phi}(x \mid z) \pi_0(z)}{p_{\phi}(x)}, \quad p_{\phi}(x) = \int p_{\phi}(x \mid z) \pi_0(z) \d z
+\end{equation}
+Instead, a VAE learns a corresponding encoder model $q_{\theta}(z \mid x)$ to approximate $p(z \mid x)$.
+
+and in an ideal setting, one could learn the parameters $\theta$ by maximising the marginal likelihood over the training dataset $\Dtrain$, which is given as
+\begin{align}
+    \mathcal{L}_{\text{MLL}} &= \E_{x \sim \Dtrain} \left[ \log p_{\phi}(x) \right] \\
+    &= \E_{x \sim \Dtrain} \left[ \log \int p_{\phi}(x \mid z) \pi_0(z) \d z \right], \label{eq:mll_vae}
+\end{align}
+which is intractable due to the integral. Instead, we make two design choices. First, we optimise a lower bound to the marginal likelihood in \eqref{eq:mll_vae} by using Jensen's Inequality, giving us
+\begin{equation}
+    \E_{x \sim \Dtrain} \left[ \log \int p_{\phi}(x \mid z) \pi_0(z) \d z \right] \geq \E_{x \sim \Dtrain} \left[ \int \log \right]
+\end{equation}
+
+
+VAEs parametrise an encoder neural network model that encodes data samples $x \sim \hat{\pi}$ into a simpler "latent" space $z \sim \pi_0$ using an encoder $q_{\phi}(z \mid x)$, and $\pi_0$ is usually chosen to be a simple Gaussian distribution. Simultaneously, a VAE learns a decoder $p_{\theta}(x \mid z)$ that takes samples from the latent distribution and transform them to plausible samples from the data distribution.
+
+\subsubsection*{Normalising Flows (NFs)}
+
+Normalising flows learn the mapping from $x$ to $z$ using a series of composable invertible parametrised transformations $q_{\phi}(z \mid x) = f_{\phi}(x)$, which provides the reverse mapping quite efficiently as the inverse of the function $f_{\phi}$.
+
+\subsubsection{Energy-Based Models (EBMs)}
+
+Energy-based models define a parametrised approximation $p_{\theta}$ to the unnormalised probability distribution $\hat{\pi}$ in terms of the energy $f_{\theta}$, given as 
+
+\begin{equation}
+    p_{\theta}(x) = \frac{\exp{(- f_{\theta}(x)})}{Z_{\theta}}
+\end{equation}
+
+where the normalising constant is unknown and often the intractable term requiring estimation. In order to learn $f_{\theta}(x)$, we can maximise the expected log-likelihood over the data distribution, defined by
+
+\begin{equation}
+    \mathbb{E}_{x \sim \hat{\pi}} \left[ \log p_{\theta}(x) \right] = \mathbb{E}_{x \sim \hat{\pi}} \left[ - f_{\theta}(x) - \log Z_{\theta} \right]
+\end{equation}
+
+While we cannot directly compute the likelihood of an EBM due to the normalizing constant $Z_{\theta}$, we can directly estimate the gradient of the log-likelihood using MCMC approaches, giving us
+
+\begin{align}
+    \nabla_{\theta} \log p_{\theta}(x) &= - \nabla_{\theta} f_{\theta}(x) - \nabla_{\theta} \log Z_{\theta} \\
+    &= - \nabla_{\theta} f_{\theta}(x) - \mathbb{E}_{x \sim p_{\theta}(x)} \left[ - \nabla_{\theta} f_{\theta}(x) \right]
+\end{align}
+
+where the first term on the RHS can be computed using automatic differentiation, and the second term can be written as an expectation over $p_{\theta}$\footnote{Proof is given in Appendix A}. Therefore, the challenge in training an EBM boils down to the ability to draw accurate and efficient samples from $p_{\theta}$.
+
+\subsection{Iterative Noising Methods}
+
+\subsubsection*{Score Matching}
+
+Contrary to energy-based approaches to learning a parametrised representation of $\hat{\pi}$ which require the estimation of an intractable normalising constant, score-matching attempts to learn a different quantity, the "score" of the probability distribution, which is defined as the gradient of the logarithm of the probability distribution, which gets rid of the necessity of learning the normalising constant, as seen here
+
+\begin{equation}
+    s_{\theta}(x) \simeq \nabla_x \log \hat{\pi}(x) = - \nabla_x f_{\theta}(x) - \underbrace{\nabla_x Z_{\theta}}_{0} 
+\end{equation}
+
+Score-based models are usually learnt by minimising the Fisher divergence between the parametrised score function and the actual quantity of interest, giving us 
+
+\begin{equation}
+    \mathcal{L}_{\text{SM}} = \mathbb{E}_{\hat{\pi}} \left[ \| \nabla_x \log \hat{\pi} (x) - s_{\theta}(x) \|_2^2 \right]
+\end{equation}
+
+Due to the structure of the loss function taking an expectation over samples from $\hat{\pi}$, vanilla score-matching techniques often really struggle in approximating $\hat{\pi}$ in regions of low probability where samples are sparse. In order to address this issue, the authors resort to a technique that we will see repeated over and over in the current landscape: \textit{iterative noising}. Instead of learning a score model for $\hat{\pi}$ directly, score-matching creates noisier and noisier versions of $\hat{\pi}$ by adding successively larger noise, and learns a score model per level of noise. If we assume a schedule of noise values $\sigma_1 \leq \ldots \leq \sigma_T$, we can write down each noised distribution as 
+
+\begin{equation}
+    \pi_{\sigma_i}(x) = \int \hat{\pi} (y) \mathcal{N}(x; y, \sigma_i^2) \mathrm{d} y
+\end{equation}
+
+We can then modify our score model to learn a different parametrisation for a different noise scale, resulting in a Noise-Conditional Score Network (NCSN) given by $s_{\theta}(x, i)$ and a weighted sum of Fisher divergences per noise scale, given as
+
+\begin{equation}
+    \mathcal{L}_{\text{SM}} = \sum_{i=1}^L \mathbb{E}_{\pi_{\sigma_i}} \left[ \| \nabla_x \log \pi_{\sigma_i} (x) - s_{\theta}(x) \|_2^2 \right] \label{eq:sm_loss}
+\end{equation}
+
+Here, we can see the strategy that has made score-matching work exceedingly well: learning the score of iteratively noised versions of the probability density of interest. There is a natural extension to this idea if we were to take the number of noising steps to infinity in the continuous limit, resulting in a smoothly varying function $\sigma_t$ instead of a discrete set of $\sigma_i$s, and a smooth, time-dependent probability distribution $\pi_t(x)$ with $\pi_T = \hat{\pi}$ and $\pi_0 = \mathcal{N}(0; I)$. In this continuous limit, it turns out that the iterative noising of the data distribution can exactly be represented as a stochastic differential equation. We will show this connection rigorously in the next few sections, and further show how the score-matching loss in Equation~\eqref{eq:sm_loss} can be derived using simple properties of stochastic calculus. However, it suffices to mention this generalisation of score-matching in order to motivate our eventual focus on stochastic calculus and the properties of SDEs.
+
+\subsubsection*{Denoising Diffusion Probabilistic Models (DDPM)}
+
+Another popular methodology that has achieved significant success in generative modelling applications is DDPM, where they also use the notion of \textit{iterative noising}, imposing additional structure on the mapping from data to latent $q_{\phi}(z \mid x)$ by introducing a series of additional latent variables $\{x_0, \ldots, x_T\}$ with $x_0 = x$ and $x_T = z$, and assuming a Markov assumption on the chain of latents, such that $x_t$ given $x_{t-1}$ is independent of previous latents. The authors then specifically choose a form of "noising" process that iteratively adds Gaussian noise to each latent at time $t-1$ to obtain the latent at time $t$, giving us the noising distributions
+
+\begin{equation}
+    q(x_t \mid x_{t-1}) = \mathcal{N}(x_t ; \sqrt{1 - \beta_t} x_{t-1}, \beta_t I).
+\end{equation}
+
+for some choice of noising $\beta_t$ schedule. Due to each individual noising process being Gaussian, a nice property of the DDPM formulation is that we can represent the latent at any time step $t$ w.r.t the original data sample $x = x_0$ in closed-form\footnote{See Appendix A for a proof.}, giving us
+
+\begin{equation}
+    q(x_t \mid x_0) = \mathcal{N}\left(x_t ; \sqrt{\bar{\alpha}_t} x_0, (1 - \bar{\alpha}_t I)\right), \quad \bar{\alpha}_t = \prod_{i=1}^t \alpha_i\text{ with } \alpha_t = 1 - \beta_t.
+\end{equation}
+
+
+
+
+\section[Motivating SDEs]{A Motivation for Stochastic Calculus}
+
+
+
+
+% We have discussed the value of developing sampling algorithms that can draw samples from complex, high-dimensional distributions. Historically, the task of sampling can have three distinct paradigms
+% \begin{enumerate}
+%     \item Constructing approximations to the underlying probability distribution using samples from the distribution
+%     \item Constructing approximations to the underlying distribution using the ability to evaluate an unnormalised distribution
+%     \item Modifying samples from an underlying probability distribution based on additional conditions
+% \end{enumerate}
+
+% These three paradigms cover a very large breadth of machine learning 
+% Uncomment this line, when you have siunitx package loaded.
+%The SI Units for dynamic viscosity is \si{\newton\second\per\metre\squared}.
+% I'm going to randomly include a picture Figure~\ref{fig:minion}.
+
+% \begin{figure}[htbp!] 
+% \centering    
+% \includegraphics[width=1.0\textwidth]{minion}
+% \caption[Minion]{This is just a long figure caption for the minion in Despicable Me from Pixar}
+% \label{fig:minion}
+% \end{figure}
+
+
+\section*{Enumeration}
+
+
+
+\clearpage
+
+\tochide\section{Hidden section}
+ sed \footnote{My footnote goes blah blah blah! \dots}. 
+
+\begin{landscape}
+
+\section*{Subplots}
+I can cite Wall-E (see Fig.~\ref{fig:WallE}) and Minions in despicable me (Fig.~\ref{fig:Minnion}) or I can cite the whole figure as Fig.~\ref{fig:animations}
+
+
+\begin{figure}
+  \centering
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{TomandJerry}
+    \caption{Tom and Jerry}
+    \label{fig:TomJerry}   
+  \end{subfigure}             
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{WallE}
+    \caption{Wall-E}
+    \label{fig:WallE}
+  \end{subfigure}             
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{minion}
+    \caption{Minions}
+    \label{fig:Minnion}
+  \end{subfigure}
+  \caption{Best Animations}
+  \label{fig:animations}
+\end{figure}
+
+
+\end{landscape}
