@@ -1063,7 +1063,7 @@ wish to left align your text}
 \ifthenelse{\equal {#1}{}}
 {\printnomenclature}
 {\printnomenclature[#1]}
-%\addcontentsline{toc}{chapter}{\nomname}
+\addcontentsline{toc}{chapter}{\nomname}
 }
 
 

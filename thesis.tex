@@ -1,7 +1,7 @@
 % ******************************* PhD Thesis Template **************************
 % Please have a look at the README.md file for info on how to use the template
 
-\documentclass[a4paper,12pt,times,authoryear,print,index]{PhDThesisPSnPDF}
+\documentclass[a4paper,12pt,custombib,print,index]{PhDThesisPSnPDF}
 
 % ******************************************************************************
 % ******************************* Class Options ********************************
@@ -126,10 +126,14 @@
 
 \listoftables
 
+\printnomenclature
+
+\include{Notation/notation}
+
 % \printnomenclature[space] space can be set as 2em between symbol and description
 %\printnomenclature[3em]
 
-\printnomenclature
+
 
 % ******************************** Main Matter *********************************
 \mainmatter
@@ -137,7 +141,7 @@
 \include{Chapter1/chapter1}
 \include{Chapter2/chapter2}
 \include{Chapter3/chapter3}
-%\include{Chapter4/chapter4}
+\include{Chapter4/chapter4}
 %\include{Chapter5/chapter5}
 %\include{Chapter6/chapter6}
 %\include{Chapter7/chapter7}
@@ -155,11 +159,11 @@
 % Bibliography style previews: http://nodonn.tipido.net/bibstyle.php
 % Reference styles: http://sites.stat.psu.edu/~surajit/present/bib.htm
 
-\bibliographystyle{apalike}
+% \bibliographystyle{apalike}
 %\bibliographystyle{unsrt} % Use for unsorted references  
 %\bibliographystyle{plainnat} % use this to have URLs listed in References
 \cleardoublepage
-\bibliography{References/references} % Path to your References.bib file
+% \bibliography{References/references} % Path to your References.bib file
 
 
 % If you would like to use BibLaTeX for your references, pass `custombib' as
@@ -167,7 +171,7 @@
 % specified in the preamble.tex file in the custombib section.
 % Comment out the lines related to natbib above and uncomment the following line.
 
-%\printbibliography[heading=bibintoc, title={References}]
+\printbibliography[heading=bibintoc, title={References}]
 
 
 \end{spacing}

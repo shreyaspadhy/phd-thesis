@@ -48,6 +48,8 @@
 
 %\usepackage{algpseudocode}
 
+% *************************** Nomenclature ************************************
+% \usepackage{nomencl}
 
 % ********************Captions and Hyperreferencing / URL **********************
 
@@ -112,22 +114,37 @@
 %\usepackage{cleveref} %Referencing without need to explicitly state fig /table
 
 % Add `custombib' in the document class option to use this section
-\ifuseCustomBib
-   \RequirePackage[square, sort, numbers, authoryear]{natbib} % CustomBib
+% \ifuseCustomBib
+    %    \RequirePackage[square, sort, numbers, authoryear]{natbib} % CustomBib
 
-% If you would like to use biblatex for your reference management, as opposed to the default `natbibpackage` pass the option `custombib` in the document class. Comment out the previous line to make sure you don't load the natbib package. Uncomment the following lines and specify the location of references.bib file
+    % If you would like to use biblatex for your reference management, as opposed to the default `natbibpackage` pass the option `custombib` in the document class. Comment out the previous line to make sure you don't load the natbib package. Uncomment the following lines and specify the location of references.bib file
 
-%\RequirePackage[backend=biber, style=numeric-comp, citestyle=numeric, sorting=nty, natbib=true]{biblatex}
-%\addbibresource{References/references} %Location of references.bib only for biblatex, Do not omit the .bib extension from the filename.
+\RequirePackage[backref=true, style=authoryear, bibstyle=trad-abbrv, citestyle=authoryear, sorting=nty, uniquename=false, maxcitenames=1]{biblatex}
 
-\fi
+% Custom citation formatting for author-year style
+\renewcommand{\nameyeardelim}{\addcomma\space}
+\renewcommand{\multicitedelim}{\addsemicolon\space}
+% Force maximum of 1 name in citations
+\ExecuteBibliographyOptions{maxcitenames=1, minnames=1}
+\DeclareCiteCommand{\cite}[\mkbibparens]
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}\usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{postnote}}
+% Custom bibliography spacing
+\setlength{\bibparsep}{0.5\baselineskip}
+
+\addbibresource{References/references.bib} %Location of references.bib only for biblatex, Do not omit the .bib extension from the filename.
+\AtEveryBibitem{\iffieldundef{label}{}{\clearfield{label}}}
+
+% \fi
 
 % changes the default name `Bibliography` -> `References'
 \renewcommand{\bibname}{References}
 
 
 % ******************************************************************************
-% ************************* User Defined Commands ******************************
+% ************************* User Defined Commxands ******************************
 % ******************************************************************************
 
 % *********** To change the name of Table of Contents / LOF and LOT ************
@@ -147,7 +164,7 @@
 
 % To change the name of the Nomenclature section, uncomment the following line
 
-%\renewcommand{\nomname}{Symbols}
+\renewcommand{\nomname}{Symbols}
 
 
 % ********************************* Appendix ***********************************
@@ -180,13 +197,13 @@
 % ******************************** Todo Notes **********************************
 %% Uncomment the following lines to have todonotes.
 
-%\ifsetDraft
-%	\usepackage[colorinlistoftodos]{todonotes}
-%	\newcommand{\mynote}[1]{\todo[author=kks32,size=\small,inline,color=green!40]{#1}}
-%\else
-%	\newcommand{\mynote}[1]{}
-%	\newcommand{\listoftodos}{}
-%\fi
+% \ifsetDraft
+\usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}
+\newcommand{\mynote}[1]{\todo[author=sp,size=\small,inline,color=green!40]{#1}}
+% \else
+% 	\newcommand{\mynote}[1]{}
+% 	\newcommand{\listoftodos}{}
+% \fi
 
 % Example todo: \mynote{Hey! I have a note}
 
@@ -208,9 +225,49 @@
 % *****************************************************************************
 % ******************* Better enumeration my MB*************
 \usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{xltabular}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{lettrine}
+\usepackage{standalone}
+
+\renewcommand{\floatpagefraction}{.9}    % require fuller float pages
+\renewcommand{\topfraction}{.9}          % fraction of page allowed for floats at top
+
+\RequirePackage{lmodern}
+\usepackage[commands,enumerate,environments,notes]{SP}
 
 \newcommand{\Dtrain}{\mathcal{D}_{\text{train}}}
 
-\newcommand{\E}{\mathbb{E}}
+% \newcommand{\E}{\mathbb{E}}
 
-\newcommand{\d}{\mathrm{d}}
+\newcommand{\dd}{\mathrm{d}}
+
+\newcommand{\hpi}{\hat{\pi}}
+
+\newcommand{\piy}{\pi_{\cdot \mid y}}
+
+\newcommand{\Xt}{\{X_t\}_{t \in T}} 
+
+\newcommand{\rightP}{\overrightarrow{\mathbb{P}}}
+\newcommand{\leftP}{\overleftarrow{\mathbb{P}}}
+
+
+% --- linea for captions ----------------------------------------------
+\usepackage{tikz,xcolor}
+
+% helper that keeps the line vertically centred on the baseline
+\newcommand{\RaiseLine}[1]{\raisebox{.5ex}{\tikz{#1}}}
+
+% ▬ ▬ thick black, widely‑spaced dashes (first row in your figure)
+\newcommand{\thickblackdash}{%
+  \RaiseLine{%
+    \draw[black,line width = 1.6pt,dash pattern = on 5pt off 3pt,line cap=butt] (0,0) -- (5mm,0);}}
+
+% – – – thin grey, evenly‑spaced dashes (second row in your figure)
+\newcommand{\thingreydash}{%
+  \RaiseLine{%
+    \draw[gray!60,line width = 0.9pt,dash pattern = on 3pt off 3pt,line cap=round] (0,0) -- (5mm,0);}}
+% -----------------------------------------------------------------------------
