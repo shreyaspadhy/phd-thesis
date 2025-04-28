@@ -25,3 +25,5 @@
 *.nlo
 *.nls
 *.stp
+*.DS_Store
+*cpython*

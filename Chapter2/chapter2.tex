@@ -356,7 +356,7 @@ We can then modify our score model to learn a different parametrisation for a di
 While score-matching was initially motivated by this heuristic argument about learning the score of a multi-level noised distribution, in \textcite{song2020score}, the authors show that the noising process can be represented as a stochastic differential equation that iteratively noises samples from the data distribution $\hpi$ until they resemble Gaussian noise (i.e. $\mu$).
 
 \begin{lightgraybox}{Remark: Continuous Limit of Score-Matching}
-    As shown in \textcite{song2020score}, the iterative noising process can be represented as a stochastic differential equation in the continuous limit. Here, we redefine our notation to follow standard notation in the literature closely, and assume that the distribution at $t=0$ corresponds to the data distribution $\hpi$, and the distribution at $t=T$ corresponds to the base distribution $\mu$. In this case, the iterative noising process can be represented as a forward SDE, transporting samples from $\hpi$ to $\mu$, and is given by 
+    As shown in \cite{song2020score}, the iterative noising process can be represented as a stochastic differential equation in the continuous limit. Here, we redefine our notation to follow standard notation in the literature closely, and assume that the distribution at $t=0$ corresponds to the data distribution $\hpi$, and the distribution at $t=T$ corresponds to the base distribution $\mu$. In this case, the iterative noising process can be represented as a forward SDE, transporting samples from $\hpi$ to $\mu$, and is given by 
     \[
         \dd X_t = \sqrt{\frac{\dd \sigma_t^2}{\dd t}} \dd W_t, \quad X_0 \sim \hpi, \quad t = 0, \ldots, T, \label{eq:sm_sde_fwd}
     \]

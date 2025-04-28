@@ -268,19 +268,8 @@
 
 
 
-
-% citation macros
-\ifSP@citations
-
-% select citation style
-\ifSP@citations@authoryear
-\PassOptionsToPackage{bibstyle=trad-abbrv, citestyle=authoryear, maxcitenames=1}{biblatex}
-\else
-\PassOptionsToPackage{bibstyle=trad-abbrv, citestyle=numeric-comp}{biblatex}
-\fi
-
 % load BibLaTeX
-% \RequirePackage[backref=true, useprefix, uniquename=false, maxcitenames=2, sortcites=false]{biblatex}
+\RequirePackage[backref=true, style=authoryear, bibstyle=trad-abbrv, citestyle=authoryear, sorting=nty, uniquename=false, maxcitenames=1]{biblatex}
 
 % enable URL hyphenation
 \RequirePackage{xurl}
@@ -298,34 +287,6 @@
         {\bibstring{backrefpage}\ppspace}%
       \printlist[pageref][-\value{listtotal}]{pageref}}}}
 
-% print postnotes outside brackets
-\ifSP@citations@authoryear\else
-\renewbibmacro*{postnote}{%
-  \ifbool{cbx:parens}
-    {\bibclosebracket\global\boolfalse{cbx:parens}}
-    {}%
-  \iffieldundef{postnote}
-    {}
-    {\setunit{\printdelim{postnotedelim}}\printfield{postnote}}}
-\fi 
-
-% change authoryear format
-\ifSP@citations@authoryear
-\renewcommand{\nameyeardelim}{\addcomma\space}
-\renewcommand{\multicitedelim}{\addsemicolon\space}
-\DeclareCiteCommand{\cite}[\mkbibparens]{\usebibmacro{prenote}}{\usebibmacro{citeindex}\usebibmacro{cite}}{\multicitedelim}{\usebibmacro{postnote}}
-\defbibenvironment{bibliography}
-  {\list
-    {}
-    {\setlength{\leftmargin}{\bibhang}%
-      \setlength{\itemindent}{-\leftmargin}%
-      \setlength{\itemsep}{\bibitemsep}%
-      \setlength{\parsep}{\bibparsep}}}
-  {\endlist}
-  {\item}
- \setlength{\bibparsep}{0.5\baselineskip}
-\fi
-
 \fi
 
 
@@ -342,7 +303,7 @@
 \def\[#1\]{\in@{&}{#1}\ifin@\begin{align}#1\end{align}\else\in@{\\}{#1}\ifin@\begin{gather}#1\end{gather}\else\begin{equation}#1\end{equation}\fi\fi}
 \fi
 
-\fi
+% \fi
 
 
 
