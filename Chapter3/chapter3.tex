@@ -328,6 +328,7 @@ where $A_i \subset \mathbb{R}$ is a Borel set. This is known as the law of the p
 Therefore, for solutions of SDEs of the form in \Cref{eq:integral_form_of_sde}, we can define the \textit{law of the process} as a path measure, notated as $\mathbb{P} = \operatorname{Law}(\Xt)$.
 
 \begin{definition}[Path Measure of an Itô Process]
+    \label{def:path_measure_of_ito_process}
     Let $\Xt$ be an Itô process defined as the solution to the SDE in \Cref{eq:integral_form_of_sde}, with drift coefficient $\mu$ and diffusion coefficient $\sigma$. Further, let $\pi_0$ be the marginal distribution of the RV at $t=0$. Then the path measure of $\Xt$ is denoted as $\mathbb{P}^{\mu, \pi_0} = \operatorname{Law}(\Xt)$.
 \end{definition}
 
@@ -439,7 +440,7 @@ We can further state a more general version of Girsanov's theorem between genera
     \]
     with path measures $\P^{a, \mu}$ and $\P^{b, \nu}$ respectively, then we have
     \[
-        \ln \left(\frac{\d\P^{a, \mu}}{\d \P^{b, \nu}}\right)(Z) = \ln \left(\frac{\mathrm{d} \mu}{\mathrm{d} \nu}\right)\left(Z_0\right) + \int_0^T \sigma_t^{-2}\left(a_t-b_t\right)\left(Z_t\right) \cdot \mathrm{d} Z_t + \frac{1}{2} \int_0^T \sigma_t^{-2}\left(b_t^2-a_t^2\right)\left(Z_t\right) \mathrm{d} t
+        \ln \left(\frac{\d\P^{a, \mu}}{\d \P^{b, \nu}}\right)(Z) = \ln \left(\frac{\mathrm{d} \mu}{\mathrm{d} \nu}\right)\left(Z_0\right) + \int_0^T \sigma_t^{-2}\left(a_t-b_t\right)\left(Z_t\right) \cdot \mathrm{d} Z_t + \frac{1}{2} \int_0^T \sigma_t^{-2}\left(b_t^2-a_t^2\right)\left(Z_t\right) \mathrm{d} t \label{eq:girsanov_theorem_for_rnd_between_sdes}
         .
     \]
 \end{theorem}
@@ -484,7 +485,7 @@ Another useful property of Itô processes is the ability to condition an Itô pr
 We have discussed some very useful properties of path measures, and techniques to perform ``pathwise'' operations on Itô processes, such as conditioning and a change of measure. We now turn our attention to one of the seminal results in stochastic calculus, which has enabled their application in generative modelling and diffusion models, known as the time-reversal of SDEs.
 
 \section{Time-Reversal of SDEs}
-
+\label{sec:time_reversal_of_sdes}
 \begin{figure}[!t]
     \centering
     \includegraphics[width=\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter3/Figs/Vector/sde_reversal.pdf"}
@@ -493,7 +494,7 @@ We have discussed some very useful properties of path measures, and techniques t
     \label{fig:sde_reversal}
 \end{figure}
 
-As we alluded to in the previous chapter, generative modelling algorithms such as score-matching and DDPMs simultaneously design the ``forward'' process $q_{\theta}(z \mid x)$ that starts from an unknown data distribution $\hat{\pi}$ and iteratively noises it until a tractable noise distribution $\pi_T$, and the ``backward'' process $p_{\phi}(x \mid z)$ that starts from the noise distribution $\pi_T$ and iteratively removes noise from it until the data distribution $\hat{\pi}$. An alluring property of SDEs is that we can choose a specific form of the ``forward'' process $q_{\theta}$ as a simple SDE, and due to the time-reversal property of SDEs, we are able to write down the ``backward'' process $p{\phi}$ in closed form. Anderson and Nelson showed that it is possible to write down a ``backward'' Itô process that is the time-reversal of the forward process, so that the marginal distributions of the forward and backward processes are the same at the same time. 
+As we alluded to in the previous chapter, generative modelling algorithms such as score-matching and DDPMs simultaneously design the ``forward'' process $q_{\theta}(z \mid x)$ that starts from an unknown data distribution $\hat{\pi}$ and iteratively noises it until a tractable noise distribution $\pi_T$, and the ``backward'' process $p_{\phi}(x \mid z)$ that starts from the noise distribution $\pi_T$ and iteratively removes noise from it until the data distribution $\hat{\pi}$. An alluring property of SDEs is that we can choose a specific form of the ``forward'' process $q_{\theta}$ as a simple SDE, and due to the time-reversal property of SDEs, we are able to write down the ``backward'' process $p_{\phi}$ in closed form. Anderson and Nelson showed that it is possible to write down a ``backward'' Itô process that is the time-reversal of the forward process, so that the marginal distributions of the forward and backward processes are the same at the same time. 
 
 There are two distinct approaches on how to define the time-reversal SDE, both of which have subtle differences that can impact the theoretical properties of SDEs that we can work with. The first approach, which we title as ``forward-time'', defines the time-reversal SDE on the same filtration as the original forward process, with the same ``forward-time'' Brownian motion as the stochastic term. This approach allows us to use our discussed tools such as Girsanov's theorem, and continue to use the definition of the Itô integral with respect to the forward-time Brownian motion. 
 
@@ -503,11 +504,11 @@ The second approach, which we title as ``reverse-time''; defines the time-revers
     \label{def:anderson-reversal}
     Given an Itô process $X_t$ adapted to the ``forward-time'' filtration $\mathcal{F}_t=\sigma\left\{X_s, W_s: 0 \leq s \leq t\right\}$ which is defined as the solution to the SDE
     \[
-        \d X_t = \mu_t(X_t) \d t + \sigma_t(X_t) \d W_t, \quad X_0 \sim \hat{\pi},
+        \d X_t = a_t(X_t) \d t + \sigma_t(X_t) \d W_t, \quad X_0 \sim \hat{\pi},
     \]
     we introduce a re-indexed stochastic process $Z_t := X_{T-t}, t \in [0, T]$ adapted to the same ``forward-time'' filtration $\mathcal{F}_t$. Then, $Z_t$ is the solution to the following SDE
     \[
-        \d Z_t = \left[ -\mu_{T-t}(Z_t) + \sigma_{T-t}^{\top} \sigma_{T-t} \nabla_{Z_t} \ln P_{T-t}(Z_t) \right] \d t + \sigma_{T-t}(Z_t) \d W_t, \quad Z_0 \sim \pi_T
+        \d Z_t = \left[ -a_{T-t}(Z_t) + \sigma_{T-t}^{\top} \sigma_{T-t} \nabla_{Z_t} \ln P_{T-t}(Z_t) \right] \d t + \sigma_{T-t}(Z_t) \d W_t, \quad Z_0 \sim \pi_T
     \]
 \end{definition}
 
@@ -554,13 +555,13 @@ There are some important properties of this time-reversal to note:
     \label{def:nelson-reversal}
     Given an Itô process $X_t$ adapted to the ``forward-time'' filtration $\mathcal{F}_t=\sigma\left\{X_s, W_s: 0 \leq s \leq t\right\}$ which is defined as the solution to the SDE
     \[
-        \d X_t = \mu_t(X_t) \d t + \sigma_t(X_t) \d W_t, \quad X_0 \sim \hat{\pi},
+        \d X_t = a_t(X_t) \d t + \sigma_t(X_t) \d W_t, \quad X_0 \sim \hat{\pi},
     \]
-    we then define the \textit{same} random variable $Y_t := X_t, t \in [0, T]$ defined backwards in time, and adapted to the ``reverse-time'' filtration $\mathcal{G}_t=\sigma\left\{X_s, W_s: T \geq s \geq t\right\}$. Then, $Y_t$ is the solution to the following SDE solved backwards in time from $t=T$ to $t=0$
+    with corresponding path measure $\overrightarrow{\mathbb{P}}^{\pi, a}$, we then define the \textit{same} random variable $Y_t := X_t, t \in [0, T]$ defined backwards in time, and adapted to the ``reverse-time'' filtration $\mathcal{G}_t=\sigma\left\{X_s, W_s: T \geq s \geq t\right\}$. Then, $Y_t$ is the solution to the following SDE solved backwards in time from $t=T$ to $t=0$
     \[
-        \d Y_t = \left[ \mu_{t}(Y_t) - \sigma_{t}^{\top} \sigma_{t} \nabla_{Y_t} \ln P_{t}(Y_t) \right] \d t + \sigma_{t}(Y_t) \d \overleftarrow{W}_t, \quad Y_T \sim \pi_T,
+        \d Y_t = \left[ a_{t}(Y_t) - \sigma_{t}^{\top} \sigma_{t} \nabla_{Y_t} \ln P_{t}(Y_t) \right] \d t + \sigma_{t}(Y_t) \d \overleftarrow{W}_t, \quad Y_T \sim \pi_T,
     \]
-    where $\overleftarrow{W}_t$ is a Brownian motion that is adapted to the ``reverse-time'' filtration $\mathcal{G}_t$.
+    with corresponding path measure $\overleftarrow{\mathbb{P}}^{\pi_T, b}$, where $b_t = a_t - \sigma_t^2 \nabla \ln P_t(Y_t)$. Furthermore, $\overleftarrow{W}_t$ is a Brownian motion that is adapted to the ``reverse-time'' filtration $\mathcal{G}_t$.
 \end{definition}
 
 Some important properties of the ``reverse-time'' time-reversal to note:
@@ -579,17 +580,18 @@ Some important properties of the ``reverse-time'' time-reversal to note:
     \end{itemize}
 \end{lightgraybox}
 
-\section{Reverse-Time SDEs and Föllmer's Itô Calculus}
+\section{Reverse-Time SDEs and F{\"o}llmer's Itô Calculus}
+\label{sec:folmer_ito_calculus}
 
 We have seen that the ``reverse-time'' SDE framework provides the same joint law for the forward and reverse SDEs, which would enable us to define probability divergences between the forward and reverse SDEs. However, since the forward and reverse SDEs exist on different filtrations going in different directions, we cannot rely on our existing machinery of Ito integrals and Girsanov's theorem, bringing us to a standstill. 
 
-In this section, we introduce an alternative framework, Föllmer's Itô calculus, that allows us to derive a version of Itô's formula for SDEs without relying on the existence of filtrations. While there are some subtleties to this framework, and the results might be not as general as the existing framework, for our purposes, it suffices to use this framework to define a novel Radon-Nikodym derivative between the forward and reverse processes, which we will use to define a novel Girsanov's theorem in the next chapter.
+In this section, we introduce an alternative framework, F{\"o}llmer's Itô calculus, that allows us to derive a version of Itô's formula for SDEs without relying on the existence of filtrations. While there are some subtleties to this framework, and the results might be not as general as the existing framework, for our purposes, it suffices to use this framework to define a novel Radon-Nikodym derivative between the forward and reverse processes, which we will use to define a novel Girsanov's theorem in the next chapter.
 
 \begin{definition}[Ito's formula without probability]
     \label{def:ito-formula-without-probability}
     (\textcite[Theorem 6.6, Pg. 122]{eberle2011introduction}, \textcite{follmer2006calcul}) Suppose that $X: [0, T) \to \mathbb{R}^d$ is a continuous function with continuous quadratic variation $\langle X \rangle_t$ w.r.t a partition $(\pi_n)$. Then, for any $f \in C^2([0, t) \times \mathbb{R}^d)$, and for any $t \in [0, T)$, the Itô integral
     \[
-        \int_0^t \nabla f(s, X_s) \d X_s := \lim_{n \to \infty} \sum_{s \in \pi_n, s < t} \nabla f(s, X_s) (X_{s^{\prime} \wedge t} - X_s)
+        \int_0^t \nabla f(s, X_s) \d X_s := \lim_{n \to \infty} \sum_{s \in \pi_n, s < t} \nabla f(s, X_s) (X_{s^{\prime} \wedge t} - X_s) \label{eq:ito-integral-forward}
     \]
     exists, and Itô's formula
     \[
@@ -600,13 +602,13 @@ In this section, we introduce an alternative framework, Föllmer's Itô calculus
 
 We note here that \Cref{def:ito-formula-without-probability} holds only for individual continuous functions (or paths) $X_t$ with continuous quadratic variation, and not for general processes adapted to a filtration. Therefore, we no longer require the existence of a filtration to define Itô's formula. However, it is important to note that the result is dependent on the specific partition of the interval $[0, t)$ that we choose, and if the quadratic variation of the function $X_t$ varies with the partition, then the result may not hold. This is not a problem for our purposes, aas the quadratic variation of the Wiener process is deterministic, finite and continuous regardless of the partition almost surely (\textcite[Pg. 120]{eberle2011introduction}).
 
-In Föllmer's framework, defining the ``reverse-time'' Itô integral is done by using the same definition of the Itô integral as in the forward-time case.
+In F{\"o}llmer's framework, defining the ``reverse-time'' Itô integral is done by using the same definition of the Itô integral as in the forward-time case.
 
 \begin{definition}[``Reverse-time'' Itô's formula without probability]
     \label{def:ito-formula-without-probability-reverse}
     (\textcite[Theorem 6.7, Pg. 123]{eberle2011introduction}, \textcite{follmer2006calcul,kunitha1982backward}) Suppose that $X: [0, T) \to \mathbb{R}^d$ is a continuous function with continuous quadratic variation $\langle X \rangle_t$ w.r.t a partition $(\pi_n)$. Then, for any $f \in C^2([0, t) \times \mathbb{R}^d)$, and for any $t \in [0, T)$, the backward Itô integral
     \[
-        \int_0^t \nabla f(s, X_s) \d \overleftarrow{X}_s := \lim_{n \to \infty} \sum_{s \in \pi_n, s < t} \nabla f(s^{\prime} \wedge t, X_s) (X_{s^{\prime} \wedge t} - X_s)
+        \int_0^t \nabla f(s, X_s) \d \overleftarrow{X}_s := \lim_{n \to \infty} \sum_{s \in \pi_n, s < t} \nabla f(s^{\prime} \wedge t, X_s) (X_{s^{\prime} \wedge t} - X_s) \label{eq:ito-integral-reverse}
     \]
     exists, and Itô's formula
     \[
@@ -615,13 +617,101 @@ In Föllmer's framework, defining the ``reverse-time'' Itô integral is done by 
     holds. 
 \end{definition}
 
+Finally, we make note of a very useful identity in F{\"o}llmer's framework, which allows us to relate the forward and reverse Itô integrals directly to each other. 
 
+% NOTE: Maybe define forward and reverse w.r.t Y_s dX_s, and also define stratanovich integral w.r.t Y_s dX_s, and then show the identity.
 
+\begin{theorem}[Relating forward and reverse Itô integrals]
+    \label{thm:relating-forward-and-reverse-ito-integrals}
+    (\textcite[Theorem 6.18, Pg. 134]{eberle2011introduction}) Suppose that the Itô integral $\int_0^t Y_s \d X_s$ and the covariation $\langle Y, X \rangle_t$ exists w.r.t a partition $(\pi_n)$. Then, by \Cref{def:ito-formula-without-probability-reverse}, the reverse Itô integral $\int_0^t Y_s \d \overleftarrow{X}_s$ and the forward Stratonovich integral $\int_0^t Y_s \circ \d X_s$ exists, and we have that
+    \[
+        \int_0^t Y_s \d \overleftarrow{X}_s  - \int_0^t Y_s \d X_s &= \langle Y, X \rangle_t \label{eq:diff-reverse-ito-integral} \\
+        \int_0^t Y_s \d \overleftarrow{X}_s + \int_0^t Y_s \d X_s &= 2 \int_0^t Y_s \circ \d X_s \label{eq:sum-reverse-ito-integral}
+    \]
+\end{theorem}
+\begin{proof}
+    See \textcite[Theorem 6.18, Pg. 134]{eberle2011introduction}.
+\end{proof}
 
+\begin{corollary}[Relating forward and reverse Itô integrals through divergence]
+    \label{cor:relating-forward-and-reverse-ito-integrals-through-divergence}
+    Suppose that the forward and backward Itô integrals exist, then we have that
+    \[
+        \int_0^T a_t(X_t) \d \overleftarrow{X}_t = \int_0^T a_t(X_t) \d X_t - \sigma_t^2 \int_0^T \nabla \cdot a_t(X_t) \d t
+    \]
+\end{corollary}
+\begin{proof}
+    From \Cref{eq:diff-reverse-ito-integral}, we have that
+    \[
+        \int_0^T a_t(X_t) \d \overleftarrow{X}_t = \int_0^T a_t(X_t) \d X_t - \sigma_t^2 \int_0^T \nabla \cdot a_t(X_t) \d t
+    \]
+    Applying Itô's formula (component wise) we have
+    \[
+    \mathrm{d}\left[a_t\left(X_t\right)\right]_i = &\left(\partial_t\left[a_t\left(X_t\right)\right]_i+\nabla\left[a_t\left(X_t\right)\right]_i^{\top} a_t\left(X_t\right)+\frac{\sigma_t^2}{2} \operatorname{tr}\left(H\left(\left[a_t\left(X_t\right)\right]_i\right)\right)\right) \mathrm{d} t \\ &+ \sigma_t \nabla\left[a_t\left(X_t\right)\right]_i^{\top} \mathrm{d} W_t .
+    \]
+    Now, using that the co-variation between two Itô processes is the integrated product of their volatility coefficients    
+    \[
+    \left\langle\left[a_t\left(X_t\right)\right]_i,[X]_i\right\rangle_t & =\left\langle\int_0^T \sigma_t \nabla\left[a_t\left(X_t\right)\right]_i^{\top} \mathrm{d} W_t,[X]_i\right\rangle_t \\
+    & =\sum_j \int_0^T \sigma_t^2 \partial_{\left[X_t\right]_j}\left[a_t\left(X_t\right)\right]_i \mathrm{~d}\left\langle[W]_i,[W]_j\right\rangle_t \\
+    & =\int_0^T \sigma_t^2 \partial_{\left[X_{t] i}\right.}\left[a_t\left(X_t\right)\right]_i \mathrm{~d} t
+    \]
 
-% We have seen from the time-reversal of SDEs that the ``reverse-time'' time-reversal allows for a framework that would enable us to write down probability divergences between forward and reverse processes, which would then enable us to reframe generative modelling and sampling under a unified variational framework. However, we are not yet able to define an essential component for defining a divergence, i.e. Girsanov's theorem for a change of measure between the forward and reverse processes, since these processes are defined on different filtrations. In this section, we briefly discuss the specific nuances of defining stochastic calculus properties for reverse-time SDEs, and finally discuss Föllmer's Itô calculus framework, a filtration-free framework that we will make use of in the next chapter to define a novel Girsanov's theorem.
+    where in the first equality we have used $\left\langle\mathrm{d} t,[\mathrm{~d} \overrightarrow{W}]_j\right\rangle_t=0$ and in the final equality we have used d $\left\langle[\overline{{W}}]_i,[\overline{{W}}]_j\right\rangle_t=\delta_{i j}$ t. Combining the coefficients we have
 
-% Here, we briefly summarise the definitions of ``reverse-time'' filtrations, Brownian motions and Itô integrals, before discussing Föllmer's Itô calculus framework, which dispenses with the need to explicitly define the filtrations of the forward and reverse processes.
+    $$
+    \left\langle a_t\left(X_t\right), X\right\rangle_t=\int_0^T \sigma_t^2 \nabla \cdot a_t\left(X_t\right) \mathrm{d} t .
+    $$
+    % NOTE: Simplify a bit, remove component-wise stuff.s
+\end{proof}
+
+Finally, we can use F{\"o}llmer's Itô calculus to write down the solutions for forward and reverse SDEs in their integral formulation, which we summarise below.
+
+\begin{proposition}[Solutions for Forward and Reverse Processes]
+    \label{prop:solutions-for-forward-and-reverse-processes}
+    Suppose we have the forward and reverse SDEs defined as
+    \begin{subequations}
+        \begin{align}
+            \d X_t &= a_t(X_t) \d t + \sigma_t(X_t) \d W_t, \quad X_0 \sim \mu, \label{eq:forward-sde} \\
+            \d X_t &= b_t(Y_t) \d t + \sigma_t(X_t) \d \overleftarrow{W}_t, \quad X_T \sim \nu. \label{eq:reverse-sde}
+        \end{align}
+    \end{subequations}
+    Then, the precise integrated formulations are given by
+    \begin{subequations}
+        \begin{align}
+            X_t &= X_0 + \int_0^t a_s(X_s) \d s + \int_0^t \sigma_s(X_s) \d W_s, \label{eq:forward-sde-integral} \\
+            X_t &= X_T - \int_0^t b_s(X_s) \d s - \int_0^t \sigma_s(X_s) \d \overleftarrow{W}_s. \label{eq:reverse-sde-integral}
+        \end{align}
+    \end{subequations}
+    with the forward and reverse Itô integrals defined as in \Cref{eq:ito-integral-forward} and \Cref{eq:ito-integral-reverse} respectively. Roughly speaking, we can also write down the forward and reverse integrals in their limit as
+    \begin{subequations}
+        \begin{align}
+        \int_{t_0}^{t_1} X_s \d W_s &= \lim_{\Delta t \to 0} \sum_{i} X_{t_i} (W_{t_{i+1}} - W_{t_i}), \label{eq:forward-ito-integral-limit} \\
+            \int_{t_0}^{t_1} X_s \d \overleftarrow{W}_s &= \lim_{\Delta t \to 0} \sum_{i} X_{t_{i+1}} ({W}_{t_i} - {W}_{t_{i+1}}). \label{eq:reverse-ito-integral-limit}
+        \end{align}
+    \end{subequations}
+    Furthermore, the conversion formula between the forward and reverse Itô integrals w.r.t Brownian motion is given by
+    \begin{subequations}
+        \begin{align}
+            \int_{0}^{t} X_s \d \overleftarrow{W}_s - \int_{0}^{t} X_s \d W_s &= \langle X, W \rangle_t, \label{eq:forward-reverse-ito-conversion} \\
+            \int_{0}^{t} X_s \d \overleftarrow{W}_s + \int_{0}^{t} X_s \d W_s &= 2 \int_{0}^{t} X_s \circ \d W_s, \label{eq:reverse-forward-ito-conversion}
+        \end{align}
+    \end{subequations}
+    and the solutions to the forward and reverse SDEs follow the following martingale properties
+    \begin{subequations}
+        \begin{align}
+            \mathbb{E}\left[\int_0^t f_t\left(X_t\right) \cdot \d W_t\right]=0, & \text { if }\left(X_t\right)_{0 \leq t \leq T} \text { solves \ref{eq:forward-sde}}, \label{eq:forward-sde-martingale} \\
+            \mathbb{E}\left[\int_t^T f_t\left(X_t\right) \cdot \d\overleftarrow{W}_t\right]=0, & \text { if }\left(X_t\right)_{0 \leq t \leq T} \text { solves \ref{eq:reverse-sde}}. \label{eq:reverse-sde-martingale}
+        \end{align}
+    \end{subequations}
+\end{proposition}
+
+% NOTE: Maybe a section about discretising and solving SDEs.
+
+%------------------------------------------------------------
+
+% We have seen from the time-reversal of SDEs that the ``reverse-time'' time-reversal allows for a framework that would enable us to write down probability divergences between forward and reverse processes, which would then enable us to reframe generative modelling and sampling under a unified variational framework. However, we are not yet able to define an essential component for defining a divergence, i.e. Girsanov's theorem for a change of measure between the forward and reverse processes, since these processes are defined on different filtrations. In this section, we briefly discuss the specific nuances of defining stochastic calculus properties for reverse-time SDEs, and finally discuss F{\"o}llmer's Itô calculus framework, a filtration-free framework that we will make use of in the next chapter to define a novel Girsanov's theorem.
+
+% Here, we briefly summarise the definitions of ``reverse-time'' filtrations, Brownian motions and Itô integrals, before discussing F{\"o}llmer's Itô calculus framework, which dispenses with the need to explicitly define the filtrations of the forward and reverse processes.
 
 % %----------------------------------------------------------
 % %  REVERSE‑TIME NOTIONS  (to insert after the forward ones)

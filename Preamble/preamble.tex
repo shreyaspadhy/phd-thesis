@@ -119,7 +119,7 @@
 
     % If you would like to use biblatex for your reference management, as opposed to the default `natbibpackage` pass the option `custombib` in the document class. Comment out the previous line to make sure you don't load the natbib package. Uncomment the following lines and specify the location of references.bib file
 
-\RequirePackage[backref=true, style=authoryear, bibstyle=trad-abbrv, citestyle=authoryear, sorting=nty, uniquename=false, maxcitenames=1]{biblatex}
+\RequirePackage[backref=true, style=authoryear, bibstyle=trad-abbrv, citestyle=authoryear, sorting=nty,uniquelist=false,maxcitenames=1]{biblatex}
 
 % Custom citation formatting for author-year style
 \renewcommand{\nameyeardelim}{\addcomma\space}
@@ -271,3 +271,20 @@
   \RaiseLine{%
     \draw[gray!60,line width = 0.9pt,dash pattern = on 3pt off 3pt,line cap=round] (0,0) -- (5mm,0);}}
 % -----------------------------------------------------------------------------
+
+
+% ---------- a tiny helper ----------
+% \badge{<bg-colour>}{<stuff>}  →  coloured box wrapping <stuff> in display-style math
+\newcommand{\badge}[2]{\colorbox{#1}{\ensuremath{#2}}}
+
+\newcommand{\Ra}{\mathcal{R}a}
+\newcommand{\Rb}{\mathcal{R}b}
+
+% Macros for forward and backward processes with superscripts
+\newcommand{\fwdP}[2]{\overrightarrow{\mathbb{P}}^{#1, #2}}
+\newcommand{\bwdP}[2]{\overleftarrow{\mathbb{P}}^{#1, #2}}
+
+% \usepackage{pdflscape}      % provides the landscape environment
+% \usepackage{booktabs}       % better horizontal rules
+% \usepackage{adjustbox}      % easy table-resizing
+% \usepackage{rotating}

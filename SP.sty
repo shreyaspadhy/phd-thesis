@@ -268,8 +268,8 @@
 
 
 
-% load BibLaTeX
-\RequirePackage[backref=true, style=authoryear, bibstyle=trad-abbrv, citestyle=authoryear, sorting=nty, uniquename=false, maxcitenames=1]{biblatex}
+% % load BibLaTeX
+% \RequirePackage[backref=true, style=authoryear, bibstyle=trad-abbrv, citestyle=authoryear, sorting=nty, uniquename=false, maxcitenames=1]{biblatex}
 
 % enable URL hyphenation
 \RequirePackage{xurl}
@@ -512,8 +512,22 @@
 \declaretheorem[style=\ifSP@notes marginnotethm\else namedtheorem\fi,numberlike=theorem]{exercise}
 \declaretheorem[style=namedtheorem,numberlike=theorem]{lemma}
 \declaretheorem[style=namedtheorem,numberlike=theorem]{proposition}
-\declaretheorem[style=\ifSP@notes marginnotethm\else namedtheorem\fi,numberlike=theorem]{remark}
+\declaretheorem[style=namedtheorem,numberlike=theorem]{remark}
 \declaretheorem[style=\ifSP@notes marginnotethm\else namedtheorem\fi,numberlike=theorem]{result}
+\declaretheorem[style=namedtheorem,numberlike=theorem]{framework}
+
+% Proof sketch environment
+\newtheoremstyle{proofsketchstyle}
+  {\topsep}                % Space above
+  {\topsep}                % Space below
+  {\normalfont}            % Body font
+  {}                       % Indent amount
+  {\itshape}               % Theorem head font
+  {.}                      % Punctuation after theorem head
+  {.5em}                   % Space after theorem head
+  {}                       % Theorem head spec
+\theoremstyle{proofsketchstyle}
+\newtheorem*{proofsketch}{Proof Sketch}
 
 \fi
 
