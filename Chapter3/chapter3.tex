@@ -54,6 +54,7 @@ The triple $(\Omega, \mathcal{F}, \P)$ is called a \textit{probability space}. F
 
 \label{ntn:stochastic-process}
 \begin{definition}[Stochastic Process]
+    \label{def:stochastic_process}
     A \textit{stochastic process} $\{X_t\}_{t \in T}$ is a parametric collection of random variables indexed by a parameter $t \in T$, which we call the \textit{index set}. 
 \end{definition}
 
@@ -456,26 +457,27 @@ With the ability to write down the density ratio between two path measures, we a
 \end{definition}
 
 \subsection{Doob's \texorpdfstring{$h$}{h}-transform: SDEs with Boundary Conditions}
-
+\label{sec:doobs_h_transform}
 \begin{figure}[!t]
     \centering
     \includegraphics[width=\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter3/Figs/Vector/sde_doobs.pdf"}
-    \caption{An example of an unconditioned SDE (left) and an SDE conditioned on a boundary condition using Doob's $h$-transform(right). On the left, we plot the solution to an SDE $\d X_t = \mu_0 X_t \d t + \sigma_0 \d W_t$, with $\mu_0 = 1$ and $\sigma_0 = 0.5$. On the right, we plot the solution to the same SDE, but conditioned on the boundary condition $X_T = 5$. The conditioned SDE is given by $\d X_t = \left(\mu_0 X_t + \sigma_0^2 \nabla_{X_t} \ln \P(X_T = 1 \mid X_t)\right) \d t + \sigma_0 \d W_t$.}
+    \caption{An example of an unconditioned SDE (left) and an SDE conditioned on a boundary condition using Doob's $h$-transform(right). On the left, we plot the solution to an SDE $\d X_t = \mu_0 X_t \d t + \sigma_0 \d W_t$, with $\mu_0 = 1$ and $\sigma_0 = 0.5$. On the right, we plot the solution to the same SDE, but conditioned on the boundary condition $X_T = 5$. The conditioned SDE is given by $\d X_t = \left(\mu_0 X_t + \sigma_0^2 \nabla_{X_t} \ln p_{T \mid t}(X_T = 1 \mid X_t)\right) \d t + \sigma_0 \d W_t$.}
     \label{fig:sde_doobs}
 \end{figure}
 
 Another useful property of Itô processes is the ability to condition an Itô process on a set of paths. This is particularly useful for solving SDEs with boundary conditions, which are SDEs that have constraints on the values of the process at the boundaries of the domain. Here, we discuss Doob's $h$-transform, a tool that allows us to define Itô processes conditioned on boundary conditions as the solution to an SDE with an additional term in the drift coefficient.
 
 \begin{definition}[Doob's $h$-transform]
+    \label{def:doobs}
     Let $X_t$ be an Itô process defined as the solution to the SDE
     \[
         \d X_t = a_t(X_t) \d t + \sigma_t \d W_t, \quad X_0 = x.
     \]
     It then follows that the conditioned process $X_t$ conditioned on a boundary condition $X_T \in B$ is defined as the solution to the SDE
     \[
-        \d X_t = \left(a_t(X_t) + \sigma_t^2 \nabla_{X_t} \ln \P \left(X_T \in B \mid X_t\right)\right) \d t + \sigma_t \d W_t, \quad X_0 = x,
+        \d X_t = \left(a_t(X_t) + \sigma_t^2 \nabla_{X_t} \ln p_{T \mid t} \left(X_T \in B \mid X_t\right)\right) \d t + \sigma_t \d W_t, \quad X_0 = x,
     \]
-    where the term $h(X_t, t) \triangleq \P \left(X_T \in B \mid X_t\right)$ is defined as the $h$-transform, and we have $\P(X_T \in B) = 1$.
+    where the term $h(X_t, t) \triangleq p_{T \mid t} \left(X_T \in B \mid X_t\right)$ is defined as the $h$-transform, and we have $\P(X_T \in B) = 1$.
 \end{definition}
 
 \begin{proof}
@@ -490,7 +492,7 @@ We have discussed some very useful properties of path measures, and techniques t
     \centering
     \includegraphics[width=\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter3/Figs/Vector/sde_reversal.pdf"}
     \caption[``Forward-time'' vs ``Reverse-time'' time reversal of an SDE.]{Sample paths of a forward Ornstein--Uhlenbeck (OU) diffusion and its two distinct time–reversal conventions. The forward SDE is $\d X_t = \theta(\mu-X_t)\, \d t + \sigma \d W_t$ on $t \in [0,1]$ with $(\theta, \sigma, \mu)=(4,1,0)$ and bimodal start $X_0 \sim \tfrac12 \mathcal{N}(+2,0.4^2) + \tfrac12 \mathcal{N}(-2,0.4^2)$; the OU process converges to $\mathcal{N}(0, 1)$ by $t=1$. Twenty paths are shown as dashed lines, where the grey $\to$ blue colour encodes the physical time that the process is solved in the direction of. The top row shows the forward process being solved from $t=0$ to $t=1$ in the forward direction (left to right). The bottom-left panel is the ``forward-time'' time reversal, where the re-indexed process $Z_t := X_{1-t}$ is another forward process adapted to the same filtration as $X_t$ and is solved from $t=0$ to $t=1$ in the forward direction. The bottom right panel is the ``reverse-time'' time reversal, where the process $Y_t := X_t$ is defined backwards in time, and solved in the reverse direction from $t=1$ to $t=0$ against the reverse Brownian motion $W_t$. The solver runs right to left, and the color gradient is flipped accordingly.}
-    %  mean reversion drives the law to the unimodal $\mathcal N(0,1)$ by $t=1$.  Twenty realisations are shown as grey$\to$blue dashed lines (colour encodes physical time), flanked by horizontal density strips for the source at $x=0$ and the target mirrored at $x\!=\!1$.  The lower‐left panel is the Andersen/Haussmann re‑indexing $Z_t=X_{1-t}$, which remains a \emph{forward} SDE (clock left$\to$right) and therefore starts in the Gaussian and ends in the bimodal mixture.  The lower‐right panel is the Nelson backward SDE $\mathrm dY_t=[\theta(\mu-Y_t)-\sigma^2\nabla_x\ \log p_t(Y_t)]\,\mathrm dt+\sigma\,\mathrm d\overleftarrow W_t$ with reverse Brownian motion; here the clock runs right$\to$left, so the colour gradient is flipped and the path measure coincides with the original forward law.  Gradient arrows beneath each axis share the same colour fade, emphasising the respective temporal directions.}
+    %  mean reversion drives the law to the unimodal $\mathcal N(0,1)$ by $t=1$.  Twenty realisations are shown as grey$\to$blue dashed lines (colour encodes physical time), flanked by horizontal density strips for the source at $x=0$ and the target mirrored at $x\!=\!1$.  The lower‐left panel is the Andersen/Haussmann re‑indexing $Z_t=X_{1-t}$, which remains a \emph{forward} SDE (clock left$\to$right) and therefore starts in the Gaussian and ends in the bimodal mixture.  The lower‐right panel is the Nelson backward SDE $\mathrm dY_t=[\theta(\mu-Y_t)-\sigma^2\nabla_x\ \ln p_t(Y_t)]\,\mathrm dt+\sigma\,\mathrm d\overleftarrow W_t$ with reverse Brownian motion; here the clock runs right$\to$left, so the colour gradient is flipped and the path measure coincides with the original forward law.  Gradient arrows beneath each axis share the same colour fade, emphasising the respective temporal directions.}
     \label{fig:sde_reversal}
 \end{figure}
 
@@ -706,6 +708,22 @@ Finally, we can use F{\"o}llmer's Itô calculus to write down the solutions for 
 \end{proposition}
 
 % NOTE: Maybe a section about discretising and solving SDEs.
+\section{Discretisation and Solving SDEs}
+
+In practise, unless we consider very specific forms of drift and diffusion coefficients, it is not feasible to solve SDEs analytically. Therefore, we need to consider numerical methods for solving SDEs. While there exist many first-order and higher-order numerical methods for solving SDEs, which have a tradeoff between accuracy and computational complexity, we will focus on the Euler-Maruyama method \parencite{kloeden1992stochastic,kunita2019stochastic}, which is a first-order method that is the stochastic calculus equivalent of Euler's method for ODEs.
+
+\begin{definition}[Euler-Maruyama method]
+    \label{def:euler-maruyama-method}
+    Given the forward and backward SDEs defined as in \Cref{eq:forward-sde} and \Cref{eq:reverse-sde} respectively, the Euler-Maruyama method discretises the forward and backward processes as follows:
+    \begin{subequations}
+    \[
+        \hat{X}_0 \sim \mu, \quad \hat{X}_{i+1} = \hat{X}_i + a_{t_i}(\hat{X}_i) \delta + \sigma_{t_i}(\hat{X}_i) \sqrt{\delta}~ \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, 1) \\
+        \hat{X}_T \sim \nu, \quad \hat{X}_{i-1} = \hat{X}_i + b_{t_i}(\hat{X}_i) \delta + \sigma_{t_i}(\hat{X}_i) \sqrt{\delta}~ \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, 1)
+    \]
+    \end{subequations}
+    where $\delta = t_{i+1} - t_i$ is the step size.
+\end{definition}
+
 
 %------------------------------------------------------------
 
@@ -780,7 +798,7 @@ Finally, we can use F{\"o}llmer's Itô calculus to write down the solutions for 
 %      = -a_t(Y_t)\,\mathrm dt + \sigma_t(Y_t)\,\mathrm d\overleftarrow W_t$.
 %   When $\sigma_t$ is non--singular, the drift
 %   $a_t$ can be expressed from its forward counterpart via Nelson’s relation
-%   $a_t(x)=b_t(x)-\sigma_t^2\nabla_x\!\log p_t(x)$, where
+%   $a_t(x)=b_t(x)-\sigma_t^2\nabla_x\!\ln p_t(x)$, where
 %   $\mathrm dX_t=b_t(X_t)\,\mathrm dt+\sigma_t\,\mathrm dW_t$ is the forward
 %   SDE and $p_t$ the density of $X_t$.
 % \end{definition}
@@ -875,7 +893,7 @@ Finally, we can use F{\"o}llmer's Itô calculus to write down the solutions for 
 %   \[
 %       \boxed{\;
 %         \mathrm dY_t
-%         = \bigl[a_t(Y_t)-\sigma_t^2(Y_t)\,\nabla_x\log p_t(Y_t)\bigr]\,\mathrm dt
+%         = \bigl[a_t(Y_t)-\sigma_t^2(Y_t)\,\nabla_x\ln p_t(Y_t)\bigr]\,\mathrm dt
 %         + \sigma_t(Y_t)\,\mathrm d\overleftarrow W_t
 %       \;}, \qquad Y_t:=X_t,
 %   \]

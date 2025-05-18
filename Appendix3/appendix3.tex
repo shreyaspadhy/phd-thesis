@@ -1,0 +1,160 @@
+%!TEX root = ../thesis.tex
+% ******************************* Thesis Appendix B ********************************
+
+\chapter{Additional Results for Doob's \texorpdfstring{$h$}{h}-transform Efficient Finetuning}
+
+\label{app:deft}
+
+\section{Additional Proofs}
+
+\subsection{Proof of \Cref{prop:noisy_cond}}
+\label{app:proof_noisy_cond}
+
+\begin{proof}
+    Starting from the unconditioned reverse SDE
+    \begin{align} 
+        \dd X_t &=  b_t(X_t) \,\dd t + \sigma_t\; { \dd \ola{W}}_t,  \quad X_T \sim  \pi_T = \ora{\P}^{\pi, f_t}_T
+    \end{align}
+    we consider its reversal, the forward SDE, but we change its initial from distribution $\pi(x_0)$ to the target posterior $p(x_0 | y)$, i.e.,
+    \begin{align} 
+        \dd H_t &= f_t( H_t )\,\dd t + \sigma_t\;{ \dd {W}}_t, \quad H_0 \sim  \frac{p(y|x_0){\pi}(x_0)}{p(y)}, \label{eq:forpost}
+    \end{align}
+    where $b_t(H_t) = f_t(H_t) - \sigma_t^2 \nabla_{H_t} \ln p_t(H_t)$.
+    
+    Now let us use $p_{t|y}(x|y) = \int p(x_t |x_0) \dd p(x_0|y)$ to denote the marginal of the above SDE and as before $p_t$ to denote the marginal of the reference starting at the data distribution. Then it follows that
+    \begin{align}
+        p_{t|y}(x |y) &= p_t(x)p(y)^{-1} \int {\frac{\ora{p}_{t|0}(x| x_0)}{p_t(x)}} p(y |x_0) {\pi}(x_0) dx_0 \label{eq:post1}\\
+        &=  p_t(x)p(y)^{-1} \int {{\ola{p}_{0|t}(x_0| x)}} p(y |x_0)  dx_0 \label{eq:post2}
+    \end{align}
+    and thus the score of the reference starting at the posterior is given by:
+    \begin{align}
+       \nabla_x \ln  p_{t|y}(x|y) = \nabla_x \ln  p_t(x) + \nabla_x \ln \int \ola{p}_{0|t}(x_0| x) p(y |x_0)  dx_0  %= \nabla_x \ln  p_{t|y}(x |y)
+    \end{align}
+    Now that we have the score of the SDE in Equation \ref{eq:forpost} we can reverse it yet another time to obtain the  conditional backwards SDE:
+    \begin{align} 
+        H_T &\sim   \ora{\P}^{p(x_0 \mid y),f_t}_T = \int \ora{p}_{T|0}(x| x_0) p(x_0|y) \dd x_0 \nonumber\\
+        \dd H_t &= \left( {f}_t(H_t) - \sigma^2_t\left( \nabla_{H_t} \ln p_{t}(H_t) + {\nabla_{H_t} \ln \ola{p}_{y|t}(Y=y|H_t)}\right)\right)\,\dd t + \sigma_t\; { \dd \ola{W}}_t, \nonumber\\
+       \dd H_t &= \left( b_t(H_t) - \sigma^2_t{\nabla_{H_t} \ln \ola{p}_{y|t}(Y=y|H_t)}\right)\,\dd t + \sigma_t\; { \dd \ola{W}}_t,  \label{eq:rev_sde2trans_2apdx}
+    \end{align}
+    Where it is very important to notice that the backward SDE starts at the terminal distribution of the conditional forward SDE $\ora{\P}^{p(x_0 \mid y),f_t}_T$ and \textit{not} $\pi_T = \ora{\P}^{\pi, f_t}_T$. For a VP-SDE, this happens to approximately be $\mathcal{N}(0,I)$ in both cases (i.e. $\ora{\P}^{p(x_0 \mid y),f_t}_T \approx  \ora{\P}^{\pi,f_t}_T \approx \mathcal{N}(0,I)$) however more generally it is not and one needs to be careful.
+    
+    Note that this remark highlights that the score used in DPS \citep{chung2022diffusion} (i.e. $\nabla_x \ln  p_{t|y}(x |y)$) is in fact the score of an OU process starting at $p(x_0|y)$. For example, notice that the cancellation going from \Cref{eq:post1} to \Cref{eq:post2} was only possible since the \textit{prior} in our target posterior is the initial distribution for the forward SDE (in their case an OU-process) with marginal $p_t$. These considerations are subtle yet important and omitted in prior works. Whilst this is akin to the relationship motivated in DPS as $\nabla_x \ln p_{t|y}(x|y) = \nabla_x \ln p_t(x) + \nabla_x \ln p_t(y|x) $, DPS fails to convey that this is in fact the score of a VP-SDE with the posterior $p(x_0|y)$ as its initial distribution.
+    
+    % Also notice that whilst similar simply stating $\nabla_x \ln  p_{t|y}(x |y) = \nabla_x \ln  p_{t}(x ) + \nabla_x \ln  p_{y|t}(y |x)$ is insufficient to prove 
+    \end{proof}
+
+\subsection{Proof of \Cref{prop:amortised_conditional_score_matching}}
+\label{app:proof_amortised_conditional_score_matching}
+\begin{proof}
+Via the mean squared error property of the conditional expectation, the minimiser is given by:
+\begin{align}
+    h^*_t(x, \m) &= \E \left[ \nabla_{H_t}\ln \ora{p}_{t|0}(X_t|X_0) | Y = \m, H_t =x  \right]
+\end{align}
+Then:
+\begin{align}
+    h&^*_t(x, y) = \int \nabla_{x}\ln \ora{p}_{t|0}(x|x_0 ) \ola{p}_{0|t}( x_0 | H_t =x, Y=y) \dd x_0 \nonumber \\
+    &=  \int \frac{\nabla_{x} \ora{p}_{t|0}(x| x_0 )}{ \ora{p}_{t|0}(x| x_0 )}  \frac{\ora{p}_{t|0}( H_t=x | x_0, Y=y) p(x_0| Y=y,)}{p(H_t =x | Y=y )} \dd x_0\nonumber \\
+    &= \frac{1}{p(H_t =x | Y=y )}\int \frac{\nabla_{x} \ora{p}_{t|0}(x| x_0 )} {\ora{p}_{t|0}(x| x_0 )} {\ora{p}_{t|0}( H_t =x | x_0) p(x_0| Y=y)} \d x_0 \nonumber \\
+    &= \frac{1}{p(H_t =x | Y=y)}\nabla_{x} \int {\ora{p}_{t|0}(x| x_0 )}  { p(x_0| Y=y)} \d X_0 \  \nonumber \\
+    &= \frac{1}{\ora{p}( X_t =x | Y = y)}\nabla_{x}\ora{p}( X_t =x | Y = y) \\
+    &= \nabla_{x}\ln\ora{p}( X_t =x | Y = y ) \nonumber,
+\end{align}
+% where we have used $\oplus$ loosely as a concatenation operator. 
+where we use that $\ora{p}_{t|0}(H_t = x | x_0, Y = y) = \ora{p}_{t|0}(H_t = x| x_0)$ as $H_t$ is independent from $Y$ given $X_0$.
+\end{proof}
+
+\subsection{Proof of \Cref{theorem:representation_h}, 2)}
+\label{app:proof_representation_h_2}
+
+\begin{proof}
+    The idea of the proof is similar to \Cref{prop:amortised_conditional_score_matching}. Here, we directly proof the amortised variation from \Cref{eq:finetuning_loss_amortised}. First, we state the well known score matching identity for the posterior score:
+    \begin{align*}
+        \nabla_{x_t} \ln p_t(x | y) = \int \nabla_{x_t} \log \ora{p}_{t|0}(x_t|x_0) \ola{p}_{0|t}(x_0 | x_t, y) \dd x_0.
+    \end{align*}
+    Via the mean squared error property of the conditional expectation we get the minimiser as 
+    \begin{align*}
+       \mathbb{E}\left[ \nabla_{H_t} \ln \ora{p}_{t|0}(H_t | X_0) - \nabla_{H_t} \ln p_t(H_t) \Big| Y = y, H_t = x  \right]
+    \end{align*}
+    Then
+    \begin{align*}
+        h_t^*(x, y) &= \int ( \nabla_{x} \ln \ora{p}_{t|0}(x|x_0 ) - \nabla_{x} \ln p_t(x)) \ola{p}_{0|t}( x_0 | H_t =x, Y=y) \d x_0 \\ 
+        &= \int \nabla_{x} \log \ora{p}_{t|0}(x|x_0) \ola{p}_{0|t}(x_0 | H_t =x, Y=y) \dd x_0 - \nabla_{x} \ln p_t(x) \\ 
+        &= \nabla_{x} \ln p_t(x|y) - \nabla_{x} \ln p_t(x) = \nabla_{x} \ln  p_t(y | x).
+    \end{align*}
+    \end{proof}
+
+\subsection{Proof of \Cref{prop:app_stochastic_control}}
+\label{app:proof_stochastic_control}
+% NOTE: Fix the fwd/bwd here if time permits.
+\begin{proof}
+    The derivation for this  objective is inspired by the sequential Bayesian learning scheme proposed in \textcite[Appendix B, Lemma 1]{vargas2021bayesian}. 
+    
+    Let $\ora{\P}^{\pi, f}$ denote the path measure for the forward SDE in Eqn.~\eqref{eq:forward_sde_doobs}. By Nelson's reversal, we know that this path measure is equal to the path measure of the reverse SDE in Eqn.~\eqref{eq:back_sde}, which we denote as $\ola{P}$ (for brevity). Now consider the following variational problem termed a half-bridge \citep{bernton2019schr,de2021diffusion, vargas2021solving}.
+    \begin{align}\label{eq:half}
+       \ola{\Q}^*= \argmin_{\ola{\Q}: \ola{\Q}_{0} = p(x_0|y)} D_{\text{KL}}(\ola{\Q} || \ola{\P})
+    \end{align}
+    where the constraint enforces that at time $0$ we hit the target posterior $p(x|y)$ then via standard results in half bridges we know that the above optimisation problem has an unconstrained formulation (e.g. see \cite{vargas2023denoising}) that is $\dd\ora{\Q}^* = \dd\ora{\P} \frac{\dd p(x|y)}{\dd \ora{\P}_0} $
+    Now following \citep{vargas2021bayesian} we notice that we can cancel the $\pi$ prior in the posterior term:
+    \begin{align}
+     \dd \ola{\P}   \frac{\dd p(x|y)}{\dd \ola{\P}_0}  = \dd\ola{\P} \frac{\dd p(x|y)}{\dd \pi} = \dd \ola{\P} \frac{\dd p(y | x)}{\dd p(y)}
+    \end{align}
+    and thus:
+    \begin{align}\label{eq:contkl}
+       \ola{\Q}^*= \argmin_{\ola{\Q}} D_{\text{KL}}(\ola{\Q} || \ola{\P}) - \E_{\ola{H}_0 \sim \ola{\Q}_0} [\ln p(y| H_0)]
+    \end{align}
+    with $\ola{\Q}_T = \operatorname{Law}{X_T} \approx \mathcal{N}(0, \mathbf{I})$ when $X_0 \sim p(x_0|y)$. Furthermore, we can parametrise $\ola{\P}$ as :
+    \begin{align} \label{eq:vpsderev}
+        %\dd X_t &= -\beta_t (X_t+ 2\nabla_{X_t}\ln p_t(X_t)) \,\dd t + \sqrt{2\beta_t }\; {\dd \rv{W}_t }, \quad X_0 \sim Q^{f_t}_T[p_{\mathrm{data}}(x_0)]
+        \dd X_t &= \left( f_t(X_t) - \sigma_t^2 \nabla_{X_t} \ln p_t(X_t) \right) \dd t + \sigma_t {\dd \ola{W}_t }, \quad X_T \sim \ora{\P}_T^{\pi, f_t}
+    \end{align}
+    
+    and thus $\ola{\Q}$ as 
+    \begin{align} 
+    H_T &\sim \ola{\P}_T^{p(x_0|y), f_t}\nonumber\\
+         \dd H_t &= \left( f_t(H_t) - \sigma^2_t (\nabla_{H_t} \ln p_t(H_t)+ h_t(H_t)) \right)\,\dd t + \sigma_t\; \dd \ola{W}_t,
+         \label{eq:reverse_sde_theorem}
+    \end{align}
+    then via Girsanov Theorem we can re-express the KL term in Eqn.~\eqref{eq:contkl} as
+    \begin{align}
+       h^* =\argmin_{h} \E_{\ola{\Q}}\left[\frac{1}{2}\int_0^T \sigma_t^{2}|| h(H_t) ||^2 \dd t\right] - \E_{H_0 \sim \ola{\Q}_0} [\ln p(y| H_0)].\label{eq:stoch2}
+    \end{align}
+    Now noticing that Eqn.~\eqref{eq:stoch2} is a standard stochastic control problem \citep{nusken2021solving, kappen2005linear} we can characterise its minimiser as (using Theorem 2.2 in \cite{nusken2021solving} and the Hopf-Cole transform \citep{fleming2012deterministic}) 
+    \begin{align}
+        h^*_t(x) = \nabla_{x}\ln \E_{X_0 \sim p_{0 |t}(\cdot|x)}[p(y| X_0) ],
+    \end{align}
+    and thus the SDE in Eqn.~\ref{eq:reverse_sde_theorem} with $h^*_t$ hits the target posterior $p(y|x_0)$ at time $0$ as it is the minimiser of half-bridge posed in Eqn. \eqref{eq:half}.
+\end{proof}
+
+
+\section{Additional Related Work}
+\label{sec:related_work}
+
+A common distinction to all the works we will discuss in this section is that they all either train the conditional network from scratch or they initialise the conditional network with a pretrained score and fully train a conditional network. This is in stark contrast to DEFT which completely freezes the unconditional score and trains a highly efficient network to learn the $h$-transform which ranges from $4-17\%$ in total parameter size of the pretrained unconditional score network.
+
+\paragraph{Image 2 Image Schr\"{o}dinger Bridges (I2SB \parencite{liu20232})}{ I2SB  and more generally aligned Schr\"{o}dinger Bridges \citep{somnath2023aligned} are a recently proposed class of conditional generative models based on ideas from Schr\"{o}dinger bridges. The premise of these methods is that they aim to learn an interpolating diffusion between a clean data sample and a altered or corrupted data sample. This is in contrast to our framework: we consider an unconditioned SDE and condition it to hit an event at a particular time, thus learning an interpolating distribution between noise and an un-corrupted target distribution. This results in several algorithmic differences:
+
+\begin{itemize}
+    \item At its core, I2SB treat $Y = \mathcal{A}(X_0) +\eta$ and $X_0$ as source and target distributions respectively; thus, at sampling time, $Y$ is provided to the learned SDE which generates approximate samples from $\operatorname{Law} {X_0}$. However, in our approach, the source distribution is $\mathcal{N}(0,{I})$ and we pass $Y$ to the score network to then obtain approximate samples from $\operatorname{Law} {X_0}$.
+    
+    \item The score network in I2SB is a function only of $X_t$ and not $Y=\mathcal{A}(X_0) +\eta$. This means that in I2SB, the network is parametrised as $\epsilon^{\theta}_t(X_t)$, whilst in our setting we parametrise as $\epsilon^{\theta}_t(X_t, \mathcal{A}(X_0) +\eta, \mathcal{A})$. In the case of completion tasks like motif-scaffolding or image out-painting, our paramerisation looks something like $\epsilon^{\theta}_t(X_t, X_0^{\mathrm{mask}}, \mathrm{mask})$. This makes the task much easier for the network as we effectively provide it with a binary variable indicating which parts of the image are conditioned and which are not. In I2SB,  the network must learn this on its own. Furthermore, as we show in \cref{prop:amortised_conditional_score_matching}, adding this to the network parametrisation is essential to allow recovering the true conditional score.
+    
+    \item The training procedure in I2SB uses the diffusion bridge $p(x_t| x_0, y)$ to add noise to both the source and target distributions, whilst our forward process is given by the transition density of an OU process $p(x_t| x_0)$ and is identical to standard DDPM/VP-SDE \citep{ho2020denoising,song2021Scorebased} noise adding procedures.
+
+    \item Finally and most importantly I2SB does full fine-tuning firstly initialising with a pretrained score and training all parameters of this large pretrained network to learn an unconditional network, this requires longer training times and significantly larger networks as they must be at least the same size as the unconditional score network. 
+\end{itemize}
+
+To summarise: whilst both methodologies employ similar mathematical methodologies (e.g. Diffusion Bridges \citep{de2021simulating}), their ideations and resulting methods are fundamentally different: on one side, \textcite{liu20232} learns an interpolating distribution between the unconditioned $p(x_0)$ and conditioned $p(y| x_0)$ samples. On the other, we learn a denoising procedure that directly samples from the posterior  $p( x_0 | y)$; via this, we derive and explain most popular approaches for conditioning denoising diffusion models as part of our framework.
+
+It's important to highlight that another akin approach to I2SB, also based on the h-transform but leveraging VP-SDEs, was recently proposed in \citep{zhou2024denoising}.
+}
+
+\paragraph{First Hitting Diffusions}{
+A line of generative modelling methods proposed in \citep{liu2023learning,ye2022first} utilise the $h$-transform for unconditional generative modelling in the following settings: 
+
+\begin{itemize}
+    \item Hitting the target distribution $p_{\mathrm{data}}$ in a finite amount of time $[0,T]$ via time reversing an h-transformed VP-SDE conditioned to hit $0$ at time $T$.
+    \item Constraining a diffusion process at time $T$ to lie in a subset of the reals $\Omega \subseteq \mathbb{R}^d$. 
+\end{itemize}
+
+Whilst the aforementioned work uses a similar methodology and theory the focus is more in line with unconditional generative modelling rather than our setting which seeks to sample from the posterior arising in an inverse problem / conditional generative modelling.
+}

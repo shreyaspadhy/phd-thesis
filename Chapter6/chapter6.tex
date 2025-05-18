@@ -1,0 +1,313 @@
+%!TEX root = ../thesis.tex
+%*******************************************************************************
+%****************************** Third Chapter **********************************
+%*******************************************************************************
+\chapter[Sampling-Based Bayesian Inference with Gaussian Processes]{Sampling-Based Bayesian Inference with Gaussian Processes}
+\label{chapter:gp_sampling}
+% **************************** Define Graphics Path **************************
+\ifpdf
+    \graphicspath{{Chapter6/Figs/Raster/}{Chapter6/Figs/PDF/}{Chapter6/Figs/}}
+\else
+    \graphicspath{{Chapter6/Figs/Vector/}{Chapter6/Figs/}}
+\fi
+
+Having established the importance of sampling from complex, high-dimensional probability distributions, we now pivot our focus towards a domain where the ability to draw high-quality samples is not merely advantageous but forms the bedrock of its practical application: \textit{Bayesian inference}. In safety-critical applications such as drug discovery, medical diagnosis, and scientific modelling, the ability to make meaningful decisions hinges on \textit{reliable uncertainty estimates}. The Bayesian formalism supplies us with these estimates by integrating over \textit{all} possible choices of our modelling assumptions, balancing our uncertainty about the model and the data. Unfortunately, for modern machine learning models, the required quantities-posteriors, marginal likelihoods and even hyperparameter evidence are all unnormalised probability distributions, and are notoriously difficult to compute. 
+
+Exact Markov-chain Monte Carlo (MCMC) algorithms such as Hamiltonian Monte Carlo (HMC) and NUTS remain the gold standard, but they scale really poorly with the number of parameters and often exhibit poor mixing in the high-dimensional, multi-modal landscapes typical of Bayesian neural networks (BNNs).  Worse, naively chosen priors can lead to pathologies such as the
+\emph{cold-posterior effect}, where the data overwhelms our prior beliefs, leading to a posterior distribution that is effectively a point estimate. Robust Bayesian deep learning therefore demands \emph{smarter priors} and \emph{faster samplers} with sufficient diversity.
+
+To address these concerns, we turn our attention to the field of \textit{Bayesian Nonparametrics} (BNP), which places priors not over a finite set of parameters, but on an \textit{infinite-dimensional stochastic process}. Such processes are flexible and can adapt their effective complexity to the data, avoiding a representational bottleneck due to a fixed-size parametrisation, and providing an elegant, function-space view of uncertainty.
+
+Among BNP models, the \textit{Gaussian Process} (GP) is a particularly attractive choice: by making a Gaussian assumption on the joint distribution of finite subsets of the process, we are granted a posterior distribution that is also Gaussian, and can be computed analytically. We can further rely on ideas such as Matheron's rule to condition samples from GP priors ``pathwise'' to obtain samples from the posterior distribution. Further, we note that focusing on GPs does not entirely remove us from deep learning. Via the Linearised Laplace Approximation (LLA), we can represent a wide class of BNNs as a GP, allowing us to export any theoretical and algorithmic developments in the GP literature to the BNN setting.
+
+In this chapter, we will first review the basics of Bayesian inference and GPs from a Bayesian Nonparametrics perspective, before moving on to discuss the sampling-based perspective of Bayesian inference, which allows us to approximate many quantities of interest to a high degree of accuracy using a finite number of samples from the posterior distribution. We will then show how we can overcome the cubic cost of inference and posterior sampling in GPs using a novel, stochastic gradient descent-based approach that yields \textit{near-linear} time and space complexity. We will provide non-asymptotic error bounds, and demonstrate the high performance of our approach on a range of regression and Bayesian optimisation tasks. 
+
+\section{Bayesian Inference: A Nonparametrics Perspective}
+
+Unlike a parametrised model, where we have to struggle to specify priors over a finite number of model parameters, BNP models can scale their complexity adaptively to the amount of data we have available and specify priors over infinite-dimensional functions that exist on domains (such as the real line). In order to do this, we turn to the existing theory of stochastic processes that we've discussed in \Cref{chapter:sde} as a flexible framework for specifying priors over a potentially infinite collection of random variables.
+
+Previously, in \Cref{def:stochastic_process}, we defined a stochastic process as a collection of random variables indexed by a parameter $t \in T$, since we were explicitly interested in the case when $T$ was the time index $t \in [0, \infty)$ for stochastic differential equations. In the BNP framework, we are interested in representing a potentially infinite collection of random variables that exist on a continuous domain, such as the real line. Therefore, we redefine a stochastic process specifically as a way of representing continuous functions:
+
+\begin{definition}[Functions as Stochastic Processes]
+    \label{def:stochastic_process_function_space}
+    Consider a function $f : X \rightarrow \mathbb{R}$ mapping an index set $X$ to the real line. When the index set is infinite, the function $f$ can be viewed as an infinite-dimensional vector collecting an infinite set of random variables. We therefore call this function a stochastic process $\{f(x)\}_{x \in X}$.
+\end{definition}
+
+\begin{lightgraybox}{Remark: Notation for Functions}
+    % \label{rem:functions_as_stochastic_processes}
+    For functions defined as in \Cref{def:stochastic_process_function_space}, we can say that $f \in \mathbb{R}^X$, where $X$ is potentially infinite. Similarly, we can consider the function evaluated on a smaller subset of values: if $A \subseteq X$ is some subset of the index set, then $f_A:=(\{f(x)\}_{x \in A}$, and $f_A \in \mathbb{R}^A$. We may straightforwardly extend this definition to single elements of the index set $f_x:= f(x) := f_{\{x\}} \in \mathbb{R}$.
+\end{lightgraybox}
+
+Now, we can ask ourselves the question: how do we specify a probability measure over the space of all functions? After all, we need this in order to probabilistically encode our ``prior'' beliefs about the function we are modelling. It might seem like a really daunting task to specify a coherent probability measure for an infinite-dimensional space, but there exists a really powerful result called the \textit{Kolmogorov extension theorem} that allows us to only reason about the probability distribution of finite subsets of the function (i.e. $f_A, A \subset X$), and extend this to the whole function. In order to state this theorem, let us first define some notation.
+
+First, let us reason about the properties of our function on different subsets of the index set. We introduce a projection map $\pi_{U \rightarrow V}$ that for $V \subset U \subseteq X$ has the following property:
+
+\begin{definition}[Projection Map]
+    \label{def:projection_map}
+    The projection map $\pi_{U \rightarrow V}$ is defined as:
+    $$
+    \pi_{U \rightarrow V}: \mathbb{R}^U \mapsto \mathbb{R}^V:\{f(x)\}_{x \in U} \mapsto \{f(x)\}_{x \in V}
+    $$
+\end{definition}
+
+We remember that the Borel $\sigma$-algebra is the canonical algebra for the real line. We now must reason about sets belonging the Borel $\sigma$-algebra of different subsets of the real line map to each other through the projection map. Let us therefore define \textit{cylinder sets}, which are the pre-images of a projection map $\pi_{X \rightarrow V}$ from a Borel set $B \in \mathcal{B}\left(\mathbb{R}^V\right)$.
+
+\begin{definition}[Cylinder Set]
+    \label{def:cylinder_set}
+    A cylinder set is defined as:
+    $$
+    \pi_{X \rightarrow V}^{-1}(B)=\left\{f \in \mathbb{R}^X: \pi_{X \rightarrow V}(f) \in B\right\}
+    $$
+    Therefore, the cylinder set $\pi_{X \rightarrow V}^{-1}(B)$ is the set of all functions whose values on the finite set $V$ lie within the Borel set $B$.
+\end{definition}
+
+Finally, we define the specific $\sigma$-algebra on which the probability measure over functions is defined in the Kolmogorov extension theorem. 
+
+\begin{definition}[Product $\sigma$-algebra]
+    \label{def:product_sigma_algebra}
+    The product $\sigma$-algebra is the smallest $\sigma$-algebra which contains all the cylinder sets $\pi_{X \rightarrow V}^{-1}(B)$ for all finite $V \subset X$ and Borel sets $B$.
+\end{definition}
+
+Having set up these definitions, we can now state the Kolmogorov extension theorem:
+
+\begin{theorem}[Kolmogorov Extension Theorem]
+    \label{thm:kolmogorov_extension}
+    If a family of probability measures $\mu_V$ corresponding to a finite index set $V$ obeys the following consistency relation for all $V \subset X$ and all second finite index sets with $U \supset V$:
+    $$
+    \mu_U\left(\pi_{U \rightarrow V}^{-1}(B)\right)=\mu_V(B)
+    $$
+    then there is a unique probability measure on the product $\sigma$-algebra, $\mathcal{P}_X$ with the property:
+    $$
+    \mathcal{P}_X\left(\pi_{X \rightarrow V}^{-1}(B)\right)=\mu_V(B) \quad \forall B \in \mathcal{B}\left(\mathbb{R}^V\right)
+    $$
+\end{theorem}
+
+In simpler terms, the Kolmogorov extension theorem tells us that if we have a family of probability measures $\mu_V$ corresponding to a finite index set $V$, then there exists a unique probability measure $\mathcal{P}_X$ on the product $\sigma$-algebra which has those measures as finite dimensional marginals\footnote{We use the $\mathcal{P}$ notation to refer to potentially infinite measures on the entire index set, distinguishing them from the explicitly finite marginal distributions, which we will interchangeably use $\mu$, $P$ or $p$ to denote.}. Further, this result is very general and holds even if $X$ is uncountably infinite. We can therefore deal with the infinite-dimensional space of functions by reasoning about the probability distribution of finite subsets of the function. We shall soon see how this allows us to define Gaussian processes as a specific case.
+
+\subsection{Bayes' Theorem for Functions}
+\label{sec:bayes_theorem_functions}
+
+We can now revisit Bayes' Theorem for the infinite-dimensional objects that we are calling functions. If we assume a ``prior'' probability measure $\mathcal{P}$ over the space of all functions that encodes our beliefs, and observed data $y$ over the index set $X$ defined by a likelihood function $p_X(y \mid f)$, then we can define the posterior probability measure $\hat{\mathcal{P}}$ as follows:
+\[
+    \frac{\d \hat{\mathcal{P}}}{\d \mathcal{P}}(f)=\frac{p_X(y \mid f)}{p(y)}, \label{eq:bayes_theorem_functions}
+\]
+where the quantity $p(y)$ is the marginal likelihood, defined as 
+\[
+    p(y) := \int p_X(y \mid f) d \mathcal{P}(f)
+\]
+Since we are dealing with probability measures over infinite-dimensional spaces, instead of writing down density ratios like we usually do, we instead must use the Radon-Nikodym derivative, which we have defined and discussed extensively in \Cref{chapter:sde}.  
+
+In many practical situations, we only observe outputs $y$ on a finite subset $D \subset X$ of the index set (as in the case of a training dataset $D = \{x_i, y_i\}_{i=1}^N$). Therefore, the likelihood only depends on the function $f$ on the subset $D$, i.e. $f_D$. We can therefore define the likelihood function $p_D(y \mid f)$ (or equivalently $p(y \mid f_D)$) as the probability of the data $y$ given the function $f$ on the subset $D$. We can then define the posterior probability measure $\hat{\mathcal{P}}$ through the Radon-Nikodym derivative:
+\[
+    \frac{\d \hat{\mathcal{P}}}{\d \mathcal{P}}(f)=\frac{p(y \mid f_D)}{p(y)}
+\]
+where the marginal likelihood is now an integral over a finite subset of the index set, i.e.
+\[
+    p(y) := \int p_D(y \mid f_D) d P(f_D).
+\]
+Finally, we can consider the case where we are interested in calculating the posterior distribution over a finite subset of evaluation points $D_{\star} \subset X$ of the index set. In this situation, we have the joint posterior density over the function values $f_D$ and $f_{D_{\star}}$ given the observations $y$ as follows:
+\[
+    p\left(f_D, f_{D_{\star}} \mid y\right) & =\frac{p\left(y \mid f_D\right) p\left(f_{D_{\star}}, f_D\right)}{p(y)} \\
+    & =\frac{p\left(y \mid f_D\right) p\left(f_D\right) p\left(f_{D_{\star}} \mid f_D\right)}{p(y)}, \label{eq:joint_posterior_density_functions}
+\]
+where the quantities $p(f_D)$ and $p(f_{D_{\star}}, f_D)$ are explicitly the probability densities w.r.t the Lebesgue measure. It is not necessary that these have a simple form w.r.t the Lebesgue measure, but for Gaussian processes, these will simplify to simple Gaussian densities.
+
+\subsection{Gaussian Processes}
+
+GPs are a special case of a Bayesian Nonparametrics model that reconciles the infinite flexibility we want from a stochastic process prior, with the analytic tractability that the choice of a Gaussian provides. From the Kolmogorov extension theorem, we know that any stochastic-process prior must supply a consistent family of finite-dimensional marginals; the multivariate Gaussian distribution is alluring here because it is fully determined by just a mean function and a positive-definite covariance kernel. We simply need to specify these two quantities, and we can encode a coherent and powerful prior over an infinite function space whose behaviour on every finite subset is consistent. Furthermore, the Gaussian law of probability is closed under both marginalisation and conditioning, so when we observe data under a Gaussian likelihood assumption, the posterior remains a GP. That conjugacy means predictive means, variances and sample paths can be computed with simple linear algebra, avoiding the intractable normalising constants that plague most other BNP priors.
+
+Despite this simple assumption, Gaussian processes still provide highly expressive modelling. The covariance kernel lets us encode rich inductive biases, such as smoothness, periodicity, non-stationarity, and compositional structure, to name a few, while keeping the model non-parametric: the effective degrees of freedom still grow with the data because the kernel generates an infinite set of basis functions. With these properties in mind, let us define a Gaussian process in detail, and briefly discuss posterior inference and hyperparameter inference.
+
+\begin{definition}[Gaussian Process]
+    \label{def:gaussian_process}
+    A Gaussian process on a domain $X$ is a stochastic process $\{f(x)\}_{x \in X}$ such that the joint distribution of any finite subset of the function is a multivariate Gaussian distribution specified through a mean function $m( \cdot)$ and a covariance function $k( \cdot, \cdot^{\prime})$ which is positive definite. For any subset $D \subset X$, the joint distribution of the function values $f_D$ is a multivariate Gaussian distribution defined by the mean vector $m_D$ and the covariance matrix $K_{D, D} = k(D, D)$ as follows:
+    \[
+        f_D \sim \mathcal{N}\left(m_D, K_{D, D}\right)
+    \]
+    where the covariance matrix $K_{D, D}$ is a symmetric positive semi-definite matrix. We denote this GP as $f \sim \operatorname{GP}(m, k)$.
+\end{definition}
+
+\subsection{Bayesian Inference with Gaussian Processes}
+
+Let us revisit our Bayesian inference framework from \Cref{sec:bayes_theorem_functions}. Here, we assume a Gaussian process prior $\mathcal{P}$ over the space of all functions, parameterised through a mean function $m( \cdot) := 0$ and a covariance kernel $K( \cdot, \cdot)$. Further, to make our notation more explicit about the availability of training data, we assume that we have access to a training dataset $D = \{x_i, y_i\}_{i=1}^N$ of $N$ observations. We can therefore define the prior over the dataset as follows:
+\[
+    \mathcal{P}(f_D) = \mathcal{N}\left(0, K_{D, D}\right)
+\]
+where $f_D = \{f(x_i)\}_{i=1}^N$ is the function evaluated on the training dataset. Further, for the purpose of this thesis, we will always make the assumption that we are dealing with a Gaussian likelihood, i.e. $p(y \mid f_D) = \mathcal{N}(y \mid f_D, \Sigma)$\footnote{We will discuss the case of non-Gaussian likelihoods more in \Cref{chapter:laplace}, and in the discussion of this chapter}. Using simple linear algebra and properties of the Gaussian distribution, we see that the posterior distribution is also Gaussian, resulting in the posterior distribution being defined by another GP which we denote $f \mid y \sim \operatorname{GP}(m_{\star}, K_{\star})$, with the following mean and covariance functions\footnote{We make an explicit choice of notation for the posterior mean and covariance distributions, using the placeholder $(\cdot)$ to denote that the posterior distribution is a quantity that can be computed at any arbitrary evaluation point $(\cdot)$, and is a quantity involving the training data $f_D$ and the observations $y$.}:
+\begin{subequations}
+\[
+    m_{{\star}}(\cdot) &= K_{(\cdot), D} \left(K_{D, D} + \Sigma\right)^{-1} y \label{eq:m_posterior_gp} \\
+    k_{\star}(\cdot, \cdot^{\prime}) &= k_{(\cdot, \cdot^{\prime})} - K_{(\cdot), D} \left(K_{D, D} + \Sigma\right)^{-1} K_{D, (\cdot^{\prime})} \label{eq:sigma_posterior_gp}
+\]
+\end{subequations}
+
+\subsection{Posterior Distributions with Gaussian Processes}
+
+From \Cref{eq:m_posterior_gp} and \Cref{eq:sigma_posterior_gp}, we can see that the posterior mean and covariance matrix of the function values $f_{D_{\star}}$ given the observations $y$ and the function values $f_D$ involve the matrix inversion of the kernel matrix $K_{D, D} + \Sigma$. This is an $N \times N$ matrix, and therefore the cost of computing the posterior mean and covariance matrix is $\mathcal{O}(N^3)$, due to the explicit inversion of the kernel matrix. In this section, we discuss some techniques that are commonly used to approximate this computational cost, either by using an approximation to the posterior distribution, or by using a less computationally expensive algorithm to approximate the matrix inverse.
+
+\paragraph{Variational Inference.}
+
+The basis of variational inference is to approximate the posterior measure $\hat{\mathcal{P}}$ with a simpler measure $\mathcal{Q}^{\star}$ that is the solution to the following optimisation problem:
+\[
+    \mathcal{Q}^{\star} = \arg \min_{\mathcal{Q}} D_{\text{KL}}\left(\mathcal{Q} \| \hat{\mathcal{P}}\right).
+\]
+In particular, we study the \textit{inducing points} method, which can be framed in a variational framework following \textcite[Chapter 3, Theorem 2]{de2017scalable}, which is equivalent to the framework of \textcite{titsias2009variational}. The idea is to consider a set of inducing points $Z \subset X$, which gives us the following decomposition of the KL divergence:
+\[
+    D_{\text{KL}}[\mathcal{Q} \| \hat{\mathcal{P}}]=D_{\text{KL}}\left[Q_Z \| P_Z\right]-\mathbb{E}_{Q_D}\left[\log p\left(y \mid f_D\right)\right]+\log p(y).
+\]
+Following \textcite{titsias2009variational}, we obtain the posterior mean and covariance function of the approximate, variational posterior as follows:
+\[
+    m^{(Z)}_{\star}(\cdot) &= K_{(\cdot), Z} \left(K_{Z, Z} + K_{Z, D} \Sigma^{-1} K_{D, Z}\right)^{-1} \Sigma^{-1}y \label{eq:m_posterior_gp_variational} \\
+    k^{(Z)}_{\star}(\cdot, \cdot^{\prime}) &= k_{(\cdot, \cdot^{\prime})} + K_{(\cdot), Z} \left(\left(K_{Z, Z} + K_{Z, D} \Sigma^{-1} K_{D, Z}\right)^{-1} - K_{Z, Z}^{-1}\right) K_{Z, (\cdot^{\prime})} \label{eq:sigma_posterior_gp_variational}
+\]
+where $K_{Z, Z} = k(Z, Z)$ is the kernel matrix evaluated on the inducing points $Z$. As we can see, the computational cost of the variational posterior is $\mathcal{O}(|Z|^3)$, which is significantly lower than the $\mathcal{O}(N^3)$ cost of the exact posterior.
+
+\paragraph{Conjugate Gradients.}
+
+As we see in \Cref{eq:m_posterior_gp}, the challenge of calculating the posterior mean and covariance matrix reduces to the challenge of solving a system of linear equations of dimensionality $N$, given by
+\[
+v^{\star} = \left(K_{D, D} + \Sigma\right)^{-1} y.
+\]
+Similarly, for \Cref{eq:sigma_posterior_gp}, we must solve $N$ linear systems per test datapoint, solving $(K_{D, D} + \Sigma)^{-1}$ against each element of the kernel matrix $K_{D, (\cdot^{\prime})}$. While the ``exact'' solution requires a matrix inversion, there are often approximate methods that can be used to solve this system of linear equations.
+
+\emph{Conjugate gradients} (CG) are the most widely used algorithm to solve such problems, both in the context of GPs \cite{Gibbs_MacKay97a,gardner18,Artemev21} and more generally \cite{numerical07,BoydVandenberghe2014}. CG reduces GP posterior inference to a series of matrix-vector products, each of $\mathcal{O}(N^2)$ cost. Given the system $(K_{D, D} + \Sigma)^{-1} y$, the number of matrix-vector products needed to guarantee convergence of CG to within a tolerance of $\epsilon$ \cite{terenin23}, is
+\[
+    \mathcal{O}\left(\sqrt{\operatorname{cond}((K_{D, D} + \Sigma))} \log \frac{\operatorname{cond}((K_{D, D} + \Sigma))\|y\|}{\varepsilon}\right) \\
+    \text{where }\operatorname{cond}((K_{D, D} + \Sigma))=\frac{\lambda_{\max }((K_{D, D} + \Sigma))}{\lambda_{\min }((K_{D, D} + \Sigma))}
+\]
+where $\lambda_{\max}((K_{D, D} + \Sigma))$ and $\lambda_{\min}((K_{D, D} + \Sigma))$ are the maximum and minimum eigenvalues of $(K_{D, D} + \Sigma)$.
+CG performs well in many GP use cases, for instance \textcite{gardner18,WangPGT2019exactgp}.
+In general, however, the condition number $\operatorname{cond}((K_{D, D} + \Sigma))$ need not be bounded, and conjugate gradients may fail to converge quickly \cite{terenin23}.
+
+\paragraph{Issues with Posterior Distributions.}
+
+Having discussed the computational challenges of posterior inference, and a few solutions to them, we must discuss how dealing with exact posterior distributions can still be quite challenging in practice. For example, even storing the posterior distribution in its full form requires $\mathcal{O}(N^2)$ memory, which is prohibitive for large datasets. Furthermore, the posterior distribution is a function of the training data, and therefore requires re-computation of the posterior distribution when the training data changes, or when new data is observed, such as in a sequential framework like Bayesian optimisation.
+
+\section{Sampling-Based Inference with Gaussian Processes}
+
+In this thesis, we will focus on the framework of ``pathwise conditioning'', a technique that allows us to compute individual samples from the posterior distribution by modifying samples from the prior distribution. By replacing the computation of the posterior distribution with the computation of a few samples from it instead, we can reframe the Bayesian inference problem in an approximate, sampling-based approach, where we use Monte-Carlo estimates of the posterior covariance, as well as the model evidence (or approximations thereof). 
+
+We have discussed the seminal result from Matheron \parencite{journel1976mining, chiles2012geostatistics, wilson2021pathwise} in the context of finite multivariate Gaussian distributions before in \Cref{thm:matherons_rule}. Turns out, it is trivially extended to the infinite-dimensional Gaussian process case, which we state here:
+\begin{theorem}[Matheron's rule for Gaussian processes]
+    \label{thm:matherons_rule_gp}
+Let $f \sim \operatorname{GP}(m, k)$ be a Gaussian process, $f_D$ be the function values at training points $D$ and $f(\cdot)$ a sample from the GP prior. Then, a sample from the posterior GP $f \mid y \sim \operatorname{GP}(m_{\star}, k_{\star})$ from \Cref{eq:m_posterior_gp} and \Cref{eq:sigma_posterior_gp} is expressed as
+\[
+    (f \mid y)(\cdot) = f(\cdot) + K_{(\cdot), D} (K_{D,D} + \Sigma)^{-1} (y - f_D - \epsilon), \quad \epsilon \sim \mathcal{N}(0, \Sigma) \label{eq:pathwise_conditioning_gp}
+\]
+\end{theorem}
+\begin{proof}
+We can apply \Cref{thm:matherons_rule} to the finite-dimensional Gaussian distributions $f_D$ and $f_{(.)})$ to obtain the result.
+\end{proof}
+
+We can now use \Cref{thm:matherons_rule_gp} to compute a sample from the posterior GP $f \mid y \sim \operatorname{GP}(m_{\star}, k_{\star})$ by sampling a sample from the prior GP $f \sim \operatorname{GP}(m, k)$ and applying the Matheron transformation. This result is very powerful, as it allows us to reframe the posterior inference problem as the task of computing a finite number of samples from the posterior GP and using Monte-Carlo estimates. Looking at \Cref{eq:pathwise_conditioning_gp}, we see that there are some quantities that are still intractable, and we need to compute. For example, if we assume a set of test points $D_{\star} \subset X$ of cardinality $N_{\star}$, then we have the following quantities to compute: 
+\begin{itemize}
+    \item the prior function samples $f(\cdot)$ at the test points $D_{\star}$, require $\mathcal{O}(N_{\star}^3)$ time to compute.
+    \item the inversion of the kernel matrix $K_{D, D} + \Sigma$ of size $N \times N$ requires $\mathcal{O}(N^3)$ time to compute.
+\end{itemize}
+
+So, while we were aiming to reduce the computational cost of posterior inference, we have ended up with a similarly expensive problem. In \textcite{wilson2021pathwise}, the authors rely on random feature approximations to reduce this computational cost, which we discuss here for completeness. However, we can already see how naive ``pathwise conditioning'' is not a solution to our problem, and we will need a smarter strategy to compute posterior samples.
+
+\paragraph{Cholesky sampling.}
+
+The ``exact'' approach to sampling from multivariate Gaussian distributions $\mathcal{N}(m, K)$ is to use the Cholesky decomposition of the covariance matrix to modify a sample from the standard Gaussian distribution $\mathcal{N}(0, I)$, using the following transformation:
+\[
+    \epsilon \sim \mathcal{N}(0, I) \quad \Rightarrow \quad x \leftarrow m + Lx
+\]
+where $L$ is the Cholesky factor of the covariance matrix $K$. Therefore, we can write samples from the GP prior over the test points $D_{\star}$ as follows:
+\[
+    \epsilon \sim \mathcal{N}(0, I) \quad \Rightarrow \quad f(\cdot) \leftarrow m_{\star} + L_{\star} \epsilon
+\]
+where $L_{\star}$ is the Cholesky factor of the covariance matrix $K_{\star, \star}$.
+
+\paragraph{Random feature approximations.}
+
+The Random Feature approximation is an alternate technique that allows us to obtain approximate samples from the GP prior quite efficiently \citep{rahimi2007random, terenin2022gaussian, wilson2021pathwise}. Random Fourier features are sets of $L$ random functions $\Phi: X \rightarrow \mathbb{R}^L$ whose components, indexed by $\ell \leq L$, are $\phi_{\ell}(\cdot)=L^{-1 / 2} \cos \left(2 \pi\left\langle\omega_{\ell}, \cdot\right\rangle\right)$ for $\ell$ odd, and $\phi_{\ell}(\cdot)=$ $L^{-1 / 2} \sin \left(2 \pi\left\langle\omega_{\ell}, \cdot\right\rangle\right)$ for $\ell$ even. By taking $\omega_{\ell}$ to be samples distributed according to $\rho$, the normalized spectral measure of the kernel, for any $x, x^{\prime} \in X$ we have
+\[
+    k\left(x, x^{\prime}\right)=\mathbb{E}_{\omega_1, \ldots, \omega_L \sim \rho}\left\langle{\Phi}(x), {\Phi}\left(x^{\prime}\right)\right\rangle.
+\]
+Given a precomputed set of Fourier features ${\Phi}$, we can estimate samples from a GP prior in a Monte Carlo fashion as follows:
+\[
+    f(\cdot) \approx \tilde{f}(\cdot)={\epsilon}^T {\Phi}(\cdot)=\sum_{\ell=1}^L \epsilon_{\ell} \phi_{\ell}(\cdot) \quad \epsilon \sim \mathcal{N}(0, I) \label{eq:random_feature_approximation}
+\]
+where $\epsilon$ is a vector of random variables drawn from the standard Gaussian distribution. The approximation error in this approximation decays as $L$ goes to infinity. 
+
+\textcite{wilson2021pathwise} use Random Fourier features to approximate the ``pathwise'' conditioning update for posterior samples as:
+\[
+    (f \mid y)(\cdot) = \tilde{f}(\cdot) + \underbrace{{\Phi}(\cdot)^T {\Phi}({x})}_{\text {replaces } {K}_{(\cdot), D}} (\underbrace{{\Phi}({x})^T {\Phi}({x})}_{\text {replaces } {K}_{D, D}}+{\Sigma})^{-1}(y-\tilde{f}_D-{\epsilon}) \label{eq:random_feature_conditioning}
+\]
+where $\tilde{f}_D$ is evaluating \Cref{eq:random_feature_approximation} at the training points $D$ and $\epsilon$ is a vector of random variables drawn from the standard Gaussian distribution.
+
+\paragraph{Issues with ``Pathwise Conditioning''.}
+
+While the ``pathwise conditioning'' technique is a powerful tool for sampling from the GP posterior, we see that it also suffers from the same computational bottlenecks as the exact posterior inference. For example, we need to compute the matrix inversion of the kernel matrix $K_{D, D} + \Sigma$ of size $N \times N$ to compute the posterior mean and samples from the posterior covariance. While papers such as \textcite{wilson2021pathwise} use random feature approximations to reduce the computational cost of the matrix inversion, we lose some of our exactness in the process, having to make a trade-off between computational cost and accuracy. Similarly, we could use conjugate gradients to solve the matrix inversions in \Cref{eq:pathwise_conditioning_gp}, but in ill-conditioned problems, CG can take a very long time to converge, tending towards $\mathcal{O}(N)$ steps, each with $\mathcal{O}(N^2)$ cost. We therefore turn to a different family of optimisation algorithms to tackle the challenge of solving the linear systems that emerge in GP posterior mean calculation and posterior sampling: Stochastic Gradient Descent (SGD) algorithms.
+
+\section{Stochastic Gradient Descent for Sampling}
+
+In recent years, stochastic gradient descent (SGD) has emerged as the leading technique for training machine learning models at scale \cite{Ruder16SGD,Zhang2023sgd}, in both deep learning and related settings like kernel methods \cite{dai2014doubly} and Bayesian modeling \cite{Mandt17Descent}.
+While the principles behind the effectiveness of SGD are not yet fully understood, empirically, SGD often leads to good predictive performance---even when it does not fully converge.
+The latter is the default regime in deep learning, and has motivated researchers to study \emph{implicit biases} and related properties of SGD \cite{Belkin2019,ZouWBGK2021benign}.
+
+In the context of GPs, SGD is commonly used to learn kernel hyperparameters---by optimizing the marginal likelihood \cite{filippone2015stochastic,Cunningham2016preconditioning,gardner18,chen20,chen22} or closely related variational objectives \cite{titsias09,hensman13}. 
+In this work, we explore applying SGD to the complementary problem of approximating GP posterior samples given fixed kernel hyperparameters.
+In this section, we ask: \emph{Do the linear systems arising in GP computations necessarily need to be solved to a small error tolerance? If not, can SGD help accelerate these computations?}
+
+We answer this question affirmatively, with specific contributions as follows: (i) We develop a scheme for drawing GP posterior samples by applying SGD to a quadratic problem. 
+In particular, we re-cast the pathwise conditioning technique of \textcite{wilson2021pathwise} as an optimization problem to which we apply the low-variance SGD sampling estimator of \textcite{Antoran22sampling}. 
+We extend the proposed method to inducing point Gaussian processes.
+(ii) We characterize the implicit bias in SGD-approximated GP posteriors showing that despite optimization not fully converging, these match the true posterior in regions both near and far away from the data. 
+(iii) Experimentally, we show that SGD produces strong results---compared to variational and conjugate gradient methods---on both large-scale and poorly-conditioned regression tasks, and on a parallel Thompson sampling task, where error bar calibration is paramount.
+
+\subsection{SGD For Linear System Solutions}
+
+In order to apply SGD to the problem of sampling from the GP posterior, we need to re-cast both the posterior mean and posterior sample calculation as optimisation problems. In this section, we make our notation concrete, and discuss two formulations of objectives that we can use to approximate the posterior mean and samples from the GP posterior.
+
+Given a training dataset $D = \{x_i, y_i\}_{i=1}^N$, the kernel $K_{D, D}$, an assumption of a Gaussian likelihood with isotropic noise $\Sigma = \lambda I$, we can write the form of linear system that we need to solve to compute the posterior mean and samples from the GP posterior as follows:
+\[
+    \alpha^\star(b) = (K_{D, D} + \lambda I)^{-1} b, \quad \alpha \in \R^N
+\]
+Now, let us define the following function:
+\[
+    h_b (\cdot) = \sum_{i=1}^N \alpha^{\star}_{i}(b) k(x_i,\cdot).
+\]
+Then we can see how we obtain the following
+\[
+    h_{y} &= \sum_{i=1}^N \alpha_{i}(y) k(x_i,\cdot) \label{eq:posterior_mean_sgd} \\
+    &= (K_{(\cdot), D}) (K_{D, D} + \lambda I)^{-1} y = m_{\star}(\cdot) \nonumber
+\]
+and similarly,
+\[
+f(\cdot) + h_{y - f_D - \epsilon} &= f(\cdot) + \sum_{i=1}^N \alpha_{i}(y - f_D - \epsilon) k(x_i,\cdot) \label{eq:posterior_sample_sgd} \\
+&= f(\cdot) + K_{(\cdot), D} (K_{D, D} + \lambda I)^{-1} (y - f_D - \epsilon) \nonumber \\
+&= (f \mid y)(\cdot) \nonumber
+\]
+
+\subsection{Gradient Descent: Primal versus Dual Objectives}\label{subsec:primal_vs_dual}
+
+% For any $b \in \R^n$, computing the vector $\alpha^\star(b)$ of \cref{eq:alpha-star} using Cholesky factorisation takes on the order of $n^3$ operations. 
+
+% The vector $\alpha^\star(b)$ of \cref{eq:alpha-star} is the minimiser of the kernel ridge regression objective,
+% \begin{equation*}
+%     \label{eq:primal_objective}
+% L(\alpha) = \frac{1}{2}\norm{b - K \alpha}^2 + \frac{\lambda}{2} \norm{\alpha}^2_K 
+% \end{equation*}
+% over $\alpha \in \R^n$ \cite{smola1998learning}. We will refer to $L$ as the \emph{primal} objective in the context of this work, to contrast with our proposed dual objective, which we shall introduce shortly.
+
+% Consider using gradient descent to minimise $L(\alpha)$. 
+% This entails constructing a sequence $(\alpha_t)_t$ of elements in $\R^n$, which we initialise at the standard but otherwise arbitrary choice $\alpha_0 = 0$, and setting
+% \begin{equation*}
+%     \alpha_{t+1} = \alpha_t - \beta \nabla L(\alpha_t),
+% \end{equation*}
+% where $\beta > 0$ is a step-size and $\nabla L$ is the gradient function of $L$. Recall that the speed at which $\alpha_t$ approaches $\alpha^\star(b)$ is determined by the condition number of the Hessian: the larger the condition number, the slower the convergence speed.
+% The intuitive reason for this correspondence is that, to guarantee convergence, the step-size needs to scale inversely with the largest eigenvalue of the Hessian, while progress in the direction of an eigenvector underlying an eigenvalue is governed by the step-size multiplied with the corresponding eigenvalue. The \emph{primal} gradient and Hessian are
+% \begin{equation}\label{eq:primal_gradient}
+%     \nabla L(\alpha) = K (\lambda \alpha - b + K\alpha)
+%     \spaced{and}
+%     \nabla^2 L(\alpha) = K(K+\lambda I)
+% \end{equation}
+% respectively, and therefore we have the following (tight) bounds on the relevant eigenvalues,
+% \begin{equation*}
+%     0 \leq \lambda_n(K(K+\lambda I )) \leq \lambda_1(K(K+\lambda I)) \leq \kappa n(\kappa n+\lambda),
+% \end{equation*}
+% where $\kappa = \sup_{x\in \cX} k(x,x)$ is finite by assumption. These bounds only allow for a step-size $\beta$ on the order of $(\kappa n(\kappa n+\lambda))^{-1}$. Moreover, since the minimum eigenvalue is not bounded away from zero, we do not have a~priori guarantees for the performance of gradient descent using $L$. 
+
+\mynote{Add mostly discussion from ICLR SDD paper, inducing points, asymptotic analysis, plots, and results.}

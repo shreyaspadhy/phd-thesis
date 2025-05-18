@@ -1,0 +1,2 @@
+amortized_vfkic2b4:
+	Amortized training, from the previous arxiv paper 

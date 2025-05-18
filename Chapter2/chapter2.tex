@@ -12,7 +12,7 @@
     \graphicspath{{Chapter2/Figs/Vector/}{Chapter2/Figs/}}
 \fi
 
-The task of sampling in machine learning can be broadly divided into three distinct paradigms. In the first situation, we don't have any existing samples from an unnormalised probability distribution, and we are only able to evaluate the unnormalised density $\hpi(x)$ and the gradient of the density $\nabla_x \hpi(x)$\footnote{The assumption is often made that one can evaluate the gradient of the log-density $\nabla_x \log \hpi$. These are equivalent assumptions, as by the chain rule of calculus we can write $\nabla_x \log \hpi(x) = \frac{1}{\hpi(x)} \nabla_x \hpi(x)$}. The task of \textit{unnormalised density sampling} (\Cref{fig:sampling_paradigm}, I.) focuses on learning to draw samples from this probability distribution (and often-times using these samples to estimate the normalising constant). 
+The task of sampling in machine learning can be broadly divided into three distinct paradigms. In the first situation, we don't have any existing samples from an unnormalised probability distribution, and we are only able to evaluate the unnormalised density $\hpi(x)$ and the gradient of the density $\nabla_x \hpi(x)$\footnote{The assumption is often made that one can evaluate the gradient of the log-density $\nabla_x \ln \hpi$. These are equivalent assumptions, as by the chain rule of calculus we can write $\nabla_x \ln \hpi(x) = \frac{1}{\hpi(x)} \nabla_x \hpi(x)$}. The task of \textit{unnormalised density sampling} (\Cref{fig:sampling_paradigm}, I.) focuses on learning to draw samples from this probability distribution (and often-times using these samples to estimate the normalising constant). 
 
 In the second task of \textit{generative modelling} (\Cref{fig:sampling_paradigm}, II.), we only have access to a training dataset of samples from our probability distribution of interest, i.e. $\mathcal{D}_{\text{train}} = \{x^{(i)}\}_{i=1}^{N_{\text{train}}}$, but not the ability to evaluate the density or its gradients. The task therefore focuses on using these samples to learn parametrised approximations to our probability distribution of interest, allowing us to draw novel samples from this approximation, and sometimes allowing us to estimate the density $\hpi(x)$. 
 
@@ -117,7 +117,7 @@ Unfortunately, there are a few issues with this approach in general. Firstly, th
 
 Markov Chain Monte Carlo (MCMC) methods allow us to construct a Markov chain with an equilibrium distribution that matches the target distribution $\pi$. While the literature of MCMC algorithms is vast, and we could dedicate an entire chapter to summarising the recent advances, for the purpose of this thesis, we will focus on one specific algorithm: Langevin dynamics, which can exploit information about the gradient of the log-density of $\hpi$ to obtain high-quality samples compared to other MCMC variants. Specifically, assuming a sample from a simple distribution $x_0 \sim \mu$, we can follow the following iterative procedure
 \begin{equation}
-    x_{t+1} \leftarrow x_t + \Delta t \nabla_x \log \hpi(x) + \sqrt{2 \Delta t} \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, I), \quad t = 0, \ldots, T \label{eq:langevin_dynamics}
+    x_{t+1} \leftarrow x_t + \Delta t \nabla_x \ln \hpi(x) + \sqrt{2 \Delta t} \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, I), \quad t = 0, \ldots, T \label{eq:langevin_dynamics}
 \end{equation}
 where $\Delta t$ is a small interval. When $\Delta t \rightarrow 0$ and $T \rightarrow \infty$, it can be shown that $x_T$ obtained by the procedure above converges to a sample from $\pi(x)$ under some regularity conditions.
 
@@ -126,7 +126,7 @@ Vanilla Langevin dynamics can struggle in practise to produce samples that are d
 \begin{lightgraybox}{Remark: Continuous Limit of Langevin Dynamics}
 In fact, our choice of using $t$ to refer to the discrete index foreshadows what Langevin dynamics converges to in the continuous limit: a time-varying stochastic differential equation. Intuitively, we could write down a differential equation of $x$ w.r.t $t$ as
 \begin{equation}
-    \frac{\mathrm{d}x_t}{\mathrm{d}t} = \nabla_x \log \hpi(x_t) + C \times \frac{\mathrm{d} \text{``noise''} }{\mathrm{d}t}, \label{eq:sde_intuitive}
+    \frac{\mathrm{d}x_t}{\mathrm{d}t} = \nabla_x \ln \hpi(x_t) + C \times \frac{\mathrm{d} \text{``noise''} }{\mathrm{d}t}, \label{eq:sde_intuitive}
 \end{equation}
 for some constant $C$. The introduction of a noise term in the differential equation introduces subtle issues that prevent us from relying on traditional ordinary differential equation machinery, and we will need to develop a ``stochastic'' calculus framework in order to successfully find solutions for equations of such form. However, here, it suffices to say that Langevin dynamics is a specific instantiation of an SDE.
 % However, it suffices to say that the connection between Langevin dynamics and SDEs provides us with a compelling reason to consider a stochastic calculus framework for a unifying viewpoint of sampling. 
@@ -139,7 +139,7 @@ for some constant $C$. The introduction of a noise term in the differential equa
 % In terms of our framework above, we can see that when $z = x_0$, we are describing a Markov chain that iteratively maps $z$ to $x = x_T$, with a mapping defined as follows
 % \begin{align}
 %     p_{\theta}(x \mid z) &= p(x \mid x_{T-1}) \left[ \prod_{t=1}^{T-1} p(x_{t} \mid x_{t-1}) \right] p(x_1 \mid z) \\
-%     \text{with } p(x_t \mid x_{t-1}) &= \mathcal{N}(x_t; x_{t-1} + \Delta t \nabla_{x_{t-1}} \log \hpi(x_{t-1}), 2 \Delta t I)
+%     \text{with } p(x_t \mid x_{t-1}) &= \mathcal{N}(x_t; x_{t-1} + \Delta t \nabla_{x_{t-1}} \ln \hpi(x_{t-1}), 2 \Delta t I)
 % \end{align}
 % and the parameters $\theta = \{\Delta t, T\}$.
 
@@ -187,18 +187,19 @@ These weights can be computed efficiently in an iterative manner while proceedin
 
 The AIS algorithm is quite flexible, and allows us to make a few choices in the design of the intermediate distributions $\left(\hpi_t\right)_{t=0}^T$ and the forward and backward transition kernels $\left(F_t\right)_{t=1}^T$ and $\left(B_t\right)_{t=0}^{T-1}$. For example, we can pick suitable forward transition kernels $\left(F_t\right)_{t=1}^T$ as long as they are invariant to the annealed distribution $\pi_t$, and common choices include MCMC kernels (Metropolis-Hastings, Gibbs', etc), Langevin dynamics, etc. Correspondingly, we can pick backwards transition kernels $\left(B_t\right)_{t=0}^{T-1}$ with properties beneficial to us. In fact, modern extensions of AIS allow for parametrised choices of $F_t$ and $B_t$ that can reduce the variance of the importance sampling weights, or be learnable through backpropagation, bringing them closer to our framework discussed in \Cref{eq:framework_mc}.
 
+% NOTE: ALGO UNCOMMENT
 \begin{algorithm}[!t]
 \begin{algorithmic}[1]
-\REQUIRE Sequence of unnormalized distributions $\{\hat{\pi}_t\}_{t=0}^T$ with $\hat{\pi}_T = \hat{\pi}$
-\REQUIRE Forward transition kernels $\{F_t\}_{t=1}^T$ with $F_t$ invariant to $\pi_t$
-\STATE Sample $x_0^{(i)} \sim \pi_0(x)$ from initial distribution
-\STATE Initialize weight $w^{(i)} = 1$
-\FOR{$t = 1$ to $T$}
-    \STATE Sample $x_t^{(i)} \sim F_t(x_t | x_{t-1}^{(i)})$ from forward transition
-    \STATE Update weight $w^{(i)} \leftarrow w^{(i)} \cdot \frac{\hat{\pi}_t(x_{t-1}^{(i)})}{\hat{\pi}_{t-1}(x_{t-1}^{(i)})}$
-\ENDFOR
-\STATE Set $x^{(i)} = x_T^{(i)}$ as final sample
-\RETURN $\{(x^{(i)}, w^{(i)})\}_{i=1}^N$
+\Require Sequence of unnormalized distributions $\{\hat{\pi}_t\}_{t=0}^T$ with $\hat{\pi}_T = \hat{\pi}$
+\Require Forward transition kernels $\{F_t\}_{t=1}^T$ with $F_t$ invariant to $\pi_t$
+\State Sample $x_0^{(i)} \sim \pi_0(x)$ from initial distribution
+\State Initialize weight $w^{(i)} = 1$
+\For{$t = 1$ to $T$}
+    \State Sample $x_t^{(i)} \sim F_t(x_t | x_{t-1}^{(i)})$ from forward transition
+    \State Update weight $w^{(i)} \leftarrow w^{(i)} \cdot \frac{\hat{\pi}_t(x_{t-1}^{(i)})}{\hat{\pi}_{t-1}(x_{t-1}^{(i)})}$
+\EndFor
+\State Set $x^{(i)} = x_T^{(i)}$ as final sample
+\Return $\{(x^{(i)}, w^{(i)})\}_{i=1}^N$
 \end{algorithmic}
 \caption{Annealed Importance Sampling (AIS)}
 \label{alg:ais}
@@ -211,7 +212,7 @@ In \textcite{neal2001annealed}, Radford Neal chose a Metropolis-Hastings sampler
 
 which simplifies the calculation of the importance sampling weights in Algorithm~\ref{alg:ais}. Another closely-related algorithm is the Unadjusted Langevin Annealing (ULA) sampler \parencite{wu2020stochastic,welling2011bayesian,thin2021monte}, which defines the forward transition kernel as an approximate Langevin dynamics algorithm that uses intermediate annealed distributions at each time step (instead of the target distribution itself, as defined in \Cref{eq:langevin_dynamics})
 \[
-    x_{t+1} \leftarrow x_t + \Delta t \nabla_x \log \hpi_t(x) + \sqrt{2 \Delta t} \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, I), \quad t = 0, \ldots, T.
+    x_{t+1} \leftarrow x_t + \Delta t \nabla_x \ln \hpi_t(x) + \sqrt{2 \Delta t} \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, I), \quad t = 0, \ldots, T.
 \]
 Furthermore, the backwards kernel is defined quite simply as the reverse of the forward kernel, i.e. $B_t^{\text {ula }}(x_t \mid x_{t+1})=F_{t+1}(x_{t+1} \mid x_t)$.
 % NOTE: Check if time index is correct?
@@ -248,8 +249,8 @@ VAEs parametrise $p_{\theta}$ (termed the \textit{decoder}) from the latent spac
 \end{equation}
 Instead, a VAE learns a corresponding \textit{encoder} model $q_{\phi}(z \mid x)$ to approximate $p(z \mid x)$. Here, we follow the somewhat unconventional derivation of \textcite{kingma2019introduction} to derive the loss function for a VAE as a lower bound to the marginal log-likelihood, which is given as
 \begin{align}
-    \log p_{\phi}(x) &= \E_{q_{\theta}(z \mid x)} \left[ \log p_{\phi}(x) \right] \\
-    &= \underbrace{\E_{q_{\theta}(z \mid x)} \left[ \log \left[ \frac{p_{\phi}(x, z)}{q_{\theta}(z \mid x)} \right] \right]}_{\substack{=\mathcal{L}_{\theta, \phi}(x) \\(\mathrm{ELBO})}} - \underbrace{\E_{q_{\theta}(z \mid x)} \left[ \log \left[ \frac{q_{\theta}(z \mid x)}{p_{\phi}(z \mid x)} \right] \right]}_{D_{KL}(q_{\theta}(z \mid x) \mid \mid p_{\phi}(z \mid x))} \label{eq:vae_loss}
+    \ln p_{\phi}(x) &= \E_{q_{\theta}(z \mid x)} \left[ \ln p_{\phi}(x) \right] \\
+    &= \underbrace{\E_{q_{\theta}(z \mid x)} \left[ \ln \left[ \frac{p_{\phi}(x, z)}{q_{\theta}(z \mid x)} \right] \right]}_{\substack{=\mathcal{L}_{\theta, \phi}(x) \\(\mathrm{ELBO})}} - \underbrace{\E_{q_{\theta}(z \mid x)} \left[ \ln \left[ \frac{q_{\theta}(z \mid x)}{p_{\phi}(z \mid x)} \right] \right]}_{D_{KL}(q_{\theta}(z \mid x) \mid \mid p_{\phi}(z \mid x))} \label{eq:vae_loss}
 \end{align}
 % NOTE: Show more clearly how this is just KL-divergence between p_theta and q_phi.
 Since the KL-divergence term in \Cref{eq:vae_loss} is non-negative, we can see that the ELBO is a lower bound to the marginal log-likelihood, and in an ideal setting, one learns the parameters $\theta$ and $\phi$ by maximising the ELBO over the training dataset $\Dtrain$. In practice, VAEs often struggle to learn a sufficiently flexible encoder $q_{\theta}(z \mid x)$ and decoder $p_{\phi}(x \mid z)$, resulting in poor (or blurry) samples from the model. Intuitively, we can see how VAEs lie within our framework, albeit without using intermediate latent variables to parametrise the mapping. However, by allowing a more heirarchical structure, we can design more flexible models that can learn more complex mappings, which we will see in the next section.
@@ -297,7 +298,7 @@ Normalising flows tend to perform really well in practise, owing to the flexibil
 % Maximum‐likelihood training therefore minimises the empirical KL divergence between the data distribution $\hat\pi$ and the model $\pi_{\theta}$:
 % \begin{equation}
 %     \theta^{\star}=\arg\min_{\theta}\;\text{KL}\bigl(\hat\pi\;\|\;\pi_{\theta}\bigr)
-%                    =\arg\max_{\theta}\;\mathbb E_{\hat\pi}\bigl[\log\pi_{\theta}(x)\bigr]. \label{eq:nf_kl}
+%                    =\arg\max_{\theta}\;\mathbb E_{\hat\pi}\bigl[\ln\pi_{\theta}(x)\bigr]. \label{eq:nf_kl}
 % \end{equation}
 % Equation\,\eqref{eq:nf_kl} is precisely the divergence objective in the latent‐transport framework with $q_{\phi}(z\mid x)=\delta\bigl(z-f_{\theta}^{-1}(x)\bigr)$ (a Dirac distribution, since inversion is deterministic) and $p_{\theta}(x\mid z)=\delta\bigl(x-f_{\theta}(z)\bigr)$.  Both conditional legs collapse to deterministic transports, yet the joint densities $q_{\theta}(x,z)$ and $p_{\theta}(x,z)$ remain well defined.  The KL between them reduces to the data‐likelihood term above, so NF training fits neatly under the variational umbrella.
 
@@ -307,7 +308,7 @@ Normalising flows tend to perform really well in practise, owing to the flexibil
 % \end{equation}
 % with $x_T$ taken as the generated sample.  This \emph{continuous normalising flow} (CNF) view \parencite{chen2018neural,grathwohl2019ffjord,dupont2019augmented} leads to the instantaneous change‐of‐variables formula
 % \begin{equation}
-%     \frac{\mathrm d}{\mathrm dt}\log\pi_t(x_t) = -\nabla\cdot v_{\theta}(x_t,t), \label{eq:cnf_continuity}
+%     \frac{\mathrm d}{\mathrm dt}\ln\pi_t(x_t) = -\nabla\cdot v_{\theta}(x_t,t), \label{eq:cnf_continuity}
 % \end{equation}
 % so that the log‐density along the path is obtained by integrating the divergence of the velocity field.  Importantly, the ODE induces a deterministic \emph{path measure} that is absolutely continuous with respect to the Wiener measure concentrated on deterministic trajectories.  Because every data point $x$ is reached by exactly one latent path $\gamma_x(\cdot)$, optimising \eqref{eq:nf_kl} again amounts to minimising the divergence between the pushforward path measure $\rightP_{\theta}=\gamma_{\theta\,#}\pi_0$ and the empirical measure $\leftP_{\text{data}}$ concentrated at $t=T$.  In this sense CNFs occupy the continuous‐time corner of the same family that includes AIS (stochastic, bidirectional), Langevin dynamics (stochastic, unidirectional) and VAEs (single‐step stochastic).
 
@@ -325,11 +326,11 @@ Normalising flows tend to perform really well in practise, owing to the flexibil
 % \end{equation}
 % where the normalising constant is unknown and requires estimation. In order to learn $f_{\theta}(x)$, we can maximise the expected log-likelihood over the data distribution, defined by
 % \begin{equation}
-%     \mathbb{E}_{x \sim \Dtrain} \left[ \log p_{\theta}(x) \right] = \mathbb{E}_{x \sim \Dtrain} \left[ - f_{\theta}(x) - \log Z_{\theta} \right].
+%     \mathbb{E}_{x \sim \Dtrain} \left[ \ln p_{\theta}(x) \right] = \mathbb{E}_{x \sim \Dtrain} \left[ - f_{\theta}(x) - \ln Z_{\theta} \right].
 % \end{equation}
 % While we cannot directly compute the likelihood of an EBM due to the normalizing constant $Z_{\theta}$, we can directly estimate the gradient of the log-likelihood using MCMC approaches, giving us
 % \begin{align}
-%     \nabla_{\theta} \log \pi_{\theta}(x) &= - \nabla_{\theta} f_{\theta}(x) - \nabla_{\theta} \log Z_{\theta} \\
+%     \nabla_{\theta} \ln \pi_{\theta}(x) &= - \nabla_{\theta} f_{\theta}(x) - \nabla_{\theta} \ln Z_{\theta} \\
 %     &= - \nabla_{\theta} f_{\theta}(x) - \mathbb{E}_{x \sim \pi_{\theta}(x)} \left[ - \nabla_{\theta} f_{\theta}(x) \right]
 % \end{align}
 % where the first term on the RHS can be computed using automatic differentiation, and the second term can be written as an expectation over $\pi_{\theta}$\footnote{Proof is given in Appendix A.}. Therefore, the challenge in training an EBM boils down to the ability to draw accurate and efficient samples from $\pi_{\theta}$, which is performed using Langevin dynamics, and as we saw in Section \ref{sec:mcmc}, this is equivalent to a time-varying stochastic differential equation in the continuous limit.
@@ -341,11 +342,11 @@ Normalising flows tend to perform really well in practise, owing to the flexibil
 
 Energy-based approaches (such as EBMs) learn a parametrised representation of $\hat{\pi}$, and run into the issue of having to estimate the intractable normalising constant. On the other hand, Score Matching (SM) \parencite{song2019generative,song2020score} attempts to learn a different quantity, the "score" of the probability distribution. This quantity is defined as the gradient of the logarithm of the probability distribution, which gets rid of the necessity of learning the normalising constant,
 \begin{equation}
-    s_{\theta}(x) \simeq \nabla_x \log \hat{\pi}(x) = - \nabla_x f_{\theta}(x) - \underbrace{\nabla_x Z_{\theta}}_{0}.
+    s_{\theta}(x) \simeq \nabla_x \ln \hat{\pi}(x) = - \nabla_x f_{\theta}(x) - \underbrace{\nabla_x Z_{\theta}}_{0}.
 \end{equation}
 Vanilla score-matching models are usually learnt by minimising the Fisher divergence between the parametrised score function and the actual quantity of interest, giving us 
 \begin{equation}
-    \mathcal{L}_{\text{VSM}} = \mathbb{E}_{\hat{\pi}} \left[ \| \nabla_x \log \hat{\pi} (x) - s_{\theta}(x) \|_2^2 \right].
+    \mathcal{L}_{\text{VSM}} = \mathbb{E}_{\hat{\pi}} \left[ \| \nabla_x \ln \hat{\pi} (x) - s_{\theta}(x) \|_2^2 \right].
 \end{equation}
 Due to the structure of the loss function taking an expectation over samples from $\hat{\pi}$, vanilla score-matching techniques often really struggle in approximating $\hat{\pi}$ in regions of low probability where samples are sparse. In order to address this issue, the authors resort to a technique that we will see repeated quite often in the current landscape: \textit{iterative noising}. Instead of learning a score model for $\hat{\pi}$ directly, score-matching creates noisier and noisier versions of $\hat{\pi}$ by adding successively larger amounts of Gaussian noise, and learns a score model per level of noise. If we assume a schedule of noise values $\sigma_1 \leq \ldots \leq \sigma_T$, we can write down each noised distribution as 
 \begin{equation}
@@ -353,7 +354,7 @@ Due to the structure of the loss function taking an expectation over samples fro
 \end{equation}
 We can then modify our score model to learn a different parametrisation for a different noise scale, resulting in a Noise-Conditional Score Network (NCSN) given by $s_{\theta}(x, t)$ and a weighted sum of Fisher divergences per noise scale, given as
 \begin{equation}
-    \mathcal{L}_{\text{SM}} = \sum_{t=1}^T \mathbb{E}_{\pi_{t}} \left[ \| \nabla_x \log \pi_{t} (x) - s_{\theta}(x, t) \|_2^2 \right]. \label{eq:sm_loss}
+    \mathcal{L}_{\text{SM}} = \sum_{t=1}^T \mathbb{E}_{\pi_{t}} \left[ \| \nabla_x \ln \pi_{t} (x) - s_{\theta}(x, t) \|_2^2 \right]. \label{eq:sm_loss}
 \end{equation}
 While score-matching was initially motivated by this heuristic argument about learning the score of a multi-level noised distribution, in \textcite{song2020score}, the authors show that the noising process can be represented as a stochastic differential equation that iteratively noises samples from the data distribution $\hpi$ until they resemble Gaussian noise (i.e. $\mu$).
 
@@ -387,7 +388,7 @@ If we could now learn a reverse "denoising" process $p(x_{t-1} \mid x_t)$ that t
 \end{align}
 where the integrals over the data distribution $\pi_0$ are intractable. Instead, DDPM assumes a variational distribution $p_{\theta}(x_{t-1} \mid x_t) = \mathcal{N}(x_{t-1}; \mu_{\theta}(x_t, t), \Sigma_{\theta}(x_t, t))$ that is a Gaussian with mean and variance parametrised by a neural network, and learns the parameters $\theta$ in the same way as a VAE (where the latents $z = \{x_1, \ldots, x_{T}\}$). We can therefore write down an ELBO similar to \Cref{eq:vae_loss}, giving us
 \begin{equation}
-    \mathcal{L}_{\text{DDPM}} = \mathbb{E}_{x_{1:T} \sim q(x_{1:T} \mid x_0)} \left[ \log \left[ \frac{p_{\theta}(x_{1:T} \mid x_0)}{q(x_{1:T} \mid x_0)} \right] \right].
+    \mathcal{L}_{\text{DDPM}} = \mathbb{E}_{x_{1:T} \sim q(x_{1:T} \mid x_0)} \left[ \ln \left[ \frac{p_{\theta}(x_{1:T} \mid x_0)}{q(x_{1:T} \mid x_0)} \right] \right].
 \end{equation}
 Interestingly, \textcite{song2020score} showed that in the continuous limit, the iterative noising process for DDPM converges to an SDE (different from the SDE in Score Matching), and therefore both Score Matching and DDPM are variants of a score-matching loss, albeit on different forward SDEs.
 
@@ -424,7 +425,7 @@ where we have used the fact that $y$ and $x_t$ are independent given $x$. Many a
     \[
         \dd X_t &= - C_1 \underbrace{\nabla_{X_t} \ln p(X_t)}_{\approx s_{\theta}(X_t, t, y)}  - C_2 \nabla_{X_t} \ln p(y \mid X_t) \dd t +  \sqrt{\frac{\dd \sigma_t^2}{\dd t}} \dd \overleftarrow{W}_t,
     \]
-    where the additional term $\nabla_{X_t} \ln p(y \mid X_t)$ is generally intractable to calculate in closed-form, due to the decomposition in \Cref{eq:conditional_likelihood_decomposition}. Later, in \Cref{chapter:cmcd}, we will develop a unifying framework for conditional generative modelling to learn the ``conditional'' score term accurately with a neural network, without needing any assumptions.
+    where the additional term $\nabla_{X_t} \ln p(y \mid X_t)$ is generally intractable to calculate in closed-form, due to the decomposition in \Cref{eq:conditional_likelihood_decomposition}. Later, in \Cref{chapter:deft}, we will develop a unifying framework for conditional generative modelling to learn the ``conditional'' score term accurately with a neural network, without needing any assumptions.
 \end{lightgraybox}
 
 \subsection{Pathwise Conditioning}
@@ -459,7 +460,7 @@ See \textcite[Theorem 1, Pg. 4]{wilson2021pathwise}.
 
 \begin{lightgraybox}{Remark: Infinite-Dimensional Limit of Gaussian Distributions}
     % NOTE: Be more precise/wordy here.
-    While \Cref{thm:matherons_rule}, as defined above, is applicable to $X_1$ and $X_2$ being finite-dimensional Gaussian random variables with corresponding finite-dimensional distributions, we can consider the situation where we no longer are considering a finite set of points that are jointly Gaussian, but a potentially \textit{infinite} set of random variables. In this setting, finite-dimensional probability distribution converge to stochastic processes, which we've already seen before in the context of being solutions to SDEs. In the previous settings, we considered a stochastic process $X_t$ with $t \in [0, T]$, an index set signifying time, which is a a subset of $\mathbb{R}$. In the context of Gaussian processes considered for pathwise conditoning, we can instead consider stochastic processes $X_i$, with $i \in \mathbb{R}$, where any subset of $X_i$s are jointly Gaussian. We discuss this in more detail in \Cref{chapter:sgd}, and discuss a Gaussian process version of Matheron's rule that is derived from stochastic calculus fundamentals.
+    While \Cref{thm:matherons_rule}, as defined above, is applicable to $X_1$ and $X_2$ being finite-dimensional Gaussian random variables with corresponding finite-dimensional distributions, we can consider the situation where we no longer are considering a finite set of points that are jointly Gaussian, but a potentially \textit{infinite} set of random variables. In this setting, finite-dimensional probability distribution converge to stochastic processes, which we've already seen before in the context of being solutions to SDEs. In the previous settings, we considered a stochastic process $X_t$ with $t \in [0, T]$, an index set signifying time, which is a a subset of $\mathbb{R}$. In the context of Gaussian processes considered for pathwise conditoning, we can instead consider stochastic processes $X_i$, with $i \in \mathbb{R}$, where any subset of $X_i$s are jointly Gaussian. We discuss this in more detail in \Cref{chapter:gp_sampling}, and discuss a Gaussian process version of Matheron's rule that is derived from stochastic calculus fundamentals.
 \end{lightgraybox}
 
 In the second half of this thesis, we will extensively develop the theory of GPs, and show how they shine in applications of Bayesian inference, where we can use them to provide flexible and representative priors on our assumptions, and develop tractable posterior inference algorithms. We will further show how many Bayesian inference problems in the deep learning setting can be simplified to GPs, including the recently popularised Linearised Laplace Approximation (LLA) \parencite{mackay1992bayesian, khan2019approximate, immer2021improving, daxberger2021laplace}. Further, we will develop a sampling-based framework for Bayesian inference that allows us to obtain uncertainty estimates and perform model selection using a finite number of samples from the posterior distribution, doing away with the need for approximating the posterior distribution itself. Finally, we will develop highly scalable and performant algorithms for obtaining posterior samples from very large GPs, and show how they can be used to perform efficient Bayesian inference in the deep learning setting.

@@ -225,8 +225,8 @@
 % *****************************************************************************
 % ******************* Better enumeration my MB*************
 \usepackage{enumitem}
-\usepackage{algorithm}
-\usepackage{algorithmic}
+% \usepackage{algorithm}
+% \usepackage{algorithmic}
 \usepackage{xltabular}
 \usepackage{hyperref}
 \usepackage{microtype}
@@ -284,7 +284,75 @@
 \newcommand{\fwdP}[2]{\overrightarrow{\mathbb{P}}^{#1, #2}}
 \newcommand{\bwdP}[2]{\overleftarrow{\mathbb{P}}^{#1, #2}}
 
+% Shorthand macros for overrightarrow and overleftarrow
+\newcommand{\ora}{\overrightarrow}
+\newcommand{\ola}{\overleftarrow}
+
+% Macros for CMCD forward and backward processes with hardcoded phi
+\newcommand{\fwdPcmcd}[1]{\ora{\P}^{#1, \phi}_{\text{CMCD}}}
+\newcommand{\bwdPcmcd}[1]{\ola{\P}^{#1, \phi}_{\text{CMCD}}}
+
+\newcommand{\fwdPcmcdstar}[1]{\ora{\P}^{#1, \phi^{\star}}_{\text{CMCD}}}
+\newcommand{\bwdPcmcdstar}[1]{\ola{\P}^{#1, \phi^{\star}}_{\text{CMCD}}}
+
+% Define \citep as a macro for \parencite
+\newcommand{\citep}{\parencite}
+
+% Macros for vector notation and matrix notation
+\newcommand{\vx}{x}
+\newcommand{\vy}{y}
+\newcommand{\mY}{Y}
+\newcommand{\mH}{H}
+\newcommand{\m}{y}
+\newcommand{\mx}{x}
+\newcommand{\my}{y}
+\newcommand{\bX}{X}
+\newcommand{\bH}{H}
+\newcommand{\fX}{X}
+\newcommand{\fH}{H}
+\newcommand{\gN}{\mathcal{N}}
+\newcommand{\fwd}{\overrightarrow}
+\newcommand{\bwd}{\overleftarrow}
+\newcommand{\rv}{\overleftarrow}
+\newcommand{\Pm}{\mathcal{A}}
+
+\newcommand{\Dsc}{\mathcal{D}}
+\newcommand{\Dscstar}{\mathcal{D}^*}
+\newcommand{\btheta}{\theta}
+
+% Macros for conditional distributions
+\newcommand{\picond}{\pi_{\text{cond}}}
+\newcommand{\picondt}{\pi_{\text{cond}, t}}
+
+\usepackage{dsfont}
+
+\usepackage{wrapfig,lipsum,booktabs}
+
+\usepackage{crossreftools}
+\pdfstringdefDisableCommands{%
+    \let\Cref\crtCref
+    \let\cref\crtcref
+}
+\usepackage{colortbl}
+\definecolor{lightgray}{gray}{0.9}
+
+\usepackage{algorithm}
+\usepackage[noEnd=true, indLines=true, spaceRequire=false, italicComments=false, rightComments=true, commentColor=gray]{algpseudocodex}
+% \RequirePackage{algorithmic}
 % \usepackage{pdflscape}      % provides the landscape environment
 % \usepackage{booktabs}       % better horizontal rules
 % \usepackage{adjustbox}      % easy table-resizing
 % \usepackage{rotating}
+
+% % section title format
+% \RequirePackage[explicit,noindentafter,pagestyles]{titlesec}
+% \titleformat{\part}[display]{\@SPsemibold\scshape\Huge}{\list{}{\rightmargin-0.75in\leftmargin1in}\item[]\centering\thepart\endlist}{1em}{\list{}{\rightmargin-0.75in\leftmargin1in}\item[]\centering#1}[\endlist]
+% \titleformat{\chapter}[display]{\@SPsemibold\scshape\Huge}{Chapter \thechapter}{1em}{\raggedright#1}
+% \@ifclassloaded{book}{
+% \titleformat{\section}{\@SPsemibold\scshape\LARGE}{\thesection.}{1em}{\raggedright#1}
+% }{
+% \titleformat{\section}{\@SPsemibold\scshape\LARGE}{\thesection}{1em}{\raggedright#1}
+% }
+% \titleformat{\subsection}[runin]{\bfseries}{\thesubsection.}{1ex}{#1.}
+% \titlespacing{\section}{\z@}{*3.5}{*2}
+% \titlespacing{\subsection}{\z@}{*3.5}{*1}

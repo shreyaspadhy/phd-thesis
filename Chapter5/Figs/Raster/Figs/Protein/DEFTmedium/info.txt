@@ -1,0 +1,4 @@
+This is the run: 
+apricot-water-800ep:
+	plots & data for medium size run 
+	(9% of uncond. model size, 800 epochs, ~160 A100h)

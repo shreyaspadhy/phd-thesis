@@ -1,0 +1,35 @@
+%!TEX root = ../thesis.tex
+%*******************************************************************************
+%****************************** Third Chapter **********************************
+%*******************************************************************************
+\chapter[Sampling-Based Bayesian Inference with Bayesian Neural Networks]{Sampling-Based Bayesian Inference with Bayesian Neural Networks}
+\label{chapter:bnn_sampling}
+% **************************** Define Graphics Path **************************
+\ifpdf
+    \graphicspath{{Chapter7/Figs/Raster/}{Chapter7/Figs/PDF/}{Chapter7/Figs/}}
+\else
+    \graphicspath{{Chapter7/Figs/Vector/}{Chapter7/Figs/}}
+\fi
+
+\subsection{Gaussian Linear Models: A Weight-Space View of GPs}
+
+Cover the weight-function duality, show how GPs are the same as GLMs.
+
+\subsection{Linearised Laplace Approximation}
+
+Cover LLA, show how it converts BNN posterior to a GLM, and therefore a GP.
+
+\subsections{Adapting the LLA to Modern Deep Learning}
+
+Discuss Immer et al, Antoran 2023.
+
+\subsubsection{Computational Considerations}
+
+Discuss quickly diagonal, KFAC, subnetwork, last-layer etc.
+
+
+\subsection{Sample-then-Optimise: Pathwise Conditioning in Weight Space}
+
+Discuss STO from Matthews et al, show the exact correspondence with Matheron's rule.
+
+\section{ICLR Paper (Large Scale)}

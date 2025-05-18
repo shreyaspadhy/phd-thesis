@@ -1,13 +1,750 @@
 %!TEX root = ../thesis.tex
 % ******************************* Thesis Appendix B ********************************
 
-\chapter{Installing the CUED class file}
+\chapter{Additional Results for Controlled Monte Carlo Diffusion}
 
-\LaTeX.cls files can be accessed system-wide when they are placed in the
-<texmf>/tex/latex directory, where <texmf> is the root directory of the user’s \TeX installation. On systems that have a local texmf tree (<texmflocal>), which
-may be named ``texmf-local'' or ``localtexmf'', it may be advisable to install packages in <texmflocal>, rather than <texmf> as the contents of the former, unlike that of the latter, are preserved after the \LaTeX system is reinstalled and/or upgraded.
+\label{app:cmcd}
+\section{Additional Proofs}
 
-It is recommended that the user create a subdirectory <texmf>/tex/latex/CUED for all CUED related \LaTeX class and package files. On some \LaTeX systems, the directory look-up tables will need to be refreshed after making additions or deletions to the system files. For \TeX Live systems this is accomplished via executing ``texhash'' as root. MIK\TeX users can run ``initexmf -u'' to accomplish the same thing.
+\subsection{Proof of \Cref{prop:annealing uniqueness}}
 
-Users not willing or able to install the files system-wide can install them in their personal directories, but will then have to provide the path (full or relative) in addition to the filename when referring to them in \LaTeX.
+Before proceeding to the proof of \Cref{prop:annealing uniqueness}, we state the following assumption on the curve of distributions $(\pi_t)_{t \in [0,T]}$:
 
+\begin{assumption}
+\label{ass:annealing}
+Assume that $\pi \in C^{\infty}([0,T]\times \mathbb{R}^d; \mathbb{R})$, and that for all $t \in [0,T]$ 
+\begin{enumerate}
+\item the time derivative $\partial_t \pi_t$ is square-integrable, that is, $\partial_t \pi_t(t,\cdot) \in L^2(\mathbb{R}^d)$,
+\item $\pi_t$ satisfies a Poincar{\'e} inequality, that is, there exists a constant $C_t>0$ such that
+\begin{equation}
+\label{eq:Poincare}
+\Var_{\pi_t}(f) \le C_t \int_{\mathbb{R}^d} |\nabla f|^2 \d \pi_t,    
+\end{equation}
+for all $f \in C_b^1(\mathbb{R}^d)$. 
+\end{enumerate}
+\end{assumption}
+Note that at the boundary $\partial [0,T] = \{0,T\}$, we agree to denote by $\partial_t \pi_t$ the `inward-pointing derivative' and interpret $C^{\infty}([0,T]\times \mathbb{R}^d; \mathbb{R})$ in that way.
+We remark that the Poincar\'e inequality (\ref{eq:Poincare}) is satisfied under relatively mild conditions on the tails of $\pi_t$  (for instance, Gaussian tails) and control of its derivatives, see, e.g., \textcite[Chapter 4]{bakry2014analysis}. Under Assumption \ref{ass:annealing}, we can prove \Cref{prop:annealing uniqueness} as follows:
+
+\begin{proof}[Proof of \Cref{prop:annealing uniqueness}] The Fokker-Planck equation associated to \Cref{eq:controlled annealing} is given by 
+\begin{equation}
+\label{eq:continuity}
+\partial_t \pi_t + \nabla \cdot (\pi_t \nabla \phi_t) = 0.
+\end{equation}
+The operator $\phi \mapsto - \nabla \cdot (\pi_t \nabla \phi)$ is essentially self-adjoint in $L^2(\mathbb{R}^d)$, and, by (\ref{eq:Poincare}) coercive on $L_0^2(\mathbb{R}^d) := \{f \in L^2(\mathbb{R}^d) : \,\, \int f \d x = 0\}$. Therefore, there exists a unique solution $\phi_t^* \in L^2_0(\mathbb{R}^d)$ to (\ref{eq:continuity}), for any $t \in [0,T]$. This solution is smooth by elliptic regularity. By \Cref{prop:time_reversal_of_sdes} and our general framework, any minimiser $\widetilde{\phi}$ of \Cref{eq:cmcd_divergence_loss} necessarily satisfies \Cref{eq:continuity} as well. We then obtain
+\begin{equation}
+\nonumber
+\nabla \cdot (\pi_t \nabla (\phi_t - \widetilde{\phi_t})) = 0.
+\end{equation}
+Multiplying this equation by $\phi_t - \widetilde{\phi}_t$, integrating, and integrating by parts shows that $\int \Vert \nabla (\phi - \widetilde{\phi})\Vert^2 \, \d \pi_t = 0$, proving the claim.
+\end{proof}
+
+\begin{remark}[Relation to previous work]
+\label{rem:AFT}
+Note we can carry out a change of variables to \Cref{eq:continuity}, 
+\begin{align}
+\nonumber
+    \partial_t \ln  \pi_t  = -\pi_t^{-1}( \nabla \pi_t  \cdot \nabla \phi_t + \pi_t \Delta \phi ) = -\nabla \ln \pi_t \cdot  \nabla \phi  - \Delta \phi,
+\end{align}
+yielding the PDE
+\begin{align}
+\nonumber
+    \partial_t \ln  \pi_t   +\nabla \ln \pi_t \cdot  \nabla \phi  + \Delta \phi = 0,
+\end{align}
+which when considered in terms of the unnormalised flow $\hat{\pi}_t = Z_t \pi_t$ coincides with PDE in \textcite{vaikuntanathan2008escorted,arbel2021annealed}:
+\begin{align}
+\nonumber
+    \partial_t \ln  \hat{\pi}_t   +\nabla \ln \hat{\pi}_t \cdot  \nabla \phi  + \Delta \phi -  \E_{\pi_t}[\partial_t \ln \hat{\pi}_t] = 0.
+\end{align}
+In particular, we note that the Markov chain proposed in \textcite{arbel2021annealed} converges to our proposed parameterisation in equation (\ref{eq:controlled annealing}) (see equation (12) in \textcite{arbel2021annealed}).
+\end{remark}
+
+\subsection{Proof of \Cref{eq:cmcd_kl_loss_continuous}}
+
+The proof uses \Cref{prop:fbrnd}, choosing $\Gamma_0 = \Gamma_T$ to be the Lebesgue measure, with $\gamma^+ = \gamma^- = 0$ (but notice that $\sigma$ in \Cref{eq:fbrnd} needs to be replaced by $\sigma \sqrt{2}$ due to the scaling in \Cref{eq:controlled annealing}). We compute
+\begin{align}
+\nonumber
+& \mathcal{L}^{\mathrm{CMCD}}_{D_{\text{KL}}}\!(\phi) = \E_{X \sim \ora{\P}^{\pi_0,\sigma^2 \nabla \ln \pi + \nabla \phi}} \left[ \ln \left( \frac{\d\ora{\P}^{\pi_0,\sigma^2 \nabla \ln \pi + \nabla \phi}}{\d \ola{\P}^{\pi_T,-\sigma^2 \nabla \ln \pi + \nabla \phi}} \right) (X) \right]  \\
+\nonumber
+ = & \E \left[ \ln \pi_0(X_0) -\ln \pi_T(X_T) \right] \\
+\nonumber
+& + \E \left[ \tfrac{1}{2 \sigma^2} \int_0^T (\sigma^2 \nabla \ln \pi_t + \nabla \phi_t)(X_t) \cdot \left( {\d} X_t - \tfrac{1}{2}(\sigma^2 \nabla \ln \pi_t + \nabla \phi_t)(X_t) \, \d t  \right) \right]
+\\
+\nonumber
+& - \E \left[ \tfrac{1}{2 \sigma^2} \int_0^T (-\sigma^2 \nabla \ln \pi_t + \nabla \phi_t)(X_t) \cdot \left( {\d} \ola{X}_t - \tfrac{1}{2}(-\sigma^2 \nabla \ln \pi_t + \nabla \phi_t)(X_t) \, \d t  \right) \right]
+\\
+\nonumber
+ = & \E \left[ \ln \pi_0(X_0) -\ln \pi_T(X_T) \right]
+\\
+\nonumber
+& + \E \left[ \tfrac{1}{2 \sigma^2} \int_0^T (\sigma^2 \nabla \ln \pi_t + \nabla \phi_t)(X_t) \cdot {\d} X_t \right] - \E \left[ \tfrac{1}{2 \sigma^2} \int_0^T (-\sigma^2 \nabla \ln \pi_t + \nabla \phi_t)(X_t) \cdot {\d} \ola{X}_t \right]
+\\
+\nonumber
+& - \tfrac{1}{\sigma^2} \E \left[ \int_0^T (\sigma^2 \nabla \ln \pi_t \cdot \nabla \phi_t) (X_t) \, \d t \right]
+\\
+\nonumber
+= & \E \left[ \ln \pi_0(X_0) -\ln \pi_T(X_T) \right] 
+\\
+\nonumber
+& +
+\E \left[ \sigma^2  \int_0^T |\nabla \ln \pi_t(X_t)|^2  \d t  + \tfrac{1}{\sigma \sqrt{2}}  \int_0^T  \left(\sigma^2 \nabla \ln \pi_t - \nabla \phi_t \right)(X_t) \cdot {\d} \ola{W}_t \right], 
+\end{align}
+where in the last equality we have inserted the dynamics from \Cref{eq:controlled annealing} and used the martingale property from \Cref{eq:forward-sde-martingale}.
+
+\subsection{Proof of \Cref{eq:cmcd_var_loss}}
+
+In this section, we first verify the expression for $\mathcal{L}^{\mathrm{CMCD}}_{\mathrm{Var}}$ in \Cref{eq:cmcd_var_loss}, using \Cref{prop:fbrnd}, and choosing $\Gamma_0 = \Gamma_T$ to be the Lebesgue measure, $\gamma^+ = \gamma^- = 0$. We recall that although the Lebesgue measure in not normalisable, the arguments can be made rigorous using the techniques in \textcite[Appendix A]{leonard2013survey}.
+
+%\begin{subequations}
+%\begin{align}
+The Radon-Nikodym derivative (RND) along \Cref{eq:controlled annealing} reads
+\begin{subequations}
+\begin{align}
+&\left(\ln \frac{\d \ora{\P}^{\pi_0,\sigma^2 \nabla \ln \pi + \nabla \phi}}{\d \ola{\P}^{\pi_T, - \sigma^2 \nabla \ln \pi + \nabla \phi}} \right)(X)  = (\ln \pi_0) (X_0) - (\ln \pi_T) (X_T) 
+\nonumber
+\\
+& +\!\tfrac{1}{2 \sigma^2} \!\!\int_0^T \!\!\!\!\!(\sigma^2 \nabla \!\ln \pi_t \!+\! \nabla \phi_t)(X_t) \!\! \left(\!(\!\sigma^2 \nabla \!\ln \pi_t \!+\! \nabla \phi_t)(X_t) \, \d t \!+\! \sqrt{2 }\sigma  \d W_t\! -\! \tfrac{1}{2} (\sigma^2 \nabla\! \ln \pi_t \! + \!\nabla \phi_t)(X_t) \, \d t \!\right)
+\nonumber
+\\
+&-\!\tfrac{1}{2 \sigma^2} \!\!\!\int_0^T \!\!\!\!\!\!(\!-\sigma^2 \nabla\! \ln \pi_t\! +\! \nabla \phi_t)(X_t) \!\!\left(\!\! (\!\sigma^2 \nabla \!\ln \pi_t\! + \!\nabla \phi_t)(X_t) \, \d t \!+\! \sqrt{2 } \sigma \d \ola{W}_t \!-\! \tfrac{1}{2} \!(\!\nabla \phi_t \!-\!\sigma^2 \nabla \ln \pi_t  )(X_t) \, \d t\! \right)
+\nonumber
+\\
+& = (\ln \pi_0) (X_0) - (\ln \pi_T) (X_T) \nonumber
++ \sigma^2 \int_0^T | \nabla \ln \pi_t(X_t)|^2 \, \d t
+\\
+& \quad\quad\quad+ {\tfrac{\sigma}{\sqrt{2}}} \left(\int_0^T \nabla \ln \pi_t(X_t) \cdot \d W_t + \int_0^T \nabla \ln \pi_t(X_t) \cdot \d \ola{W}_t \right)\nonumber\\
+&\quad\quad\quad+ \tfrac{1}{\sigma \sqrt{2 }} \left(\int_0^T \nabla \phi(X_t) \cdot \d W_t - \int_0^T \nabla \phi(X_t) \cdot \d \ola{W}_t \right).\nonumber
+\end{align}
+\end{subequations}
+Using \Cref{eq:sum-reverse-ito-integral}, we obtain
+\begin{equation*}
+{\tfrac{\sigma}{\sqrt{2} }}\left(\int_0^T \nabla \ln \pi_t(X_t) \cdot \d W_t + \int_0^T \nabla \ln \pi_t(X_t) \cdot \d \ola{W}_t \right) = \sqrt{2}\sigma \int_0^T \nabla \ln \pi_t(X_t) \circ \d W_t. 
+\end{equation*}
+Furthermore, from \Cref{cor:relating-forward-and-reverse-ito-integrals-through-divergence} we see that 
+\begin{equation}
+\label{eq:Laplace approx}
+\tfrac{1}{\sigma \sqrt{2 }} \left(\int_0^T \nabla \phi(X_t) \cdot \d W_t - \int_0^T \nabla \phi(X_t) \cdot \d \ola{W}_t \right) = -\int_0^T \Delta \phi_t(X_t) \, \d t,
+\end{equation}
+from which the claim follows.
+
+\begin{remark}[Estimating $\mathcal{L}^{\mathrm{CMCD}}_{\mathrm{Var}}$ without second derivatives]
+\label{rem:kick out Laplace}
+Using \Cref{eq:Laplace approx}, we can equivalently write the RND as 
+\begin{subequations}
+\begin{align}
+\nonumber
+& \left(\ln \frac{\d \ora{\P}^{\pi_0,\sigma^2 \nabla \ln \pi + \nabla \phi}}{\d \ola{\P}^{\pi_T, - \sigma^2 \nabla \ln \pi + \nabla \phi}} \right)(X)  =
+\ln \pi_T(X_T) - \ln \pi_0(X_0) 
+\\
+& - \tfrac{1}{\sigma \sqrt{2 }} \left(\int_0^T \nabla \phi(X_t) \cdot \d W_t - \int_0^T \nabla \phi(X_t) \cdot \d \ola{W}_t \right) \nonumber
+\\
+&-\!\! \sigma \sqrt{2 } \!\int_0^T\!\!\! \!\!\nabla \ln \pi_t(X_t)\! \circ\! \d W_t\! - \sigma^2\! \!\int_0^T\!\!\! |\nabla \ln \pi_t(X_t)|^2 \, \d t,\!\! \nonumber
+\end{align}
+\end{subequations}
+so that $\mathcal{L}^{\mathrm{CMCD}}_{\mathrm{Var}}$ can be estimated without the need to evaluate $\Delta \phi$. Note that the identity in \Cref{eq:Laplace approx} is similar to a finite difference approximation of $\Delta \phi$  along the process $X_t$. 
+\end{remark}
+
+\section{Underdamped Langevin Dynamics Generalisation}
+
+\label{sec:underdamped}
+In this section, we motivate the underdamped generalisation of CMCD which is used across our experiments. This parameterisation is inspired by the underlying theory for the overdamped approach, and we leave a rigorous extension of those foundations for future work. However, we have found this heuristic parameterisation to perform very well empirically.
+
+Following \textcite{geffner2023langevin} we parametrise as:
+\begin{align}
+\label{eq:controlled annealing2}
+X_0, Z_0 &\sim   \mathcal{N}(0,I) \otimes\!\pi_0, \nonumber \\
+\d Z_t  &= X_t \d t , \nonumber \\
+\d X_t  &\!=\! \left( \sigma^2\nabla \ln \pi_t(Z_t)\! - \sigma^2 X_t +\! \nabla \phi_t (X_t, Z_t)\right) \d t + \sigma \!\sqrt{2 } \,{\d} \ora{W}_t. 
+\end{align}
+and it's time reversal as: 
+\begin{align}
+\label{eq:controlled annealing2rev}
+X_T, Z_T &\sim  \mathcal{N}(0,I) \otimes \!\pi_T , \nonumber \\
+\d Z_t  &= X_t \d t , \nonumber \\
+\d X_t  &\!=\! \left( -\sigma^2\nabla \ln \pi_t(Z_t)\! + \sigma^2 X_t +\! \nabla \phi_t (X_t, Z_t)\right) \d t + \sigma \!\sqrt{2 } \,{\d} \ola{W}_t. 
+\end{align}
+
+
+\subsubsection{Time Discretisation and Objective}
+To discretise the above processes we follow the exact same discretisation scheme carried out in  \textcite{geffner2023langevin}, however in this case we have to adapt the forward discretisation scheme to include the non-linear drift when carrying out the momentum re-sample step, specific details for this scheme can be found in \Cref{alg:Fldvi} and \Cref{alg:Bldvi}. This discretisation in turn allows us to compute the discrete RND between these two processes which we require for \Cref{framework:unifying_framework_diffusion}.
+
+% \begin{algorithm}[ht]
+% \caption{Forward transition $F_k(Z_{t_{k+1}}, X_{t_{k+1}} \vert Z_{t_{k}}, X_{t_{k}})$ obtained with modified Euler-Maruyama}
+% \label{alg:fsimple}
+% \begin{algorithmic}
+% \State Resample momentum $X_{t_{k+1}} \sim \mathcal{N}(X_{t_{k}} (1 - \gamma \delta) + \delta \nabla \ln \pi_{k\delta}(Z_{t_{k}}), 2\gamma\delta I)$.
+% \State Update position $Z_{t_{k+1}} = Z_{t_{k}} + \delta X_{t_{k+1}}$.
+% \State \Return $(Z_{t_{k+1}}, X_{t_{k+1}})$
+% \end{algorithmic}
+% \end{algorithm}
+
+% \begin{algorithm}[ht]
+% \caption{Backward transition $B_k(Z_{t_{k}}, X_{t_{k}} \vert Z_{t_{k+1}}, X_{t_{k+1}})$ obtained with modified Euler-Maruyama}
+% \label{alg:bwsimple}
+% \begin{algorithmic}
+% \State Update position $Z_{t_{k}} = Z_{t_{k+1}} - \delta X_{t_{k+1}}$.
+% \State Resample momentum $X_{t_{k}} \sim \mathcal{N}(X_{t_{k+1}}(1-\delta\gamma) - \delta \nabla \ln \pi_{k\delta}(Z_{t_{k}}) + 2\delta \gamma s(k\delta, Z_{t_{k}}, X_{t_{k+1}}), 2\delta\gamma I)$.
+% \State \Return $(Z_{t_{k}}, X_{t_{k}})$
+% \end{algorithmic}
+% \end{algorithm}
+
+
+% OBAB
+
+\begin{algorithm}[t]
+\caption{Forward transition $F_{t_k}(Z_{t_{k+1}}, X_{t_{k+1}} \vert Z_{t_{k}}, X_{t_{k}})$}
+\label{alg:Fldvi}
+\begin{algorithmic}[1]
+\Require $Z_{t_{k}}$, $X_{t_{k}}$, step-size $\Delta t_{k}$
+\State Re-sample momentum $X_{t_{k}}'  \sim \mathcal{N}\left(  X_{t_{k}}(1-\sigma \Delta {t_k}) + \nabla \phi_{t_k}( X_{t_{k}} ,Z_{t_{k}}) \Delta t_k , \;2 \sigma \Delta t_{k} I\right)$\\
+\hspace{-0.21cm}$\left.\begin{array}{l} \vspace{0.05cm}
+\mbox{Update} \, X_{t_{k}}'' = X_{t_{k}}' + \frac{\Delta t_{k}}{2} \nabla \ln \pi_{t_k}(Z_{t_{k}})\\\vspace{0.05cm}
+\mbox{Update} \, Z_{t_{k+1}} = Z_{t_{k}} + \Delta t_{k} X_{t_{k}}''\\
+\mbox{Update} \, X_{t_{k+1}} = X_{t_{k}}'' + \frac{\Delta t_{k}}{2} \nabla \ln \pi_{t_k}(Z_{t_{k+1}})
+\end{array}\right\}
+\left . \begin{array}{l}
+\mbox{Leapfrog step}\\
+\Phi(Z_{t_{k}}, X_{t_{k}}')
+\end{array}\right .$
+\State \Return $(Z_{t_{k+1}}, X_{t_{k+1}})$
+\end{algorithmic}
+\end{algorithm}
+
+
+
+% BABO
+
+\begin{algorithm}[t]
+\caption{Backward transition $B_{t_k}(Z_{t_{k}}, X_{t_{k}} \vert Z_{t_{k+1}}, X_{t_{k+1}})$}
+\label{alg:Bldvi}
+\begin{algorithmic}[1]
+\Require $Z_{t_{k+1}}$, $X_{t_{k+1}}$, step-size $\Delta t_{k}$
+\State
+\hspace{-0.21cm}$\left.\begin{array}{l} \vspace{0.05cm}
+\mbox{Update} \, X_{t_{k}}'' = X_{t_{k+1}} - \frac{\Delta t_{k}}{2} \nabla \ln \pi_{t_k}(Z_{t_{k}})\\\vspace{0.05cm}
+\mbox{Update} \, Z_{t_{k}} = Z_{t_{k+1}} - \Delta t_{k} X_{t_{k}}''\\
+\mbox{Update} \, X_{t_{k}}' = X_{t_{k}}'' - \frac{\Delta t_{k}}{2} \nabla \ln \pi_{t_k}(Z_{t_{k+1}})
+\end{array}\right\}
+\left . \begin{array}{l}
+\mbox{Inverse leapfrog}\\
+\Phi^{-1}(Z_{t_{k+1}}, X_{t_{k+1}})
+\end{array}\right .$
+\State Re-sample momentum $X_{t_{k}}  \sim \mathcal{N}\left(X_{t_{k}}'(1-\sigma \Delta {t_k}) - \nabla \phi_{t_k}( X_{t_{k}}' ,Z_{t_{k}}) \Delta t_k , \;2 \sigma \Delta t_{k} I\right)$
+\State \Return $(Z_{t_{k}}, X_{t_{k}})$
+\end{algorithmic}
+\end{algorithm}
+
+Now via Propostion 1 in \textcite{geffner2023langevin} it follows that
+\begin{align}
+&\frac{\pi_0(X_0, Z_0)}{\pi_T(X_T, Z_T)}    \prod_{k=0}^{K-1} \frac{F_{t_k}(Z_{t_{k+1}}, X_{t_{k+1}} \vert Z_{t_{k}}, X_{t_{k}})}{B_{t_k}(Z_{t_{k}}, X_{t_{k}} \vert Z_{t_{k+1}}, X_{t_{k+1}})}  \nonumber \\
+&\;\;=\frac{\pi_0(X_0, Z_0)}{\pi_T(X_T, Z_T)} \prod_{k=0}^{K-1} \frac{\mathcal{N}\left(X_{t_{k}}' \mid X_{t_{k}}(1-\sigma \Delta {t_k}) + \nabla \phi_{t_k}( X_{t_{k}} ,Z_{t_{k}}) \Delta t_k , 2 \sigma \Delta t_{k} I\right)}{\mathcal{N}\left(X_{t_{k}} \mid X_{t_{k}}'(1-\sigma \Delta {t_k}) - \nabla \phi_{t_k}( X_{t_{k}}' ,Z_{t_{k}}) \Delta t_k , 2 \sigma \Delta t_{k} I\right)}
+\end{align}
+then we can use the above discrete time RND to approximate the KL divergence between SDEs (\Cref{eq:controlled annealing2}) and  (\Cref{eq:controlled annealing2rev}) yielding our objective for the under dampened setting:
+\begin{align}
+   \mathcal{L}^{\mathrm{CMCD-{UD}}}_{\text{KL}}(\!\phi\!) \!\approx\! \E\left[\!\ln\!\frac{\pi_0(X_0, Z_0)}{\pi_T(X_T, Z_T)} \!\!\prod_{k=0}^{K-1} \!\frac{\mathcal{N}\left(X_{t_{k}}'\! \!\mid \!\!X_{t_{k}}(1-\sigma \Delta {t_k}) + \nabla \!\phi_{t_k}\!( X_{t_{k}} ,Z_{t_{k}}) \Delta t_k , 2 \sigma \Delta t_{k} I\right)}{\mathcal{N}\left(X_{t_{k}} \!\!\mid \!\!X_{t_{k}}'(1-\sigma \Delta {t_k}) - \nabla \!\phi_{t_k}\!( X_{t_{k}}' ,Z_{t_{k}}) \Delta t_k , 2 \sigma \Delta t_{k} I\right)}\!\right]
+\end{align}
+Where the expectation is taken with respect to the discrete-time process in \Cref{alg:Fldvi}.
+
+\section{Additional Experiments}
+
+In this section, we will cover further details pertaining to our experimental setup.
+
+\subsection{ELBO experiments and Comparison to LDVI}
+
+We compare our underdamped and overdamped CMCD variants against 5 datasets from \textcite{geffner2023langevin}, which we describe in further detail below.
+\begin{itemize}
+\item \texttt{log\_sonar} ($d=61$) and \texttt{log\_ionosphere} ($d=35$) are Bayesian logistic regression models: $ x \sim \mathcal{N}(0, \sigma_w^2 I),y_i \sim \mathrm{Bernoulli}(\mathrm{sigmoid}( x^\top u_i))$ with posteriors conditioned on the 
+\textit{sonar} and \textit{ionosphere} datasets respectively.
+
+\item \texttt{brownian} ($d=32$) corresponds to the time discretisation of a Brownian motion:
+\begin{align*}
+    \alpha_{\mathrm{inn}} &\sim \mathrm{LogNormal}(0,2),\\
+    \alpha_{\mathrm{obs}} &\sim \mathrm{LogNormal}(0,2) ,\\
+    x_1 &\sim \mathcal{N}(0, \alpha_{\mathrm{inn}}),\\
+    x_i &\sim \mathcal{N}(x_{i-1}, \alpha_{\mathrm{inn}}), \quad i=2,\hdots 20,\\
+    y_i &\sim \mathcal{N}(x_{i}, \alpha_{\mathrm{obs}}), \quad i=1,\hdots 30.
+\end{align*}
+inference is performed over the variables $\alpha_{\mathrm{inn}}, \alpha_{\mathrm{obs}}$ and $\{x_i\}_{i=1}^{30}$ given the observations $\{y_i\}_{i=1}^{10} \cup \{y_i\}_{i=20}^{30}$.
+
+\item  \texttt{lorenz} ($d=90$)  is the discretisation of a highly stiff 3-dimensional SDE that models atmospheric convection:
+$$
+\begin{array}{rlrl}
+x_1 & \sim \mathcal{N}(\text { loc }=0, \text { scale }=1) & \\
+y_1 & \sim \mathcal{N}(\text { loc }=0, \text { scale }=1) & \\
+z_1 & \sim \mathcal{N}(\text { loc }=0, \text { scale }=1) & & \\
+x_i & \sim \mathcal{N}\left(\text { loc }=10\left(y_{i-1}-x_{i-1}\right), \text { scale }=\alpha_{\text {inn }}\right) & i=2, \ldots, 30 \\
+y_i & \left.\sim \mathcal{N}\left(\text { loc }=x_{i-1}\left(28-z_{i-1}\right)-y_{i-1}\right), \text { scale }=\alpha_{\text {inn }}\right) & i=2, \ldots, 30 \\
+z_i & \sim \mathcal{N}\left(\text { loc }=x_{i-1} y_{i-1}-\frac{8}{3} z_{i-1}, \text { scale }=\alpha_{\text {inn }}\right) & i=2, \ldots, 30, \\
+o_i & \sim \mathcal{N}\left(\text { loc }=x_i, \text { scale }=1\right) & i=2, \ldots, 30
+\end{array}
+$$
+where $\alpha_{\text {inn }}=0.1$ (determined by the discretization step-size used for the original SDE). The goal is to do inference over $x_i, y_i, z_i$ for $i=1, \ldots, 30$, given observed values $o_i$ for $i \in\{1, \ldots, 10\} \cup\{20, \ldots, 30\}$.
+
+\item \texttt{seeds} ($d=26$) is a random effect regression model trained on the \textit{seeds} dataset:
+\begin{align*}
+& \tau \sim \operatorname{Gamma}(0.01,0.01) \\
+& a_0 \sim \mathcal{N}(0,10) \\
+& a_1 \sim \mathcal{N}(0,10) \\
+& a_2 \sim \mathcal{N}(0,10) \\
+& a_{12} \sim \mathcal{N}(0,10) \\
+& b_i \sim \mathcal{N}\left(0, \frac{1}{\sqrt{\tau}}\right) \\
+& i=1, \ldots, 21 \\
+& \operatorname{logits}_i=a_0+a_1 x_i+a_2 y_i+a_{12} x_i y_i+b_1 \\
+& i=1, \ldots, 21 \\
+& r_i \sim \operatorname{Binomial}\left(\operatorname{logits}_i, N_i\right) \\
+& i=1, \ldots, 21 \text {. } \\
+&
+\end{align*}
+The goal is to do inference over the variables $\tau, a_0, a_1, a_2, a_{12}$ and $b_i$ for $i=1, \ldots, 21$, given observed values for $x_i, y_i$ and $N_i$.
+% The data used was obtained from (Crowder, 1978), which models the germination proportion of seeds arranged in a factorial layout by seed and type of root.
+\end{itemize}
+
+\subsection{\texorpdfstring{$\ln Z$}{ln Z}, sample quality experiments and comparison to PIS and DDS}
+ Furthermore, we also include comparisons to a large-dimensional target distribution and two standard distributions with known $\ln Z$ replicated from \textcite{vargas2023denoising}, which we summarise below.
+\begin{itemize}
+    \item \texttt{lgcp} ($d=1600$) is a high-dimensional Log Gaussian Cox process popular in spatial statistics \parencite{moller1998log}. Using a $d = M \times M = 1600$ grid, we obtain the unnormalised target density $\mathcal{N}(x ; \mu, K) \prod_{i \in[1: M]^2} \exp \left(x_i y_i-a \exp \left(x_i\right)\right)$.
+    \item \texttt{funnel} ($d=10$) is a challenging distribution given by \\ $\pi_T(x_{1:10} = \mathcal{N}(x_1 ; 0, \sigma_f^2) \mathcal{N}(x_{2: 10} ; 0, \exp(x_1) I)$, with $\sigma_f^2 = 9$ \parencite{neal2003slice}.
+    \item \texttt{gmm} ($d=2$) is a two-dimensional Gaussian mixture model with three modes, given by the following target distribution 
+    \begin{align*}
+        \pi_T(x) &= \frac{1}{3} \mathcal{N}\left(x; \begin{bmatrix}3 \\ 0\end{bmatrix}, \begin{bmatrix}
+            0.7 & 0 \\ 0 & 0.05
+        \end{bmatrix} \right) + \frac{1}{3}\mathcal{N}\left(x; \begin{bmatrix}-2.5 \\ 0\end{bmatrix}, \begin{bmatrix}
+            0.7 & 0 \\ 0 & 0.05
+        \end{bmatrix} \right) \\ & \ \ + \mathcal{N}\left(x; \begin{bmatrix}2 \\ 3\end{bmatrix}, \begin{bmatrix}
+            1 & 0.95 \\ 0.95 & 1
+        \end{bmatrix} \right)
+    \end{align*}
+\end{itemize}
+
+\begin{figure}
+    \centering
+    \includegraphics{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter4/Figs/Vector/MCD_net.pdf}
+    \caption{Architecture from \textcite{geffner2023langevin} used across experiments for our CMCD drift network. Softplus activations are used.}
+    \label{fig:cmcd_net}
+\end{figure}
+
+\begin{table}[htb!]
+\caption{\textbf{Network Sizes for comparison.} Note that CMCD has less parameters for the despite the Funnel target despite the larger drift due to the PIS and DDS networks having an additional grad network.}
+\label{table:dds_hp}
+\begin{center}
+\begin{small}
+\begin{sc}
+\resizebox{0.4 \textwidth}{!}{%
+\begin{tabular}{lccc}
+\toprule
+    & GMM & LGCP & Funnel \\ 
+    \midrule
+    DDS
+    & $[10, 10]$
+    & $[64, 64]$
+    & $[64, 64]$
+    \\
+    PIS
+    & $[10, 10]$
+    & $[64, 64]$
+    & $[64, 64]$
+    \\
+    CMCD
+    & $[38, 38]$
+    & $[64, 64]$
+    & $[110, 110]$
+    \\
+    \bottomrule
+  \end{tabular}
+ }
+\end{sc}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\subsection{Specification and Tuning: SMC, AFT, and NF-VI}
+We adopted the implementations\footnote{\url{https://github.com/google-deepmind/annealed_flow_transport}} provided by the studies in \textcite{arbel2021annealed,matthews2022continual} and initialized them with default hyperparameters before fine-tuning.
+
+\textbf{Sequential Monte Carlo (SMC).}
+For SMC, we utilized 2000 particles sampled from a zero-mean unit Gaussian distribution, implementing re-sampling if the effective sample size (ESS) fell below 0.3. We employed Hamiltonian Monte-Carlo (HMC) for particle mutation, executing one Markov Chain Monte Carlo (MCMC) step after each annealing step. The number of leapfrog steps was fixed at 10, and an extensive grid search over different step sizes was conducted, consistent with \textcite{arbel2021annealed}. This search spanned four different step sizes, contingent on the temperature, resulting in a grid search over 256 parameters. The finalized values are presented in Table \ref{table:mdn_hp}. For SMC, $K$ is defined by the number of temperatures.
+
+Furthermore, we report the results for SMC in \Cref{table:mdn_hp} for the tuned hyperparameters used for each target. Please note that we were able to obtain similar $\ln Z$ values as in \textcite{vargas2023denoising} suggesting SMC was well-tuned. Finally, for each result, we report the mean and standard deviations across 30 different seeds, results can be seen in \Cref{table:mdn_hp}.
+
+
+\textbf{Annealed Flow Transport Monte Carlo (AFT).}
+We maintained a similar setup to SMC, with a few adjustments: using 500 particles for training and 2000 for evaluation to accommodate the added complexity from the normalizing flows. We also decreased the number of temperatures and increased the number of MCMC steps to mitigate memory requirements from the flows. $K$ is defined as the number of temperatures $\times$ MCMC steps, with the latter fixed at 4, resulting in a maximum of 64 flows trained simultaneously. Inverse autoregressive flows (IAFs) were employed in all experiments except for \textit{lgcp}, using a neural network with one hidden layer whose dimension matches the problem's dimensionality. For \textit{lgcp}, a diagonal affine flow was used due to memory constraints arising from the high dimensionality. AFT flows were trained for 300 iterations until convergence.
+
+%while CRAFT used 800 iterations, ensuring the convergence of both algorithms.
+
+
+
+\textbf{Variational Inference with Normalizing Flows (VI-NF).}
+We utilized the same flows as for AFT. In this case, $K$ denotes the number of flows to stack. The flows were trained over a total of 2000 iterations with a batch size of 500. For some targets
+
+\begin{table}[htb!]
+\caption{\textbf{Tuned MCMC Step Sizes.}}
+\label{table:mdn_hp}
+\begin{center}
+\begin{small}
+\begin{sc}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccccc}
+\toprule
+    & gmm & lgcp & lorenz & brownian  & log\_sonar & log\_ionosphere & seeds & funnel \\ 
+    \midrule
+    $\Delta t$
+    & $[0.5, 0.5, 0.5, 0.3]$
+    & $[0.3, 0.3, 0.2, 0.2]$
+    & $[0.01, 0.01, 0.008, 0.01]$
+    & $[0.2,0.2,0.05,0.05]$
+    & $[0.2,0.05,0.2,0.2]$
+    & $[0.1,0.2,0.2,0.2]$
+    & $[0.2,0.1,0.05,0.01]$
+    & $[0.05, 0.2, 0.2, 0.05]$
+    \\
+    \bottomrule
+  \end{tabular}
+ }
+\end{sc}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\begin{table}[htb!]
+\caption{\textbf{SMC Results.} $ \text{ELBO}$ and $\ln Z$ values for a different number of steps $K$ and experiments.}
+\label{table:mdn_hp_2}
+\begin{center}
+\begin{small}
+\begin{sc}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccccc}
+\toprule
+    $\ln Z$ & gmm & lgcp & lorenz & brownian  & log\_sonar & log\_ionosphere & seeds & funnel \\ 
+    \midrule
+    $K=8$
+& $-0.536 \pm 0.042$ 
+& $-364.074 \pm 7.797$ 
+& $-87502.352 \pm 4004.495$ 
+& $-63.32 \pm 8.016$ 
+& $-178.589 \pm 2.784$ 
+& $-204.594 \pm 3.049$ 
+& $-108.676 \pm 1.221$ 
+& $-1.013 \pm 0.116$ 
+    \\
+    $K=16$
+& $-0.255 \pm 0.034$ 
+& $-135.207 \pm 4.665$ 
+& $-42148.287 \pm 1047.478$ 
+& $-28.714 \pm 3.71$ 
+& $-137.691 \pm 1.656$ 
+& $-149.107 \pm 1.088$ 
+& $-88.068 \pm 0.467$ 
+& $-0.65 \pm 0.1$ 
+    \\
+    $K=32$
+& $-0.119 \pm 0.017$ 
+& $86.106 \pm 5.989$ 
+& $-19288.267 \pm 834.52$ 
+& $-12.23 \pm 2.212$ 
+& $-120.557 \pm 0.613$ 
+& $-127.964 \pm 0.394$ 
+& $-79.89 \pm 0.273$ 
+& $-0.408 \pm 0.17$ 
+    \\
+    $K=64$
+& $-0.059 \pm 0.015$ 
+& $269.566 \pm 7.832$ 
+& $-8894.525 \pm 119.723$ 
+& $-4.76 \pm 1.042$ 
+& $-113.835 \pm 0.167$ 
+& $-118.812 \pm 0.192$ 
+& $-76.275 \pm 0.189$ 
+& $-0.359 \pm 0.087$ 
+    \\
+    $K=128$
+& $-0.029 \pm 0.009$ 
+& $390.33 \pm 5.427$ 
+& $-5419.678 \pm 90.362$ 
+& $-1.675 \pm 0.442$ 
+& $-110.901 \pm 0.094$ 
+& $-114.827 \pm 0.307$ 
+& $-74.774 \pm 0.097$ 
+& $-0.255 \pm 0.108$ 
+    \\
+    $K=256$
+& $-0.013 \pm 0.006$ 
+&$477.162 \pm 4.998$ 
+& $-3745.218 \pm 68.342$ 
+& $-0.131 \pm 0.22$ 
+& $-109.562 \pm 0.072$ 
+& $-113.123 \pm 0.172$ 
+& $-74.049 \pm 0.088$ 
+& $-0.211 \pm 0.074$ 
+    \\
+    \midrule
+     ELBO &  &  &  &   & &  &  &  \\
+     \midrule
+    $K=8$
+& $0.002 \pm 0.066$ 
+& $-236.087 \pm 9.623$ 
+& $-56122.917 \pm 5402.094$ 
+& $-10.147 \pm 3.427$ 
+& $-117.499 \pm 4.049$ 
+& $-123.772 \pm 3.689$ 
+& $-75.183 \pm 1.447$ 
+& $-0.417 \pm 0.236$ 
+    \\
+    $K=16$
+& $-0.003 \pm 0.037$ 
+& $-23.219 \pm 7.756$ 
+& $-27397.2 \pm 1987.523$ 
+& $-3.924 \pm 2.114$ 
+& $-110.707 \pm 1.823$ 
+& $-113.476 \pm 1.361$ 
+& $-73.524 \pm 0.543$ 
+& $-0.322 \pm 0.184$ 
+    \\
+    $K=32$
+& $0.003 \pm 0.018$ 
+& $174.797 \pm 7.241$ 
+& $-12110.983 \pm 1204.2$ 
+& $-0.426 \pm 1.415$ 
+& $-108.574 \pm 0.547$ 
+& $-112.048 \pm 0.519$ 
+& $-73.459 \pm 0.29$ 
+& $-0.215 \pm 0.222$ 
+    \\
+    $K=64$
+& $0.001 \pm 0.015$ 
+& $332.187 \pm 9.025$ 
+& $-5360.819 \pm 306.407$ 
+& $0.884 \pm 0.778$ 
+& $-108.424 \pm 0.154$ 
+& $-111.715 \pm 0.184$ 
+& $-73.375 \pm 0.214$ 
+& $-0.267 \pm 0.101$ 
+    \\
+    $K=128$
+& $0.001 \pm 0.009$ 
+& $430.838 \pm 6.441$ 
+& $-3624.167 \pm 168.119$ 
+& $1.008 \pm 0.27$ 
+& $-108.395 \pm 0.087$ 
+& $-111.603 \pm 0.298$ 
+& $-73.436 \pm 0.095$ 
+& $-0.2 \pm 0.124$ 
+    \\
+    $K=256$
+& $0.002 \pm 0.006$ 
+& $453.395 \pm 4.43$
+& $-2811.161 \pm 106.68$ 
+& $1.142 \pm 0.125$ 
+& $-108.368 \pm 0.071$ 
+& $-111.611 \pm 0.171$ 
+& $-73.413 \pm 0.087$ 
+& $-0.181 \pm 0.081$ 
+    \\
+    \bottomrule
+  \end{tabular}
+ }
+\end{sc}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\subsection{Further Ablation with NF-style methods and AFT}
+
+We further run both flow models (AFT and NFVI) on all possible target distributions (subject to OOM errors). Results can be found in \Cref{tab:allres}.
+
+\begin{table}[!ht]
+\caption{\textbf{$\ln Z$ comparison.} $\ln Z$ values for a different number of steps $K$, experiments and methods. Not all methods could be evaluated on every $K$/experiment combination due to numerical instabilities or out-of-memory (OOM) problems.}\label{tab:dnf}
+    \centering
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{l|l|cccccc}
+\toprule
+        \textbf{Dataset} & \textbf{Method} & $K=8$ & $K=16$ & $K=32$ & $K=64$ & $K=128$ & $K=256$ \\ \midrule
+        funnel & CMCD & -0.3037 $\pm$ 0.1507 & -0.223 $\pm$ 0.1041 & -0.1805 $\pm$ 0.0773 & -0.1085 $\pm$ 0.1143 & -0.0573 $\pm$ 0.0444 & -0.01928 $\pm$ 0.0641 \\ 
+        \textcolor{white}{log\_ionosphere} & VI-DNF & -0.3768 $\pm$ 0.2157 & -0.3517 $\pm$ 0.1627 & -0.2919 $\pm$ 0.0999 & -0.6941 $\pm$ 0.6841 & -0.1947 $\pm$ 0.1325 & -0.2124 $\pm$ 0.0637 \\ 
+        ~ & VI-NF & -0.206$\pm$ 0.079 & -0.206$\pm$ 0.082 & -0.206$\pm$ 0.087 & -0.194$\pm$ 0.101 & -0.182$\pm$ 0.097 & -0.197$\pm$ 0.099 \\ 
+        ~ & AFT & -0.875$\pm$ 0.543 & -0.395$\pm$ 0.351 & -0.348$\pm$ 0.192 & -0.271$\pm$ 0.227 & -0.235$\pm$ 0.139 & -0.196$\pm$ 0.111 \\ 
+        % ~ & CRAFT & $-0.979 \pm 0.289$ & $-0.309 \pm 0.233$ & $-0.114 \pm 0.35$ &  $-0.035 \pm 0.407$ & $-0.143 \pm 0.122$ & $-0.119 \pm 0.102$ \\ 
+        \midrule
+        gmm & CMCD & -0.1358 $\pm$ 0.0839 & -0.01331 $\pm$ 0.1292 & 0.0095 $\pm$ 0.0495 & 0.00736 $\pm$ 0.0477 & -0.0004 $\pm$ 0.0368 & -0.0081 $\pm$ 0.0520 \\ 
+        ~ & VI-DNF & -0.3676 $\pm$ 0.6314 & -0.258 $\pm$ 0.412 & -0.4983 $\pm$ 0.3878 & -0.4449 $\pm$ 0.5379 & -0.4652 $\pm$ 0.3223 & -0.204 $\pm$ 0.6381 \\ 
+        ~ & VI-NF & -0.355$\pm$ 0.698 & -0.455$\pm$ 0.258 & -0.064$\pm$ 0.138 & -0.054$\pm$ 0.15 & -0.066$\pm$ 0.188 & -0.045$\pm$ 0.177 \\ 
+        ~ & AFT & -0.336$\pm$ 0.372 & -0.006$\pm$ 0.082 & 0.02$\pm$ 0.068 & -0.016$\pm$ 0.042 & -0.003$\pm$ 0.029 & 0.001$\pm$ 0.026 \\ 
+        % ~ & CRAFT & $0.012 \pm 0.087$ & $-0.011 \pm 0.041$ & $0.002 \pm 0.026$ & $0.001 \pm 0.025$ & $0.001 \pm 0.025$ & $0.001 \pm 0.029$ \\ 
+        \midrule
+        lgcp & CMCD & 491.059 $\pm$ 3.553 & 498.147 $\pm$ 2.624 & 502.705 $\pm$ 2.482 & 506.045 $\pm$ 1.761 & 508.165 $\pm$ 1.553 & 509.43 $\pm$ 1.242 \\ 
+        ~ & VI-DNF & 424.733 $\pm$ 5.858 & 424.719 $\pm$ 5.855 & 424.714 $\pm$ 5.861 & 424.719 $\pm$ 5.860 & 424.7 $\pm$ 5.869 & 424.705 $\pm$ 5.896 \\ 
+        ~ & AFT & 126.651$\pm$ 5.764 & 344.145$\pm$ 23.95 & 191.613$\pm$ 173.873 & 420.259$\pm$ 91.43 & 480.126$\pm$ 33.059 & 491.028$\pm$ 8.057 \\ 
+%         ~ & CRAFT & $418.708 \pm 4.645$ &
+% $476.4 \pm 3.919$ &
+% $487.72 \pm 2.034$ &
+% $465.453 \pm 4.925$ &
+% OOM &OOM \\
+\bottomrule
+        % ~ & AFT &  &  &  &  &  &  \\ \bottomrule
+    \end{tabular}
+    }
+\end{table}
+
+\begin{table}[!ht]
+\caption{\textbf{ELBO comparison.} ELBO values for a different number of steps $K$, experiments and methods. Not all methods could be evaluated on every $K$/experiment combination due to numerical instabilities or out-of-memory (OOM) problems.}\label{tab:allres}
+    \centering
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{l|l|cccccc}
+\toprule
+        \textbf{Dataset} & \textbf{Method} & $K=8$ & $K=16$ & $K=32$ & $K=64$ & $K=128$ & $K=256$ \\ 
+        \midrule
+        seeds & 
+        CMCD &  $-74.501 \pm 0.049$ &
+$-74.327 \pm 0.065$ &
+$-74.142 \pm 0.05$ &
+$-73.967 \pm 0.038$ &
+$-73.8 \pm 0.032$ &
+$-73.684 \pm 0.033$ \\ 
+        ~ & 
+        VI-NF&  $-73.563 \pm 0.013$  &  $-73.547 \pm 0.012$  &  $-73.574 \pm 0.012$  &  $-73.58 \pm 0.014$  &  $-73.621 \pm 0.014$  &  $-73.675 \pm 0.014$ \\ 
+        ~ & AFT &  $-147.457 \pm 24.808$  &  $-116.134 \pm 8.157$  & $-99.032 \pm 6.321$ & $-87.436 \pm 1.53$  &  $-79.847 \pm 0.419$  &  $-76.364 \pm 0.188$ \\ 
+        ~ & CRAFT &  $-146.973 \pm 1.531$ &
+$-94.2 \pm 0.505$ &
+$-80.985 \pm 0.344$ &
+$-76.555 \pm 0.175$ &
+$-74.979 \pm 0.143$ &
+$-74.225 \pm 0.133$ \\
+        \midrule
+        %
+        log\_ionosphere & 
+        CMCD &  $-113.211 \pm 0.089$ &
+$-112.643 \pm 0.062$ &
+$-112.643 \pm 0.062$ &
+$-112.22 \pm 0.046$ &
+$-111.98 \pm 0.04$ &
+$-111.925 \pm 0.046$ \\ 
+        ~ & VI-NF  & $-111.903 \pm 0.022$  &  $-111.902 \pm 0.022$  &  $-111.892 \pm 0.017$  &  $-111.881 \pm 0.017$ &  OOM & OOM \\ 
+        ~ & AFT &  $-168.174 \pm 21.249$  &  $-138.733 \pm 8.374$  &  $-123.013 \pm 3.771$  &  $-118.644 \pm 0.891$  &  $-116.497 \pm 0.495$  &  $-114.905 \pm 0.781$ \\ 
+%         ~ & CRAFT & $-523.681 \pm 7.42$ &
+% $-241.686 \pm 3.525$ &
+% $-159.795 \pm 1.177$ &
+% $-130.35 \pm 0.575$ &
+% $-118.997 \pm 0.305$ &
+% $-114.558 \pm 0.226$  \\
+        \midrule
+        %
+        log\_sonar & 
+        CMCD & $-112.274 \pm 0.124$ &
+$-110.904 \pm 0.111$ &
+$-110.459 \pm 0.106$ &
+$-109.503 \pm 0.075$ &
+$-109.608 \pm 0.066$ &
+$-109.25 \pm 0.052$  \\ 
+        ~ & VI-NF &  $-109.353 \pm 0.035$  &  $-109.346 \pm 0.031$  &  $-109.441 \pm 0.035$  &  $-109.94 \pm 0.044$  &  $-109.711 \pm 0.039$  &  OOM \\ 
+        ~ & AFT &  $-203.249 \pm 12.506$  &  $-148.357 \pm 8.096$  &  $-129.772 \pm 3.057$  &  $-121.653 \pm 2.505$  &  $-114.911 \pm 0.331$  &  $-112.021 \pm 0.182$ \\ 
+%         ~ & CRAFT & $-194.746 \pm 1.422$ &
+% $-139.391 \pm 0.705$ &
+% $-122.001 \pm 0.5$ &
+% $-114.723 \pm 0.343$ &
+% $-111.778 \pm 0.176$ &
+% $-110.722 \pm 0.163$ \\
+        \midrule
+        %
+        lgcp & 
+        CMCD &  $469.475 \pm 0.259$ &
+$479.246 \pm 0.237$ &
+$486.739 \pm 0.249$ &
+$492.745 \pm 0.239$ &
+$497.074 \pm 0.267$ &
+$499.708 \pm 0.236$ \\ 
+        ~ & AFT & $75.896 \pm 0.863$  &  $265.005 \pm 34.254$  &  $62.898 \pm 200.991$  &  $340.687 \pm 126.853$  & $417.916 \pm 50.35$  & $424.705 \pm 12.416$ \\ 
+%         ~ & CRAFT & $382.327 \pm 0.317$ &
+% $436.482 \pm 1.232$ &
+% $445.207 \pm 1.947$ &
+% $399.314 \pm 5.599$ &
+% OOM & OOM  \\
+        \midrule
+        %
+        lorenz & 
+        CMCD &  $-1180.797 \pm 0.184$ &
+$-1180.797 \pm 0.184$ &
+$-1176.514 \pm 0.154$ &
+$-1174.309 \pm 0.148$ &
+$-1172.453 \pm 0.153$ &
+$-1170.826 \pm 0.15$ \\ 
+        ~ & VI-NF & $-1499.102 \pm 0.84$  &  $-1471.798 \pm 0.582$  &  $-1439.648 \pm 0.274$  &  $-1433.536 \pm 0.316$  &  OOM &  OOM \\ 
+        % ~ & AFT & 126.651$\pm$ 5.764 & 344.145$\pm$ 23.95 & 191.613$\pm$ 173.873 & 420.259$\pm$ 91.43 & 480.126$\pm$ 33.059 & 491.028$\pm$ 8.057 \\ 
+        % ~ & CRAFT &  &  &  &  &  &  \\
+        \midrule
+        %
+        brownian & 
+        CMCD &  $-0.753 \pm 0.075$ &
+$-0.209 \pm 0.059$ &
+$0.153 \pm 0.045$ &
+$0.376 \pm 0.038$ &
+$0.578 \pm 0.046$ &
+$0.722 \pm 0.032$ \\ 
+        ~ & VI-NF &  $0.733 \pm 0.019$  & $0.797 \pm 0.018$  & $0.816 \pm 0.018$  &  OOM  &  OOM  &  OOM \\ 
+        % ~ & AFT & 126.651$\pm$ 5.764 & 344.145$\pm$ 23.95 & 191.613$\pm$ 173.873 & 420.259$\pm$ 91.43 & 480.126$\pm$ 33.059 & 491.028$\pm$ 8.057 \\ 
+%         ~ & CRAFT & $-43.783 \pm 0.763$ &
+% $-2.03 \pm 0.285$ &
+% $-1.209 \pm 0.313$ &
+% $-3.728 \pm 0.29$ &
+% $-0.287 \pm 0.145$ &
+% $-0.454 \pm 0.143$ \\
+        %
+        \bottomrule
+    \end{tabular}
+    }
+\end{table}
+
+\subsection{Wallclock times for \texorpdfstring{$\ln Z$}{ln Z} calculation}
+In order to calculate the average wall-clock time for $\ln Z$ calculation, we calculate the time it takes to draw $30$ seeds of $2000$ samples each from the methods below, and use these samples to calculate the mean and standard deviation of $\ln Z$ across $30$ seeds.
+\begin{table}[!htb]
+    \centering
+    \begin{tabular}{lccc}
+\toprule Method & Average Time (s) & Min Time (s) & Max Time (s) \\
+\midrule CMCD (OD) & 9.665 & 5.592 & 21.475 \\
+ % CMCD (UD) & 8.419 & 5.392 & 16.549 \\
+ ULA & 9.204 & 4.673 & 20.721 \\
+ UHA & 9.427 & 5.588 & 20.263 \\
+ MCD & 9.204 & 4.673 & 20.721  \\
+ % LDVI & 8.419 & 5.392 & 16.549 \\
+\bottomrule
+\end{tabular}
+    \caption{Wallclock times for evaluation in seconds.}
+    \label{tab:my_label}
+\end{table}
+
+
+\begin{table}[!htb]
+\centering
+\adjustbox{max width=\textwidth}{
+\begin{tabular}{@{}lllll@{}}
+\toprule
+Mode     & ULA                         & MCD                                   & CMCD                                       & DDS / PIS                                         \\ \midrule
+Sampling & $\mathcal{O}(K \cdot (d+ G(d)))$ & $\mathcal{O}(K \cdot (d+G(d)))$           & $\mathcal{O}(K \cdot ( d + G(d) + N(d)) )$ & $\mathcal{O}(K \cdot ( N_2 + G(d) + N_1(d)) )$ \\
+ELBO     & $\mathcal{O}(K \cdot (d+G(d)))$ & $\mathcal{O}(K \cdot (d +G(d) + N(d)) )$ & $\mathcal{O}(K \cdot ( d + G(d) + N(d)) )$ & $\mathcal{O}(K \cdot ( N_2 + G(d) + N_1(d)) )$ \\ \bottomrule
+\end{tabular}}
+\caption{Sampling and loss calculation complexity across SDE based methods,  $K$ represents the number of integration steps, $G(d)$ represents the cost of evaluating the score of the target and $N(d)$ for evaluating the drift/score networks both quantities are dimension dependant. PIS and DDS have an additional grad network cost $N_2$ which is dimension independant.}
+\end{table}
+
+\subsection{Training time comparisons to SMC}
+
+In this section, we explore a total time comparison between our approach CMCD and SMC. 
+
+As both methods are quite inherently different it is not immediately obvious how to carry out an insightful comparison. In order to do so we chose the LGCP which is our most numerically intense target and we phrase the following question:
+
+\begin{center}
+“For how long do we have to train CMCD to outperform the best-run SMC”
+\end{center}
+
+For this, we look at our \Cref{fig:cmcd_exps} pane c) and we can see that at $K=8$ CMCD already outperforms SMC at $K=256$ with 2000 particles. So we choose these two approaches to compare to.  In \Cref{tab:cmcdsmc} is a brief comparison of total time calculations, note we have included tuning time for SMC which is akin to our training time as without tuning SMCs hyperparameters ELBOs and ln Z estimations were much worse. We can observe that the total runtime for training and sampling CMCD to reach a better $\ln Z$ value does not exceed the time required to tune SMC.
+
+\begin{table}[!htb]
+\centering
+\begin{tabular}{@{}llll@{}}
+\toprule
+Method & Train + Sample Time (min) & ln Z                & ELBO                  \\ \midrule
+CMCD   & $33.12 \pm 0.12$          & $491.059 \pm 3.553$  & $469.475 \pm  0.2589$ \\ 
+SMC    & $62.62 \pm 0.10$           & $477.162 \pm 4.998$ & $453.395 \pm 4.4300$    \\ \bottomrule
+\end{tabular}
+\caption{Training+ Tuning + Sampling time comparisons for CMCD and SMC at comparable ln Z estimates.} \centering\label{tab:cmcdsmc}
+\end{table}

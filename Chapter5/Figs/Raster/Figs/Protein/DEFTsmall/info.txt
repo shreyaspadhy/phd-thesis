@@ -1,0 +1,2 @@
+This is the run: 
+(misunderstood-frost) plots & data for the small training run (4% uncond. model size, ~298 epochs = ~48 A100h)

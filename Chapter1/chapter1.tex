@@ -15,11 +15,16 @@
 %********************************** %First Section  **************************************
 % \section{What is loren ipsum? Title with math \texorpdfstring{$\sigma$}{[sigma]}} %Section - 1.1 
 
-Machine learning has revolutionised the way we approach modelling and decision making in many fields, ranging from healthcare to scientific discovery. Modern algorithms are fundamentally defining a new approach to how we analyse data and derive insights from complex systems. While the entire gamut of machine learning applications and methodologies are vast and varied, there is often a common thread among them: the ability to obtain samples from complex, high-dimensional probability distributions. The ability to obtain samples from these complex distributions has allowed us to develop powerful applications, such as image synthesis, protein structure prediction, and drug design, to name a few. A large family of methods focus on the task of \textit{generative modelling}, which is the task of estimating a probability distribution when provided with samples from it, in order to obtain new, novel samples. The approaches have evolved from one-shot sampling approaches such as GANs to iterative samplers like diffusion models, dramatically improving the quality of samples at the expense of speed. Another family of ML algorithms focus on the task of \textit{obtaining samples from unnormalised probability distributions} where we can only evaluate the density of a given sample. Here, classical MCMC techniques remain indispensable, though there have been recent innovations in neural sampling algorithms that boost efficiency and accuracy. 
+Machine learning has revolutionised the way we approach modelling and decision making in many fields, ranging from healthcare to scientific discovery. Modern algorithms are fundamentally defining a new approach to how we analyse data and derive insights from complex systems. While the entire gamut of machine learning applications and methodologies are vast and varied, there is often a common thread among them: the ability to obtain samples from complex, high-dimensional probability distributions. The ability to obtain samples from these complex distributions has allowed us to develop powerful applications, such as image synthesis, protein structure prediction, and drug design, to name a few. 
 
-The ability to estimate complex probability distributions and draw samples has the potential to unlock really impactful downstream applications as well. Many modern \textit{Bayesian inference} algorithms rely on approximating quantities of interest using high-quality samples from the posterior distribution. While MCMC methods like HMC and NUTS provide this quality at an exorbitant cost, variational and Gaussian approximations that enable efficient sampling are often quite competitive. The field of \textit{Reinforcement Learning (RL)} also makes heavy use of sampling algorithms for learning policies and exploring the state-action space. Even in the modern \textit{Large Language Model (LLM)} era, it has been shown that \textit{how we sample} matters enormously: strategies like nucleus and temperature sampling have boosted the generation of coherent yet diverse, interesting text.
+A large family of methods focus on the task of \textit{generative modelling}, which is the task of estimating a probability distribution when provided with samples from it, in order to obtain new, novel samples. The approaches have evolved from one-shot sampling approaches such as Generative Adversarial Networks (GANs) to iterative samplers like diffusion models, dramatically improving the quality of samples at the expense of speed. Another family of ML algorithms focus on the task of \textit{obtaining samples from unnormalised probability distributions} where we can only evaluate the density of a given sample. Here, classical Markov Chain Monte Carlo (MCMC) techniques remain indispensable, though there have been recent innovations in neural sampling algorithms that boost efficiency and accuracy. 
 
-% In Bayesian inference, obtaining high-quality samples from the posterior distribution are indispensable, and while MCMC methods such as HMC and NUTS provide a gold-standard, variational methods offer faster if approximate solutions. Reinforcement Learning also makes heavy use of sampling algorithms for learning (Monte Carlo returns, policy gradients) and exploration (Thompson sampling, MCTS), and new methods are inserting MCMC samplers into RL for uncertainty-driven exploration. Even in large-scale language generation, it has been shown that {\em how we sample} matters enormously: strategies like nucleus and temperature sampling have boosted the generation of coherent yet diverse and interesting text.
+\paragraph{Why better samples matter.}{
+
+The ability to estimate complex probability distributions and draw samples has the potential to unlock really impactful downstream applications. Many modern \textit{Bayesian inference} algorithms rely on approximating quantities of interest using high-quality samples from the posterior distribution. Within \textit{Bayesian Deep Learning} this translates into obtaining posterior samples for Bayesian Neural Networks (BNNs), flexible deep learning models that can express rich function classes. Classical MCMC methods such as Hamiltonian Monte Carlo (HMC) and the No-U-Turn Sampler (NUTS) can in principle supply these samples, but their cost scales poorly with the number of network parameters. Recent approximate techniques—most notably the \emph{Linearised Laplace} method—have begun to bridge the BNN world to \textit{Bayesian nonparametrics}, where stochastic-process priors like Gaussian Processes (GPs) naturally shift the computational burden from the number of parameters to the number of observations. In this situation, sampling reduces to drawing from a high-dimensional—but \emph{structured}—Gaussian distribution, which can still unfortunately scale poorly with the number of observations.
+
+Sampling is no less central in other subfields. The field of \textit{Reinforcement Learning (RL)} also makes heavy use of sampling algorithms for learning policies and exploring the state-action space. Even in the modern \textit{Large Language Model (LLM)} era, it has been shown that \textit{how we sample} matters enormously: strategies like nucleus and temperature sampling have boosted the generation of coherent yet diverse, interesting text.
+}
 
 \nomenclature[z-gan]{$GAN$}{Generative Adversarial Network}
 \nomenclature[z-mcmc]{$MCMC$}{Markov Chain Monte Carlo}
@@ -31,24 +36,85 @@ The ability to estimate complex probability distributions and draw samples has t
 
 \nomenclature[z-ddpm]{$DDPM$}{Denoising Diffusion Probabilistic Models}
 
+\paragraph{Challenges in sampling algorithms and the way forward.}{
+Across these domains and applications, we see common challenges. Firstly, high dimensionality is a difficult challenge to overcome. For example, when estimating uncertainty in neural networks, posterior distributions can have millions of dimensions, making it difficult to obtain high-quality samples. Secondly, there is always a trade-off between exactness and efficiency: e.g. exact MCMC vs faster Variational Inference (VI) in Bayesian inference algorithms. Algorithms that can improve along these two axes have immense value in both allowing us to scale these techniques over larger and more complex data, as well as improve the accuracy of existing methods.
+
+While these fields are often explored independently in the literature, there has historically been cross-pollination between fields: ideas from statistical physics such as annealing and tempering now form the basis of the best sampling techniques; probabilistic inference tools such as HMC and VI have been adapted and scaled for deep learning; and better deep learning models contribute back to better neural samplers and generative models. As models and data grow in size, and our desire to apply machine learning to ever more ambitious domains grows, efficient and accurate sampling techniques will remain a crucial area of research.
+}
+
+\section{The Goal of this Thesis}
+
+\subsection{A Unifying Framework for Generative Modelling and Sampling}
+
+In recent years, there has been an increasing interest in iterative noising algorithms for generative modelling and sampling, with different viewpoints on tackling the problem. Denoising Diffusion Probabilistic Models (DDPM) design Markov chains that gradually add noise to datapoints, and learn to reverse this process using variational inference. On the other hand, Score Matching (SM) techniques aim to directly learn the gradients of the data distribution using regression. Simultaneously, there has been a resurgence in techniques that learn ``mappings'' between distributions, such as flow matching and optimal transport. In sampling literature, there has been a lot of interest in developing extensions to Annealed Importance Sampling (AIS) methods that are inspired by diffusion models and optimal transport.
+
+With such an explosion of techniques, rooted variously in variational inference, optimal transport, and stochastic control, it is often hard to view them under a unifying lens. Although there has been some work showing that many of these algorithms can be viewed as instances of Stochastic Differential Equations (SDEs), a unifying framework that covers both generative modelling and sampling remains elusive. In this thesis, we tackle this problem, by introducing a hierarchical variational-inference perspective in which every method above appears as the minimisation of a ``path-space'' divergence between probability measures. In order to achieve this perspective,  we develop a new theoretical tool: a novel way to compute divergences \emph{pathwise} under the calculus of stochastic processes.
+
+We therefore will spend some time developing the theory of stochastic calculus in \Cref{chapter:sde}, before using it to propose our framework in \Cref{chapter:cmcd}. We will then use the flexibility of our framework to develop a new state-of-the-art sampling algorithm called Controlled Monte Carlo Diffusions (CMCD), which will be shown to have strong theoretical guarantees while being practical and efficient.
+
+\subsection{A Unifying Framework for Conditional Sampling}
+Another important facet of sampling algorithms is the ability to condition on specific observations or constraints. For example, in language generation, we may want to condition on a specific prompt, or in drug design, we may want to condition on specific chemical properties. More generally, \emph{Bayesian inference itself is a conditional sampling task}: we seek draws from the posterior distribution of a model \emph{conditioned} on observed data. Over the years, many different algorithms have been proposed to adapt diffusion models to this problem, ranging from simple empirical techniques such as Classifer-Free Guidance (CFG) to more sophisticated techniques such as Diffusion Posterior Sampling (DPS). However, there has been a lack of a consistent theoretical framework that allows us to unify and understand the various trade-offs involved in these algorithms. 
+
+In this thesis, we will develop such a framework. \Cref{chapter:deft} develops a stochastic-calculus formulation that expresses a wide range of conditional samplers as specific instances of Doob’s \(h\)-transform. Within this framework, we derive \emph{Doob’s \(h\)-transform Efficient Fine-Tuning} (DEFT), an algorithm that combines strong theoretical guarantees with practical efficiency. We demonstrate DEFT across tasks ranging from controlled image generation to protein design, establishing new state-of-the-art performance while clarifying the principles that underlie earlier heuristic methods.
+
+\subsection{Large-Scale Bayesian Inference through Sampling}
+
+In the second part of this thesis, we will turn our attention to the task of sampling in large-scale Bayesian inference. Specifically, we will focus on \textit{Bayesian Nonparametrics}, where infinite-dimensional stochastic functions are used as priors, side-stepping the rigid finite parametrisations that can sometimes hamper classifical parametric Bayesian models. The recent explosion of data and model sizes in machine learning has renewed interest in this field, where methods such as Gaussian Processes (GPs) can scale their complexity with the amount of data available. Unfortunately, calculating the exact posterior distribution of a GP is computationally prohibitive for large datasets, scaling cubically in the number of observations. 
+
+However, rather than approximating the posterior distribution analytically (e.g. variationally), we apply the same viewpoint as above: high-quality samples can often be good enough. Once we have high-quality samples, we can use them to perform tasks such as posterior inference, model comparison, and hyperparameter tuning. The bottleneck is therefore entirely computational: how do we \emph{sample} efficiently from a high-dimensional Gaussian posterior? In \Cref{chapter:gp_sampling}, we exploit a technique called \textit{pathwise conditioning}, which allows us to convert samples from an unconditioned Gaussian distribution into a conditioned Gaussian distribution through the calculation of a correction term. We will show that carefully pre-conditioned \textit{stochastic gradient descent} (SGD) algorithms can replace the cubic-scaling Cholesky decomposition operation with a far more efficient, potentially near-linear, operation.
+
+Finally, in \Cref{chapter:bnn_sampling}, we push this idea further, by first approximating Bayesian Neural Networks as equivalent Gaussian Processes through the Linearised Laplace Approximation (LLA). By then expanding our SGD framework of pathwise conditioning into the parameter space of large BNNs, we are able to develop highly scalable Bayesian Deep Learning algorithms that can be use to obtain high-quality uncertainty estimates at an Imagenet scale. 
+
+% The bottleneck is therefore no longer conceptual but algorithmic: how do we \emph{sample} efficiently from a high-dimensional Gaussian posterior?  The key
+% insight is to cast GP sampling itself as a stochastic optimisation problem.
+% By interpreting the Cholesky solve underlying GP posteriors as the stationary
+% point of a quadratic objective, we show that carefully pre-conditioned
+% \emph{stochastic gradient descent} (SGD) can replace $O(N^{3})$ factorizations
+% with \emph{near-linear} time iteration.  Each SGD trajectory is a path in
+% function space, and the same stochastic calculus tools—Itô’s lemma, martingale
+% arguments, and pathwise divergences—that unified diffusion‐based generative
+% models now certify the convergence and bias–variance trade-offs of our GP
+% samplers.
+
+% \paragraph{Beyond GPs: links to Bayesian neural networks.}
+% In Chapter~\ref{chapter:bnn-gp} we push this idea further, exploiting the
+% well-known correspondence between wide Bayesian neural networks (BNNs) and GPs
+% via the \emph{linearised Laplace approximation}.  By transplanting our
+% GP-sampling algorithms into the parameter space of large networks we obtain
+% scalable Bayesian deep-learning models—an outcome that would be difficult to
+% reach from a purely variational or purely MCMC standpoint alone.
+
+% The Gaussian Process (GP) is a canonical example of this: by placing a Gaussian prior on functions, we obtain a posterior distribution that is itself jointly Gaussian, allowing us to 
+
+% In the second part of this thesis, we will turn our attention to the domain of large-scale Bayesian inference, where the ability to draw high-quality samples efficiently is not merely advantageous, but forms the bedrock of its practical applications. The Bayesian paradigm offers a principled and powerful framework for reasoning under uncertainty, enabling robust decision-making and informed model selection, qualities increasingly demanded in safety-critical and scientifically rigorous applications.
+
+% Bayesian inference algorithms face exactly the same challenges as we've discussed above: posteriors, marginal likelihoods and even hyper-parameter evidence are all unnormalised probability distributions. While classical MCMC algorithms such as HMC provide a gold standard for posterior sampling, their computational intensity frequently curtails their use in the face of massive datasets and complex models. This section will focus on a sampling-centric perspective on Bayesian inference, and show how many essential components, such as posterior inference, model comparison, and hyperparameter tuning, can often be effectively addressed using a finite set of representative samples, thereby motivating the development of novel, highly efficient sampling strategies beyond traditional MCMC. In this part of the thesis, we will focus on a specific category of Bayesian inference algorithms: Gaussian Processes (GPs). Further, we will be able to leverage the fact that Bayesian Neural Networks (BNNs) can be effectively approximated as GPs through methods like the linearised Laplace approximation. This choice is not arbitrary; GPs induce Gaussian posteriors, which make them amenable to certain conditional sampling techniques that are quite efficient. 
+
+% The biggest challenge of traditional GP and exact BNN inference remains its computational cost, notoriously scaling cubically with the number of data points or parameters when using exact inference, or even to draw a finite number of samples from the posterior. This would seemingly defeat the purpose of reframing the inference problem as a sampling problem, and our goal will be to show how we can sidestep this critical barrier. Crucially, we will develop novel stochastic optimisation algorithms that convert the task of sampling from a high-dimensional Gaussian distribution from a matrix inversion problem into a far more tractable, gradient-descent algorithm. As we will show, these stochastic optimisation algorithms can transform the sampling process itself from a cubic-scaling bottleneck into a far more manageable, potentially near-linear, operation. We will show how we are able to scale these algorithms for the large-scale era of machine learning, which has seen the development of DNNs with millions of parameters, and datasets with millions of datapoints.
 
 
-Across these domains and applications, we see a common theme. High dimensionality is a difficult challenge to overcome: techniques that leverage gradients (Langevin, HMC) or adaptive truncation (nucleus sampling) can help tame the curse of dimensionality by guiding samples towards high-density regions. Secondly, there is always a trade-off between exactness and efficiency: e.g. exact MCMC vs faster VI in Bayesian inference algorithms, or exhaustive beam search vs stochastic sampling in text generation. Algorithms that can improve along these two axes have immense value in both allowing us to scale these techniques over larger and more complex data, as well as improve the accuracy of existing methods. While these fields are often explored independently in the literature, there has historically been cross-pollination between fields: ideas from statistical physics such as annealing and tempering now form the basis of the best sampling techniques; probabilistic inference tools such as HMC and VI have been adapted and scaled for deep learning; and better deep learning models contribute back to better neural samplers and generative models. As models and data grow in size, and our desire to apply machine learning to ever more ambitious domains grows, efficient and accurate sampling techniques will remain a crucial area of research.
+% Finally, in order to scale conditional sampling algorithms to a practical domain of application, such as in large-scale uncertainty estimation using Bayesian inference, we need to develop new algorithms that can scale to datasets with millions of datapoints and models with millions of parameters.
 
-Furthermore, there have been many threads of promising research in the sampling literature, that approach the problem from different viewpoints. Denoising diffusion probabilistic models (DDPM) designed discrete Markov chains that gradually added noise to data and then learnt to reverse this noising process using variational inference. Score matching techniques were proposed independently that converted the task of learning probability distributions into learning the gradients of their logarithms, a quantity termed the "score". Simultaneously, there has been a resurgence in normalising flows and flow matching techniques, where algorithms attempt to learn continuous normalising flows to map different probability distributions to each other. In the statistical inference literature, methods involving Langevin dynamics have been quite popular, which is a classic MCMC technique that follows continuous-time Markov processes where the probability distribution of interest is the stationary distribution. This field is ever growing, and there are advancements across variational inference, optimal transport theory, and stochastic control, to name a few, that are often hard to view under a unifying lens. This is a problem that we hope to remedy in this thesis, by developing a theoretical framework that can recast ideas from disparate fields into a unified viewpoint.
+% In this thesis, we will tackle these issues in quick succession. First, we will propose a unifying framework of heirarchical variational inference that will allow us to unify many generative modelling and sampling algorithms under the common lens of minimising a probability divergence between distributions. In order to do this, we will develop a novel theoretical result that will allow us to calculate probability divergences between 
 
-\section{Thesis outline and contributions}
 
-The goal of this thesis is twofold: we develop a strong underlying mathematical framework of stochastic calculus to unify sampling, generative modelling and conditional sampling algorithms under the umbrella of stochastic differential equations, and we propose a sampling-based viewpoint of Bayesian inference, allowing us to scale algorithms to massive datasets and models. The thesis is organised as follows.
+% Along the way, we will discuss popular algorithms such as Annealed Importance Sampling, Score Matching, and Diffusion Models, and show how they converge to stochastic differential equations in the continuous limit. This connection motivates us to study the variational framework under a stochastic calculus framework, and eventually allow us to develop novel algorithms due to this theoretical framework.
 
-\begin{itemize}
-    \item Chapter 2 introduces the sampling problem, and proposes a heirarchical variational inference framework that would allow us to unify many generative modelling and sampling algorithms under a single framework of loss functions and optimisation. Along the way, we discuss popular algorithms such as Annealed Importance Sampling, Score Matching, and Diffusion Models, and show how they converge to stochastic differential equations in the continuous limit. This connection motivates us to study the variational framework under a stochastic calculus framework, and eventually allow us to develop novel algorithms due to this theoretical framework.
-    \item Chapter 3 introduces stochastic differential equations, along with the theory of Ito calculuss, which allows us to develop ``path''-based rules of probability theory that will be useful in this thesis. Further, we show two specific ways of time-reversal in SDEs, and discuss how different theoretical results can be derived from these two different perspectives and their drawbacks. Finally, we show how it is difficult to write probabilistic divergences under a ``reverse-time'' framework under regular Ito calculus, and therefore introduce an individual path-based framework of F{\"o}llmer's Ito calculus.
-    % \item Chapter 3 introduces the mathematical framework of stochastic calculus, introducing concepts that allow us to represent sampling, generative modelling and conditional generation as instantiations of stochastic differential equations. In this chapter, we spend some time showing how existing methods and algorithms are specific approximations of this unifying framework, and develop reasoning and intuitions for why a continuous-time, stochastic calculus framework is ideally suited to develop new theoretical results that result in practical algorithms.
-    \item In Chapter 4, we use our stochastic calculus framework to develop that Controlled Monte Carlo Diffusion (CMCD) sampler, an algorithm that connects heirarchical variational inference with diffusion models to adapt both forward and backward dynamics within diffusion processes, yielding an approach that has strong theoretical guarantees while maintaining remarkable practical efficiency. We then explore the related task of conditional sampling, i.e. the task of modifying sampling algorithms to target specific conditions, and unify existing approaches under a stochastic calculus framework through Doob's $h$-transform. 
-    \item Chapter 4 introduces a somewhat non-traditional viewpoint of Bayesian inference that approximates many components of the Bayesian methodology using a finite number of samples from the posterior distribution. Recognising that many practical Bayesian inference tasks do not necessarily require sampling from the full, exact posterior but instead can leverage high-dimensional Gaussian approximations, we dedicate this part of the thesis to scalable Gaussian sampling methodologies. We first show how Gaussian processes and Bayesian neural networks can be unified through the linearised Laplace approximation, allowing us to simplify the task of Bayesian inference to that of sampling from high-dimensional Gaussians. We then demonstrate the surprising empirical performance these linearised approximations, which despite their simplicity, offer highly competitive uncertainty quantification performance.
-    \item Chapter 5 is dedicated to the development of a family of Bayesian inference algorithms that can efficiently draw samples from very high-dimensional Gaussian distributions using stochastic optimisation techniques, and use these samples to tune model hyperparameters, providing a highly scalable approach to model selection. We develop theoretical bounds on the quality of model selection using a finite number of samples, as well as practical insights and suggestions for speeding up stochastic optimisation. Our algorithms demonstrate significant scalability improvements, successfully enabling Bayesian inference on large-scale neural networks such as ResNet-50 models on an Imagenet scale, as well as the ability to train and perform inference with Gaussian processes on millions of datapoints without any approximations.
-\end{itemize}
+% Furthermore, there have been many threads of promising research in the sampling literature, that approach the problem from different viewpoints. Denoising diffusion probabilistic models (DDPM) designed discrete Markov chains that gradually added noise to data and then learnt to reverse this noising process using variational inference. Score matching techniques were proposed independently that converted the task of learning probability distributions into learning the gradients of their logarithms, a quantity termed the "score". Simultaneously, there has been a resurgence in normalising flows and flow matching techniques, where algorithms attempt to learn continuous normalising flows to map different probability distributions to each other. In the statistical inference literature, methods involving Langevin dynamics have been quite popular, which is a classic MCMC technique that follows continuous-time Markov processes where the probability distribution of interest is the stationary distribution. This field is ever growing, and there are advancements across variational inference, optimal transport theory, and stochastic control, to name a few, that are often hard to view under a unifying lens. This is a problem that we hope to remedy in this thesis, by developing a theoretical framework that can recast ideas from disparate fields into a unified viewpoint.
+
+% \section{Thesis outline and contributions}
+
+% The thesis is organised as follows:
+
+% \begin{itemize}
+%     \item Chapter 2 introduces the sampling problem, and proposes a heirarchical variational inference framework that would allow us to unify many generative modelling and sampling algorithms under a single framework of loss functions and optimisation. Along the way, we discuss popular algorithms such as Annealed Importance Sampling, Score Matching, and Diffusion Models, and show how they converge to stochastic differential equations in the continuous limit. This connection motivates us to study the variational framework under a stochastic calculus framework, and eventually allow us to develop novel algorithms due to this theoretical framework.
+%     \item Chapter 3 introduces stochastic differential equations, along with the theory of Ito calculus, which allows us to develop ``path''-based rules of probability theory that will be useful in this thesis. Further, we show two specific ways of time-reversal in SDEs, and discuss how different theoretical results can be derived from these two different perspectives and their drawbacks. Finally, we show how it is difficult to write probabilistic divergences under a ``reverse-time'' framework under regular Ito calculus, and therefore introduce an individual path-based framework of F{\"o}llmer's Ito calculus.
+%     % \item Chapter 3 introduces the mathematical framework of stochastic calculus, introducing concepts that allow us to represent sampling, generative modelling and conditional generation as instantiations of stochastic differential equations. In this chapter, we spend some time showing how existing methods and algorithms are specific approximations of this unifying framework, and develop reasoning and intuitions for why a continuous-time, stochastic calculus framework is ideally suited to develop new theoretical results that result in practical algorithms.
+%     \item In Chapter 4, we use our stochastic calculus framework to develop that Controlled Monte Carlo Diffusion (CMCD) sampler, an algorithm that connects heirarchical variational inference with diffusion models to adapt both forward and backward dynamics within diffusion processes, yielding an approach that has strong theoretical guarantees while maintaining remarkable practical efficiency. 
+%     \item In Chapter 5, we explore the related task of conditional sampling, i.e. the task of modifying sampling algorithms to target specific conditions, and unify existing approaches under a stochastic calculus framework through Doob's $h$-transform. Using this framework, we develop the Doob's $h$-transform Efficient Fine-tuning (DEFT) algorithm, which is a new state-of-the-art algorithm for conditional sampling. 
+%     \item Chapter 6 is dedicated to the development of a family of Bayesian inference algorithms that can efficiently draw samples from Gaussian Process posteriors using stochastic optimisation techniques, and use these samples to tune model hyperparameters, providing a highly scalable approach to model selection. We develop theoretical bounds on the quality of model selection using a finite number of samples, as well as practical insights and suggestions for speeding up stochastic optimisation.
+%     \item Chapter 7 is dedicated to developing the connection of Bayesian Neural Networks with Gaussian Processes through the Linearised Laplace Approximation, and show how we can use this connection to develop efficient sampling algorithms for Bayesian Neural Networks. Our algorithms demonstrate significant scalability improvements, successfully enabling Bayesian inference on large-scale neural networks such as ResNet-50 models on an Imagenet scale.
+% \end{itemize}
 
 \section{List of publications in the thesis}
 
@@ -60,9 +126,16 @@ Here, I list the papers that form a part of this thesis.
     \item ``Sampling-based inference for large linear models, with application to linearised Laplace''. J. Antorán$^{*}$, \textbf{S. Padhy}$^{*}$, R. Barbano, E. Nalisnick, D. Janz, J.M. Hernández-Lobato. In \textit{International Conference on Learning Representations (ICLR)}, 2023.
     \item ``Sampling from Gaussian process posteriors using stochastic gradient descent''. J.A. Lin$^{*}$, J. Antorán$^{*}$, \textbf{S. Padhy}$^{*}$, D. Janz, J.M. Hernández-Lobato, A. Terenin. In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2023.
     \item ``Stochastic Gradient Descent for Gaussian Processes Done Right''. J.A. Lin$^{*}$, \textbf{S. Padhy}$^{*}$, J. Antorán$^{*}$, A. Tripp, A. Terenin, C. Szepesvári, J.M. Hernández-Lobato, D. Janz. In \textit{International Conference on Learning Representations (ICLR)}, 2024.
-    \item ``Improving Linear System Solvers for Hyperparameter Optimisation in Iterative Gaussian Processes''. J.A. Lin, \textbf{S. Padhy}, B. Mlodozeniec, J. Antorán, J.M. Hernández-Lobato. In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2024.
-    \item ``Iterative Importance Fine-tuning of Diffusion Models''. A. Denker, \textbf{S. Padhy}, F. Vargas, J. Hertrich. In \textit{Frontiers in Probabilistic Inference workshop at International Conference on Learning Representations (ICLR)}, 2025.
-    \item ``No Trick, No Treat: Pursuits and Challenges Towards Simulation-free Training of Neural Samplers''. J. He, Y. Du, F. Vargas, D. Zhang, \textbf{S. Padhy}, R. OuYang, C. Gomes, J.M. Hernández-Lobato. In \textit{Frontiers in Probabilistic Inference workshop at International Conference on Learning Representations (ICLR)}, 2025.
+    % \item ``Improving Linear System Solvers for Hyperparameter Optimisation in Iterative Gaussian Processes''. J.A. Lin, \textbf{S. Padhy}, B. Mlodozeniec, J. Antorán, J.M. Hernández-Lobato. In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2024.
+    % \item ``Iterative Importance Fine-tuning of Diffusion Models''. A. Denker, \textbf{S. Padhy}, F. Vargas, J. Hertrich. In \textit{Frontiers in Probabilistic Inference workshop at International Conference on Learning Representations (ICLR)}, 2025.
+    % \item ``No Trick, No Treat: Pursuits and Challenges Towards Simulation-free Training of Neural Samplers''. J. He, Y. Du, F. Vargas, D. Zhang, \textbf{S. Padhy}, R. OuYang, C. Gomes, J.M. Hernández-Lobato. In \textit{Frontiers in Probabilistic Inference workshop at International Conference on Learning Representations (ICLR)}, 2025.
+\end{enumerate}
+Further, I also list papers that I have co-authored during my PhD, but don't form an integral part of this thesis.
+
+\begin{enumerate}
+\item ``Improving Linear System Solvers for Hyperparameter Optimisation in Iterative Gaussian Processes''. J.A. Lin, \textbf{S. Padhy}, B. Mlodozeniec, J. Antorán, J.M. Hernández-Lobato. In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2024.
+\item ``Iterative Importance Fine-tuning of Diffusion Models''. A. Denker, \textbf{S. Padhy}, F. Vargas, J. Hertrich. In \textit{Frontiers in Probabilistic Inference workshop at International Conference on Learning Representations (ICLR)}, 2025.
+\item ``No Trick, No Treat: Pursuits and Challenges Towards Simulation-free Training of Neural Samplers''. J. He, Y. Du, F. Vargas, D. Zhang, \textbf{S. Padhy}, R. OuYang, C. Gomes, J.M. Hernández-Lobato. In \textit{Frontiers in Probabilistic Inference workshop at International Conference on Learning Representations (ICLR)}, 2025.
 \end{enumerate}
 
 % Therefore, in the first part of this thesis, we develop a comprehensive mathematical framework grounded in stochastic calculus and optimal transport theory, and unify a large number of sampling-based approaches under this umbrella, showing how different modelling choices result in different trade-offs. We introduce the Controlled Monte Carlo Diffusion (CMCD) sampler, 
@@ -96,3 +169,76 @@ Here, I list the papers that form a part of this thesis.
 % \nomenclature[r-j]{$j$}{superscript index}                                                       % first letter R is for superscripts
 % \nomenclature[s-0]{$0$}{subscript index}                                                        % first letter S is for subscripts
 
+
+% \subsection{From Stochastic Calculus to Bayesian Nonparametrics}
+
+% Up to this point we have leveraged stochastic calculus to develop a unifying
+% view of generative modelling, sampling, and conditional sampling.  Yet
+% stochastic processes play an equally fundamental rôle in another corner of
+% machine learning: \emph{Bayesian nonparametrics} (BNP).
+% In BNP, an \emph{infinite–dimensional} stochastic process is pressed into
+% service as a prior, thereby side-stepping the rigid finite parameterisations
+% that often hamstring classical Bayesian models.  The Gaussian process (GP) is
+% arguably the canonical example: by placing a GP prior on a latent function
+% $f(\cdot)$ we obtain a joint Gaussian distribution over \emph{every} possible
+% set of function evaluations, no matter how many or where they are queried.
+% Crucially, the very mathematics of stochastic processes that we exploited in
+% Chapters~\ref{chapter:sde}–\ref{chapter:deft} now becomes the bridge to a
+% different goal: \emph{scalable Bayesian inference}.
+
+% \paragraph{Why BNP—and why now?}
+% The recent explosion of data and model capacity has renewed interest in
+% methods that can grow their complexity with the evidence.  BNP meets that need
+% in principle, but in practice its infinite-dimensional integrals are daunting:
+% exact GP inference scales cubically in the number of observations and even
+% \emph{drawing a single posterior sample} naively requires an $O(N^{3})$ matrix
+% factorisation.  From the decision-theoretic standpoint articulated by
+% \citet{Schervish1995} and the pragmatism championed by
+% \citet{Ghahramani2012}, computation is therefore the binding constraint.
+
+% \paragraph{A sampling-centric view of BNP.}
+% Rather than approximate the posterior analytically (e.g.\ variationally) we
+% take the same stance that underpinned our treatment of diffusion models:
+% \emph{high-quality samples are a sufficient currency}.  Once a representative
+% set of samples is available, posterior prediction, model comparison, marginal-
+% likelihood estimation, and even hyper-parameter tuning can all be reduced to
+% Monte Carlo estimators—precisely the toolkit refined in the first half of this
+% thesis.
+
+% \paragraph{Stochastic optimisation as a sampler.}
+% The bottleneck is therefore no longer conceptual but algorithmic: how do we
+% \emph{sample} efficiently from a high-dimensional Gaussian posterior?  The key
+% insight is to cast GP sampling itself as a stochastic optimisation problem.
+% By interpreting the Cholesky solve underlying GP posteriors as the stationary
+% point of a quadratic objective, we show that carefully pre-conditioned
+% \emph{stochastic gradient descent} (SGD) can replace $O(N^{3})$ factorizations
+% with \emph{near-linear} time iteration.  Each SGD trajectory is a path in
+% function space, and the same stochastic calculus tools—Itô’s lemma, martingale
+% arguments, and pathwise divergences—that unified diffusion‐based generative
+% models now certify the convergence and bias–variance trade-offs of our GP
+% samplers.
+
+% \paragraph{Beyond GPs: links to Bayesian neural networks.}
+% In Chapter~\ref{chapter:bnn-gp} we push this idea further, exploiting the
+% well-known correspondence between wide Bayesian neural networks (BNNs) and GPs
+% via the \emph{linearised Laplace approximation}.  By transplanting our
+% GP-sampling algorithms into the parameter space of large networks we obtain
+% scalable Bayesian deep-learning models—an outcome that would be difficult to
+% reach from a purely variational or purely MCMC standpoint alone.
+
+% \paragraph{Roadmap for Part~II.}
+% \begin{itemize}
+%   \item \textbf{Chapter~6} develops a family of SGD-driven samplers for GP
+%         posteriors, derives non-asymptotic error bounds, and shows how a
+%         finite pool of samples can drive hyper-parameter optimisation and
+%         model comparison.
+%   \item \textbf{Chapter~7} builds on the linearised Laplace view to extend
+%         these samplers to large-scale Bayesian neural networks, demonstrating
+%         tractable uncertainty quantification on models as large as ResNet-50
+%         trained on ImageNet.
+% \end{itemize}
+
+% Taken together, Part~II shows that the same stochastic-process machinery that
+% enables state-of-the-art generative samplers can also tame the computational
+% demands of Bayesian nonparametrics, delivering scalable and principled
+% uncertainty estimation across models of truly modern scale.

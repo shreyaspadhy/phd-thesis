@@ -1,0 +1,8 @@
+unnormalised
+BNNs
+Nonparametrics
+parametrisation
+Matheron
+pathwise
+GPs
+Linearised
