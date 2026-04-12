@@ -11,25 +11,711 @@
     \graphicspath{{Chapter7/Figs/Vector/}{Chapter7/Figs/}}
 \fi
 
-\subsection{Gaussian Linear Models: A Weight-Space View of GPs}
+In the previous chapter, we saw how a sampling-based perspective of Bayesian inference allows us to approximate the posterior distribution of a GP. This allows us to scale GPs to much larger datasets (in the millions) using stochastic gradient descent algorithms, and enable their application in downstream tasks such as molecular property prediction and large-scale Bayesian optimisation. In this chapter, we will extend these ideas to Bayesian neural networks, and show how we can use the same sampling-based perspective to scale Bayesian neural networks to much larger datasets. This will allow us to obtain uncertainty estimates for ResNet models on the Imagenet dataset, and large UNet models on medical tomography.
 
-Cover the weight-function duality, show how GPs are the same as GLMs.
+We will first show how GPs have an equivalent representation in terms of parametrised Bayesian linear models, allowing us to make the connection between Bayesian Nonparametrics, and the more traditional \emph{weight-space} view of machine learning. We will then show how Matheron's rule for GPs is equivalent to the \emph{sample-then-optimise} approach popular in Bayesian linear models \citep{matthews2017scalable}. Having developed the sampling-based perspective for Bayesian linear models, we will show how we can approximate the complex, multi-modal posteriors of modern deep learning networks as a Bayesian linear model, using an approximation known as the \emph{Linearised Laplace Approximation} (LLA) \citep{immer2021improving,antoran2022adapting}. For these LLA models, we will develop stochastic gradient descent algorithms to draw samples from the posteriors, as well as perform an Expectation-Maximisation algorithm to optimise the hyperparameters of the model. The content and results of this chapter are based on the paper:
+\begin{itemize}
+    \item ``Sampling-based inference for large linear models, with application to linearised Laplace''. J. Antorán$^{*}$, \textbf{S. Padhy}$^{*}$, R. Barbano, E. Nalisnick, D. Janz, J.M. Hernández-Lobato. In \textit{International Conference on Learning Representations (ICLR)}, 2023.
+\end{itemize}
 
-\subsection{Linearised Laplace Approximation}
+\section{Bayesian Inference with Linear Models}
 
-Cover LLA, show how it converts BNN posterior to a GLM, and therefore a GP.
+Here, we begin our study of Bayesian linear models, for the task of regression with a Gaussian likelihood, where we observe inputs $X = \{x_i\}_{i=1}^n \in \R^d$ and corresponding outputs $Y = \{y_i\}_{i=1}^n \in \R^m$. We model these as\label{ntn:embedding_fn}
+\begin{equation}\label{eq:model-form}
+    y_i = \phi(x_i) \theta + \varepsilon_i,
+\end{equation}
+where $\phi \colon \R^d \to \R^m \times \R^{d'}$ is a known embedding function, $\theta \sim \mathcal{N}(0, A^{-1})$ is a random vector with an assumed Gaussian prior distribution specified by a precision matrix $A \in \R^{d' \times d'}$, and $\varepsilon_i \sim \mathcal{N}(0, \Sigma_i)$ are additive noise vectors with covariance matrices $\Sigma_i \in \R^{m \times m}$ relating the $m$ output dimensions. 
 
-\subsections{Adapting the LLA to Modern Deep Learning}
+Let us define the stacked notation: we write $\rmY \in \R^{nm}$ for the concatenation of $y_1, \dotsc, y_N$; $\mathrm{\Sigma} \in \R^{nm \times nm}$ for a block diagonal matrix with blocks $\Sigma_1, \dotsc, \Sigma_n$ and $\smash{\Phi = [\phi(x_1)^T; \dotsc; \phi(x_n)^T]^T \in \R^{nm \times d'}}$ for the embedded design matrix. This gives us the following linear model:\label{ntn:embedding_matrix}\label{ntn:block_diagonal_noise}\label{ntn:stacked_output_vector}\label{ntn:model_parameters_bnn}\label{ntn:noise_vector_bnn}\label{ntn:prior_precision_bnn}
+\begin{equation}
+    \rmY = \Phi \theta + \varepsilon, \quad \varepsilon \sim \mathcal{N}(0, \Sigma), \quad \theta \sim \mathcal{N}(0, A^{-1}). \label{eq:linear-model-form}
+\end{equation}
 
-Discuss Immer et al, Antoran 2023.
+\paragraph{Analytic Posterior Distribution.}
+We can compute the posterior distribution analytically in this situation of a Gaussian prior and Gaussian likelihood, giving us:\label{ntn:posterior_mean}\label{ntn:posterior_precision}
+\begin{subequations}
+\begin{align}
+\hat{P} := p(\theta \mid \rmY) &= \mathcal{N}(\theta; \theta_{\star}, A_{\star}^{-1}), \label{eq:linear-model-posterior} \\
+\text{with the posterior mean } \theta_{\star} &= A_{\star}^{-1} \Phi^T \Sigma^{-1} \rmY, \label{eq:linear-model-posterior-mean} \\
+\text{and the posterior precision } A_{\star} &= \Phi^T \Sigma^{-1} \Phi + A. \label{eq:linear-model-posterior-precision}
+\end{align}
+\end{subequations}
+Here, we can see that the bottleneck of calculating the posterior distribution is the inversion of the posterior precision matrix $A_{\star}$, which is a $d' \times d'$ matrix, resulting in a cost of $\mathcal{O}(d'^3)$ for the inversion. While we circumvent the cubic dependence on the number of datapoints $n$ in a GLM, unlike in GPs, we can struggle to scale to larger models with lots of parameters, which causes a bottleneck on the flexibility and representational power of the model.
 
-\subsubsection{Computational Considerations}
+\paragraph{Optimisation of the Posterior Mean.}
 
-Discuss quickly diagonal, KFAC, subnetwork, last-layer etc.
+We can equivalently write the posterior mean as the Maximum A-Posteriori (MAP) estimate of $\theta$, which is the minimum of the log-posterior density:
+\begin{subequations}
+    \label{eq:linear-model-posterior-log-density}
+\begin{align}
+\mathcal{L}(\theta) &:= \log p(\rmY \mid \theta) + \log p(\theta) + C \\
+&= \frac{1}{2} \sum_{i=1}^{n} \|y_i - \phi(x_i) \theta\|_{\Sigma_i^{-1}}^2 + \frac{1}{2} \theta^T A \theta + C. \\
+\text{where } \theta_{\star} &= \arg \min_{\theta} \mathcal{L}(\theta).
+\end{align}
+\end{subequations}
+
+In situations where the number of datapoints $n$ is large, we can use a stochastic gradient descent approach to optimise the posterior mean. We will make use of this approach in later sections when we develop stochastic gradient descent algorithms for the linear model.
+
+\subsection{The Gaussian Process Viewpoint}
+
+There is fortunately a close connection between Bayesian linear models and Gaussian processes, which we will now explore. While we have been considering the \emph{weight-space} viewpoint so far in this chapter by focusing on the explicit parametrisation w.r.t $\theta$, we can also consider the \emph{functional-space} viewpoint, where we consider the functions that our linear model evaluates to. Let us assume that the linear model evaluates to a function $f: \mathbb{R}^d \to \mathbb{R}^m$, where $\mathbb{R}^d$ is the domain of the inputs. Following \Cref{eq:model-form}, we can see that the linear model evaluates to a function $f$ given by:
+\[
+f(\cdot) = \phi(\cdot) \theta, \quad \theta \sim \mathcal{N}(0, A^{-1}).
+\]
+If we consider the explicit subset $X = \{x_i\}_{i=1}^N \subseteq \mathbb{R}^d$, we can see that the function $f$ evaluated at $X$ is given by:
+\[
+f(X) &= \Phi \theta, \quad \theta \sim \mathcal{N}(0, A^{-1}). \label{eq:linear-model-functional-space} \\
+\text{which implies that } f(X) &\sim \mathcal{N}(0, \Phi A^{-1} \Phi^T), \label{eq:gp-posterior-weight-space}
+\]
+where we obtain \Cref{eq:gp-posterior-weight-space} by using the multiplication rule of Gaussian distributions\footnote{If $X \sim \mathcal{N}(\mu, \Sigma)$ and $A$ is a matrix, then $AX \sim \mathcal{N}(A\mu, A\Sigma A^T)$.}. Similarly, we can see that the function $f \mid \rmY$ implied by the linear model conditioned on the observations $\rmY$ is given by:
+\[
+(f \mid \rmY)(\cdot) = \phi(\cdot) \theta, \quad \theta \sim \mathcal{N}(\theta_{\star}, A_{\star}^{-1}). \label{eq:linear-model-posterior-functional-space}
+\]
+If we consider the subset $X^{\prime} = \{x_i\}_{i=1}^{N^{\prime}} \subseteq \mathbb{R}^d$ and corresponding embeddings $\Phi^{\prime} = [\phi(x_1)^T; \dotsc; \phi(x_N^{\prime})^T]^T \in \R^{N^{\prime}m \times d'}$, we can see that the function $f \mid \rmY$ evaluated at $X^{\prime}$ is given by:
+\[
+(f \mid \rmY)(X^{\prime}) &= \Phi^{\prime} \theta, \quad \theta \sim \mathcal{N}(\theta_{\star}, A_{\star}^{-1}). \\
+\text{which implies that } (f \mid \rmY)(X^{\prime}) &\sim \mathcal{N}(\theta_{\star}, \Phi^{\prime} A_{\star}^{-1} \Phi^{\prime T}).
+\]
+
+\begin{lightgraybox}{Remark: The Weight-Function Duality}
+We can see how the linear model in \Cref{eq:linear-model-form} induces a prior over functions $f(x) = \phi(x) \theta$, whose covariance is given by:
+\[
+k(x, x') = \operatorname{Cov}[f(x), f(x')] = \phi(x)^T A^{-1} \phi(x').
+\]
+This is the \emph{equivalent kernel} of the linear model, with the corresponding \emph{equivalent Gaussian Process} given as $\operatorname{GP}(0, k)$. Since $d'$ is usually a finite number of parameters for the linear model, the covariance matrix $K_{XX} = \Phi A^{-1} \Phi^T$ is usually \emph{degenerate} (i.e. not full rank).
 
 
-\subsection{Sample-then-Optimise: Pathwise Conditioning in Weight Space}
+Similarly, from \Cref{thm:mercers_theorem}, we know that any positive definite kernel $k$ has an infinite-dimensional eigen-expansion given by:
+\[
+k(x, x') = \sum_{i=1}^{\infty} \lambda_i \phi_i(x) \phi_i(x'), \quad \lambda_i \geq 0, \quad \langle \phi_i, \phi_j \rangle = \delta_{ij}.
+\]
+We can therefore define an \emph{infinite-dimensional} feature map as
+\[
+\phi_{\infty}(x) = \left(\sqrt{\lambda_1} e_1(x), \sqrt{\lambda_2} e_2(x), \ldots\right)^{\top}, \quad {\theta}_{\infty} \sim \mathcal{N}(0, I) .
+\]
+Therefore, every GP kernel $k$ can be represented as an equivalent \emph{infinite-dimensional} linear model. Choosing a specific kernel $k$ is equivalent to choosing a specific infinite-dimensional feature map $\phi_{\infty}$.
+\end{lightgraybox}
 
-Discuss STO from Matthews et al, show the exact correspondence with Matheron's rule.
+\subsection{Hyperparameter Optimisation for Linear Models}
 
-\section{ICLR Paper (Large Scale)}
+Similar to \Cref{subsec:hyperparameter_optimisation_gp}, we can use the same methodology to optimise the hyperparameters of the linear model. We usually choose a prior $A$ of the form $A=\alpha I$ for $\alpha > 0$, and we need to calculate what the optimal value of $\alpha$ is that would best explain our observations. 
+
+There are quite a few approaches that tune these hyperparameters, such as by tuning the log-likelihood on a held-out validation dataset, a process known as \emph{cross-validation} \citep{ritter2018scalable, foong2019between}. However, a much more principled methodology is the \emph{evidence framework} proposed by Mackay \citep{mackay1992bayesian}, which involves an empirical Bayes approach of tuning the hyperparameters of a model by maximising the model evidence (or marginal likelihood). As opposed to cross-validation techniques, evidence maximisation results in a convex optimisation problem, is easier to scale to many hyperparameters, and is not dependent on the choice of validation set. 
+
+Considering our model class $\mathbb{M}_{\varphi} = \{A, \Sigma, \phi\}$, and denoting $H_{\varphi} = \Phi A^{-1} \Phi^T + \Sigma$, we can write the marginal likelihood from the functional-space viewpoint exactly as before:
+\[
+    \mathcal{L}(\varphi) &:= p(\rmY \mid \varphi) =-\frac{1}{2} \rmY^T H_{\varphi}^{-1} \rmY-\frac{1}{2} \log \operatorname{det}\left(H_{\varphi}\right)-\frac{n}{2} \log (2 \pi) \nonumber \\
+    &= \smash{-\frac{1}{2} \rmY^T \left(\Phi A^{-1} \Phi^T + \Sigma\right)^{-1} \rmY-\frac{1}{2} \log \operatorname{det}\left(\Phi A^{-1} \Phi^T + \Sigma\right)^{-1} - \frac{n}{2} \log (2 \pi)} \label{eq:marginal-likelihood-functional-space}
+\]
+We can then optimise this quantity with respect to the hyperparameters $A, \Sigma, \Phi$ using gradient descent. In practise, we use fixed feature maps $\phi$ and assume a fixed, known covariance matrix $\Sigma$. Therefore, our hyperparameter $A$ is the only one that we need to optimise. We can see that naive gradient descent of this quantity in the function-space viewpoint is $\mathcal{O}((nm)^3)$, which is quite expensive. 
+
+\paragraph{Exact Marginal Likelihood in the Weight-Space Viewpoint.}
+
+We can equivalently write the function-space marginal likelihood in \Cref{eq:marginal-likelihood-functional-space} in terms of the weight-space viewpoint as:
+\[
+    \mathcal{L}(\varphi) = - \frac{1}{2} \|\rmY - \Phi \theta_{\star}\|_{\Sigma^{-1}}^2 - \frac{1}{2} \| \theta_{\star} \|_A^2 + \frac{1}{2} \log \det B - \frac{1}{2} \log \det \frac{A_{\star}}{A} - \frac{n}{2} \log (2 \pi) \label{eq:marginal-likelihood-weight-space}
+\]
+\begin{proof}
+This identity follows naturally from \textcite[g. 167, Equation (3.86)]{Bishop2006-tu}.
+\end{proof}
+From this version of the marginal likelihood, we can see that gradient calculations now involve inverses and log-determinants of $A_{\star}$, which are both $\mathcal{O}(d'^3)$ operations. Therefore, we have swapped the computational bottleneck from scaling poorly in the number of datapoints $n$ to scaling poorly in the number of parameters $d'$. 
+
+\paragraph{Variational Inference.}
+
+In the Gaussian Process case, we had expressed the variational problem in terms of arbitrary infinite-dimensional measures (the posterior measure $\hat{\mathbb{P}}$ and the variational measure $\mathbb{Q}$). In the linear model case, we are explicitly dealing with finite-dimensional probability distributions (the posterior distribution $\hat{P}$ and the variational distribution $Q$). \label{ntn:variational_inference}\label{ntn:variational_family}\label{ntn:variational_inference_opt}The optimisation problem is defined similarly:    
+\[
+    Q^{\star} = \arg \min _{Q \in \mathcal{Q}} \mathcal{D}_{\mathrm{KL}}\left(Q \| \hat{P} \right),
+\]
+for a specific choice of variational family $\mathcal{Q}$. Decomposing the KL divergence, we have:
+\[
+    \mathcal{D}_{\mathrm{KL}}\left(Q \| \hat{P} \right) &= \int Q \ln \frac{Q}{p(\theta \mid \rmY)} \d Q \\
+    &= - \int Q \left[ \ln p(\rmY \mid \theta) + \ln p(\theta) - \ln Q \right] \d Q + \ln p(\rmY) \int Q \d Q \\
+    &= - \underbrace{ \mathbb{E}_Q \left[ \ln p(\rmY \mid \theta) + \ln p(\theta) - \ln Q \right]}_{\text{ELBO} := \mathcal{M}} + \ln p(\rmY), \label{eq:elbo_linear_model}
+\]
+where the first term is the \emph{evidence lower bound} (ELBO), and the second term is the log of the marginal likelihood. Therefore, instead of minimising the KL divergence, we can maximise the ELBO equivalently. For the linear model, assuming a Gaussian variational family $\mathcal{Q} = \{\mathcal{N}(\theta_q, \Sigma_q)\}$, we can write the ELBO $\mathcal{M}$ as:
+\begin{align}
+\mathcal{M}(\theta_q, \Sigma_q; \mathbb{M}) &= \frac{1}{2} \mathbb{E}_Q \left[ -n \log (2 \pi) - \log \det \Sigma - \| \rmY - \Phi \theta \|_{\Sigma^{-1}}^2 \right. \nonumber \\
+&- \left. \log \det A^{-1} - \|\theta\|_A^2\right] + \log \det \Sigma_q + \frac{d'}{2} \\
+&= \frac{1}{2} \left( -n \log (2 \pi) - \log \det \Sigma - \| \rmY - \Phi \theta_q \|_{\Sigma^{-1}}^2 - \Tr(\Phi \Sigma_q \Phi^T \Sigma^{-1}) \right. \nonumber \\
+&\quad \left. - \log \det A^{-1} - \|\theta_q\|_A^2 - \Tr(\Sigma_q A) + \log \det \Sigma_q + d' \right) \label{eq:vi_full}
+\end{align}
+
+Here, we can take gradient steps of the ELBO w.r.t $\theta_q$ and $\Sigma_q$ in order to calculate the optimal variational distribution $Q$. However, taking gradients w.r.t $\Sigma_q$ can be quite complicated in practise, and often slow to converge in practise due to $\mathcal{O}(n^2)$ degrees of freedom. Instead, we can consider a simpler variational problem where we fix a choice of $\Sigma_q$ and optimise only for $\theta_q$.\label{ntn:variational_parameters}
+
+\paragraph{Variational Inference with Fixed Covariance.}
+
+In this situation, we can fix $\Sigma_q = A_{\star}^{-1}$, which is the true closed-form posterior covariance. We first note a relationship between the two trace terms when replacing $\Sigma_q$ with $A_{\star}^{-1}$:
+\[
+\Tr(A_{\star}^{-1} A_{\star}) &= \Tr(A_{\star}^{-1} A) + \Tr(A_{\star}^{-1} \Phi^T \Sigma^{-1} \Phi) \\
+d' &= \Tr(A_{\star}^{-1} A) + \Tr(\Phi A_{\star}^{-1} \Phi^T \Sigma^{-1}). \label{eq:trace_identity}
+\]
+In this case, plugging in this quantity into \Cref{eq:vi_full}, the trace quantities and the $d'$ cancel, giving us:
+\[
+    \mathcal{M}(\theta_q; \mathbb{M})\!= \!\frac{1}{2}\! \left(\! -n \log (2 \!\pi) \!-\! \log \det \Sigma \!-\! \| \rmY \!-\! \Phi \theta_q \|_{\Sigma^{-1}}^2 \!-\!\log \det A^{-1} \!-\! \|\theta_q\|_A^2\! +\! \log \det A_{\star}^{-1} \!\right)\!. \label{eq:vi_fixed_cov}
+\]
+Specifically, we are interested in optimising the ELBO w.r.t $A$, keeping $\Sigma$ and $\phi$ fixed. This gives us a form of the ELBO, where all the term independent of $A$ are absorbed into the constant $C$.
+\begin{selfdefinition}[Fixed-Covariance ELBO]
+    \label{def:fixed_cov_elbo}
+\[
+    \mathcal{M}(\theta_q; A) = - \frac{1}{2} \|\theta_q\|_A^2 - \frac{1}{2} \log \det \frac{A_{\star}}{A} + C \label{eq:vi_fixed_cov_A}
+\]
+\end{selfdefinition}
+Obviously, fixing $\Sigma_q = A_{\star}^{-1}$ introduces $\mathcal{O}(d'^3)$ operations into the ELBO, and this choice might seem unintuitive at first glance. However, in the next section we will see first-order iterative algorithms that can further approximate this simplified ELBO quite efficiently.
+
+\paragraph{First-Order Solutions to the ELBO.}
+
+Instead of optimising the ELBO until convergence using gradient descent, we can instead obtain an approximate solution by setting the first-order derivative of \Cref{eq:vi_fixed_cov_A} in \Cref{def:fixed_cov_elbo} to zero. We can define a first-order update rule for $A$ that satisfies this condition as:
+\begin{selfdefinition}[Mackay's First-Order Solution]
+    \label{def:mackay_first_order_solution}
+For the ELBO dependent on $A$ in \Cref{eq:vi_fixed_cov_A}, we can define a first-order update rule for $A = \alpha I$ that is guaranteed to converge towards the optimum $\mathcal{M}(\theta_q; A_{\star})$:
+\[
+    A = \frac{\Tr(A_{\star}^{-1} \Phi^T \Sigma^{-1} \Phi)}{\| \theta_{\star} \|^2} I = \frac{\gamma}{\|\theta_{\star}\|^2} I, \label{eq:mackay_first_order_solution}
+\]
+for $\gamma = \Tr(A_{\star}^{-1} \Phi^T \Sigma^{-1} \Phi)$, a term defined as the \emph{effective dimension}.\label{ntn:effective_dimension}
+\end{selfdefinition}
+\begin{proof}
+See Appendix \ref{app:proof_mackay_first_order_solution}.
+\end{proof}
+Again, this update rule is $\mathcal{O}(d'^3)$ operations, and might seem quite expensive. However, we will see later that this specific form of update rule is quite efficiently approximated using a finite number of samples from the posterior distribution. We therefore derive the quantity here in order to facilitate our discussion later. 
+
+\begin{figure}[t]
+    \vspace{-0.0cm}
+        \centering
+        \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/Figs/Vector/toy_M_step_speed.pdf}
+        \vspace{-0.2cm}
+        \caption[Comparison of EM algorithm behaviour for hyperparameter learning objectives for linear models]{Left: exact linear model evidence for a linearised 2 hidden layer MLP together with the lower bound $\mathcal{M}$ from \Cref{eq:vi_fixed_cov_A}, and the ELBO from \Cref{eq:vi_full}. All curves use an initial prior precision of $\alpha=500$ and have a marker placed at their optima. Right: values of the regularisation strength $\alpha$ obtained at successive EM iterations while using the different update strategies under consideration for the M step. Note that when we assume access to the exact evidence function, the regulariser converges in a single step and no EM iteration is necessary.}
+        \label{fig:Toy_evidence_convergence}
+        \vspace{-0.1cm}
+    \end{figure}
+    
+    
+    \begin{figure}[t]
+    \vspace{-0.05cm}
+        \centering
+        \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/Figs/Vector/M_step_convergence_MNIST.pdf}
+        \vspace{-0.2cm}
+        \caption[Comparison of hyperparameter learning objectives for linear models]{Exact linear model evidence for a linearised 2 hidden layer MLP together with the lower bound $\mathcal{M}$ from \Cref{eq:vi_fixed_cov_A}, and the ELBO from \Cref{eq:vi_full}. We update the regularisation strength with Mackay's first-order update for the left side plot. Note that $\mathcal{M}$ curves are shown in this plot. We maximise $\mathcal{M}$ in the middle plot, and we maximise the ELBO in the right-hand side plot. All curves use an initial regulariser of $\alpha=5$ and we place a vertical dashed line at each step's update.}
+    \label{fig:m_step_toy_convergence}
+        \vspace{-0.0cm}
+    \end{figure}
+
+\paragraph{First-Order Expectation-Maximisation.}
+One issue with \Cref{def:mackay_first_order_solution} is that the variational mean $\theta_q$ is not fixed, and needs to be optimised as well, as it can often depend on the ideal choice of $A$. Instead of using a gradient-based approach, we turn to the Expectation-Maximisation algorithm proposed by \textcite{mackay1992bayesian}, which alternates between setting the variational mean equal to the exact posterior mean for $\theta$ for a given choice of $A$, and updating $A$, until the pair $(A, \theta)$ converge to a locally optimal setting. Therefore, we have:
+
+\begin{definition}[First-Order Expectation-Maximisation]
+    \label{def:first_order_em}
+    Starting with some initial $A \in \mathbb{R}^{d^{\prime} \times d^{\prime}}$, we iterate:
+    \begin{itemize}
+        \item (E step) Given $A$, the posterior for $\theta$, denoted $\hat{P}$, is computed exactly as
+        \[
+            \hat{P}=\mathcal{N}\left(\theta_{\star}, A_{\star}^{-1}\right) \quad \text { where } \quad A_{\star}=\Phi^T \Sigma^{-1} \Phi + A.
+        \]
+        \item (M step) We lower bound the log-probability density of the observed data, i.e. the evidence, for the model with posterior $\hat{P}$ and precision $A$ as
+        \[
+            \log p\left(Y ; A\right) \geq-\frac{1}{2}\|\theta_{\star}\|_{A}^2-\frac{1}{2} \log \operatorname{det}\left(\frac{A_{\star}}{A}\right)+C=: \mathcal{M}\left(A\right)
+        \]
+        for $C$ independent of $A$. We choose an $A$ that improves this lower bound, usually through a first-order update rule as in \Cref{def:mackay_first_order_solution}.
+    \end{itemize}
+\end{definition}
+
+The plot on the left of \Cref{fig:Toy_evidence_convergence} compares the exact evidence for a 2 hidden layer MLP trained on the toy dataset of \textcite{antoran2020depth} with the bound $\mathcal{M}$ from \Cref{eq:mackay_first_order_solution} and the ELBO from \Cref{eq:vi_full}. The initial prior precision is set to $\alpha=500$. The ELBO is only tight for prior precision values very close to initialisation, resulting in very small M steps. $\mathcal{M}$ is tangent to the evidence at the same point as the ELBO but presents a much better approximation as we move away from  $\alpha=500$. The optimum of $\mathcal{M}$ is much closer to the optimum of the evidence. The Mackay update does not use a lower bound but instead provides an updated value for $\alpha$ which is even closer to the optimum of the evidence. The right-hand side plot shows the change in the regularisation parameter across successive M-steps using the update methods under consideration.  The Mackay M-step converges to the optima of the evidence in 2 steps. Using $\mathcal{M}$ as an objective results in convergence after 5 steps. On the other hand, the ELBO update requires around 100 steps. 
+
+\Cref{fig:m_step_toy_convergence} further illustrates hyperparameter learning in the 1d toy setting by showing the successive lower bounds obtained by each of the approaches under consideration at each M-step. Interestingly, the Mackay update produces regulariser updates that almost exactly maximise $\mathcal{M}$.
+
+Having described the algorithm that enables us to optimise the hyperparameters of the linear model in a somewhat unconventional way, we now turn to a sampling-based viewpoint of inference for the linear model, and show how \Cref{def:first_order_em} is ideally suited for this setting.
+
+\section{Sampling-Based Inference for Linear Models}
+
+From \Cref{def:first_order_em}, we can see that we have two challenges to solve for the linear model that both scale as $\mathcal{O}(d'^3)$: we need to calculate the posterior mean $\theta_{\star}$ in the E-step, and we need to estimate $\Tr(A_{\star}^{-1} \Phi^T \Sigma^{-1} \Phi)$ in the M-step. As we will show in this section, the trace is easily estimated using a finite number of samples from the posterior distribution, and the posterior mean is easily estimated using a stochastic gradient descent approach, similar to the approach used in the Gaussian Process case. Therefore, let us first describe a form of Matheron's rule for linear models, and show how this is exactly the same as the popular \emph{sample-then-optimise} algorithm \citep{matthews2017sample}.
+
+\subsection{Matheron's Rule for Linear Models}
+
+Having developed the weight-function duality between linear models and Gaussian processes, we can easily write Matheron's rule for the linear model as:
+\begin{selfdefinition}[Matheron's Rule for Linear Models]
+    \label{def:matheron_rule_linear_model}
+    Given a parameter sample $\theta_0 \sim \mathcal{N}(0, A^{-1})$, we can write a parameter sample from the posterior distribution $(\theta \mid \rmY) \sim \mathcal{N}(\theta_{\star}, A_{\star}^{-1})$ as:\label{ntn:posterior_sample_bnn}\label{ntn:prior_sample_bnn}
+    \[
+        (\theta \mid \rmY) = \theta_0 + A^{-1} \Phi^T (\Phi A^{-1} \Phi^T + \Sigma)^{-1} (\rmY - \Phi \theta_0 - \varepsilon) \label{eq:matheron_rule_linear_model_1},
+    \]
+    where $\varepsilon \sim \mathcal{N}(0, \Sigma)$.
+    Equivalently, we can write a zero-mean parameter sample $\bar{\theta}_{\star} \sim \mathcal{N}(0, A_{\star}^{-1})$ as:\label{ntn:zero_mean_posterior_sample_bnn}
+    \[
+        \bar{\theta}_{\star} = \theta_0 - A^{-1} \Phi^T (\Phi A^{-1} \Phi^T + \Sigma)^{-1} (\varepsilon - \Phi \theta_0). \label{eq:matheron_rule_linear_model_2}
+    \]
+\end{selfdefinition}
+\begin{proof}
+See Appendix \ref{app:proof_matheron_rule_linear_model}.
+\end{proof}
+This form of Matheron's rule suffers the same issues as in the GP case: we need to compute the inverse of the posterior precision matrix $A_{\star}^{-1}$, which is an $\mathcal{O}(d'^3)$ operation. In the next section, we will develop stochastic gradient descent algorithms that can be used to compute posterior samples akin to the ones we used in the GP case.
+
+\subsection{Sample-Based Expectation-Maximisation}
+\label{sec:sample_em}
+Revisiting \Cref{def:first_order_em}, we see that we can replace quantities involving the explicit posterior covariance $A_{\star}^{-1}$ with a finite number of samples, which we obtain from Matheron's rule (pending the development of efficient stochastic gradient descent algorithms). We now tackle the M-step, where we need to optimise \Cref{eq:vi_fixed_cov_A} in a sample-based manner somehow. We find Mackay's first-order solution to be a good starting point, as it converts the problem into that of estimating a trace (that in \Cref{eq:mackay_first_order_solution}). Similar to the trick we employed in the GP case in \Cref{eq:pathwise_trace_estimation}, let us write the trace as an expectation over samples from the posterior distribution:
+\begin{selfdefinition}[Stochastic Trace Estimation for Mackay's Update]
+\textbf{Kernelised (Prediction Space) Trace Estimator.} Mackay's First-Order update from \Cref{eq:mackay_first_order_solution} can be estimated using a finite number of zero-mean posterior samples as:\label{ntn:stochastic_eff_dim}\label{ntn:ws_eff_dim}
+\[
+\Tr(A_{\star}^{-1} \Phi^T \Sigma^{-1} \Phi) &= \Tr(A_{\star}^{-1/2} \Phi^T \Sigma^{-1} \Phi A_{\star}^{-1/2}) \\
+&= \mathbb{E} \left[ \bar{\theta}_{\star}^T \Phi^T \Sigma^{-1} \Phi \bar{\theta}_{\star} \right] \approx \frac{1}{s} \sum_{j=1}^s \bar{\theta}_{\star, j}^T \Phi^T \Sigma^{-1} \Phi \bar{\theta}_{\star, j} := \hat{\gamma} \label{eq:eff_dim_estimator_kernelised},
+\]
+where $\bar{\theta}_{\star, j} \sim \mathcal{N}(0, A_{\star}^{-1})$ are indeed zero-mean samples from the posterior distribution, obtained easily from \Cref{eq:matheron_rule_linear_model_2}. 
+
+\textbf{Weight Space Trace Estimator.} We can equivalently define a different trace estimator using the identity in \Cref{eq:trace_identity}:
+\[
+    \Tr(A_{\star}^{-1} \Phi^T \Sigma^{-1} \Phi) &= d' - \Tr (A_{\star}^{-1/2} A A_{\star}^{-1/2}) \\
+    &= d' - \mathbb{E} \left[ \bar{\theta}_{\star}^T A \bar{\theta}_{\star} \right] \approx d' - \frac{1}{s} \sum_{j=1}^s \bar{\theta}_{\star, j}^T A \bar{\theta}_{\star, j} := \hat{\gamma}_{\text{WS}} \label{eq:eff_dim_estimator_weight_space}.
+\]
+\end{selfdefinition}
+
+ We then select $\alpha=\hat{\gamma} /\|\theta_{\star}\|^2$ (or $\hat{\gamma}_{\text{WS}} /\|\theta_{\star}\|^2$). In \Cref{fig:app_eff_dim_variance}, we compare the variance in estimation between both estimators. Both estimators present distributions centred at the true effective dimension value. However, the prediction space (kernelised) estimator presents a much lower variance of 9.16 as opposed to 654.19 from the weight space estimator. Additionally, the weight space estimator distribution places a substantial amount of probability mass on negative effective dimension values. From the form of \Cref{eq:eff_dim_estimator_weight_space}, we see that this is due to our 8-sample estimator overestimating posterior variance. On the other hand, the kernelised estimator in \Cref{eq:eff_dim_estimator_kernelised} can only produce positive values.  
+ 
+ We have thus avoided the explicit cubic cost of computing the log-determinant in the expression for $\mathcal{M}$ (given in \Cref{eq:vi_fixed_cov_A}) or inverting $A_{\star}$. Indeed, if we were equipped with efficient algorithms to compute posterior samples, we would be able to perform a sample-based expectation-maximisation algorithm quite efficiently. We turn to stochastic gradient descent algorithms to compute posterior samples in the next section.
+
+ \begin{figure}[t]
+    \vspace{-0.05cm}
+        \centering
+        \includegraphics[width=0.6\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/Figs/Vector/eff_dim_estimator_comparison.pdf}
+        \vspace{-0.1cm}
+        \caption[Comparison of prediction-space and kernel-space effective dimension estimates]{Histogram, with bin heights normalised to represent density estimates, of the effective dimension estimates produced by the weight space estimator in \Cref{eq:eff_dim_estimator_weight_space} and the kernelised (prediction space) estimator in \Cref{eq:eff_dim_estimator_kernelised}. Both distributions are roughly centred at the true effective dimension but the kernelised estimator presents much lower variance. We use a 2 hidden layer MLP with layernorm after every hidden layer and the ``Matern'' dataset of \textcite{antoran2020depth}. We use 8 samples from the exact linearised Laplace posterior to compute effective dimension estimates and repeat this procedure 1000 times to characterise the behaviour of each estimator. As a reference, we also compute the exact effective dimension using eigendecomposition.}
+        \label{fig:app_eff_dim_variance}
+        \vspace{-0.0cm}
+\end{figure}
+
+\section{Stochastic Gradient Descent for Linear Models}
+
+We have seen stochastic gradient descent algorithms be extremely useful in the GP case, where we were able to design algorithms that computed the posterior mean and posterior samples in linear time. In the linear model case, it is quite straightforward to describe the objective function that has the posterior mean as its optimum, as we showed in \Cref{eq:linear-model-posterior-log-density}. Let us now derive a similar objective for obtaining posterior samples, beginning from \Cref{eq:matheron_rule_linear_model_2}.
+\begin{selfdefinition}[Objective for Zero-Mean Posterior Samples]
+    \label{def:zero_mean_posterior_samples}
+    The minimiser $\bar{\theta}$ of the following loss function:
+    \[
+    L(\theta) := \frac{1}{2} \| \Phi \theta - \varepsilon\|^2_{\Sigma^{-1}} + \frac{1}{2} \| \theta - \theta_0 \|^2_{A} \label{eq:zero_mean_posterior_samples_loss}, \quad \theta_0 \sim \mathcal{N}(0, A^{-1}), \varepsilon \sim \mathcal{N}(0, \Sigma)
+    \]
+    satisfies $\bar{\theta} \sim \mathcal{N}(0, A_{\star}^{-1})$, i.e. $\bar{\theta} = \bar{\theta}_{\star}$.
+\end{selfdefinition}
+\begin{proof}
+See Appendix \ref{app:proof_zero_mean_posterior_samples}.
+\end{proof}
+
+This is called the ``sample-then-optimise'' method \citep{Papandreou2010perturbations}. We may thus obtain a posterior sample by optimising this quadratic loss for a given sample pair $(\varepsilon, \theta_0)$. Examining $L$: 
+\begin{itemize}[topsep=0pt]
+  \item The first term is data dependent. It corresponds to the scaled squared error in fitting $\varepsilon$ as a linear combination of $\Phi$. Its gradient requires stochastic approximation for large datasets.
+  \item The second term, a regulariser centred at $\theta_0$, does not depend on the data. Its gradient can thus be computed exactly at every optimisation step.
+\end{itemize}
+
+Predicting $\varepsilon$, i.e. random noise, from features $\Phi$ is hard. Due to this, the variance of a mini-batch estimate of the gradient of $\|\Phi \theta_0 - \varepsilon\|_{\Sigma^{-1}}^2$ may be large. Instead, for $\varepsilon$ and $\theta_0$ defined as before, we propose the following alternative loss, equal to $L$ up to an additive constant independent of $\theta$:\label{ntn:low_variance_objective_zero_mean_posterior_samples}
+\begin{selfdefinition}[Low-Variance Objective for Zero-Mean Posterior Samples]
+    \label{def:low_variance_objective_zero_mean_posterior_samples}
+    The minimiser $\bar{\theta}'$ of the following loss function:
+    \[
+    L^{\prime}(\theta) := \frac{1}{2} \| \Phi \theta \|_{\Sigma^{-1}}^2 + \frac{1}{2} \| \theta - \theta_n \|^2_{A}, \quad \text{with } \theta_n &= \theta_0 + A^{-1} \Phi^T \Sigma^{-1} \varepsilon, \label{eq:low_variance_objective_zero_mean_posterior_samples_loss}\\
+    \theta_0 &\sim \mathcal{N}(0, A^{-1}), \varepsilon \sim \mathcal{N}(0, \Sigma). \nonumber
+    \]
+    satisfies $\bar{\theta}' \sim \mathcal{N}(0, A_{\star}^{-1})$.
+\end{selfdefinition}
+\begin{proof}
+See Appendix \ref{app:proof_low_variance_objective_zero_mean_posterior_samples} for a proof that $L$ from \Cref{eq:zero_mean_posterior_samples_loss} has the same minimum as $L'$ from \Cref{eq:low_variance_objective_zero_mean_posterior_samples_loss}.
+\end{proof}
+
+Therefore, we can see that the mini-batch gradients of $L^{\prime}$ and $L$ are equal in expectation. However, in $L^{\prime}$, the randomness from the noise samples $\varepsilon$ and the prior sample $\theta_0$ both feature within the regularisation term, the gradient of which can be computed exactly, rather than in the data-dependent term. In order to see this behaviour, let us calculate the gradient variance for both losses.
+
+\begin{selflemma}[Gradient Variance Difference between $L$ and $L'$]
+    \label{lem:gradient_variance_for_objectives}
+    The single-datapoint stochastic gradient estimators for the data dependent terms of the loss functions $L$ and $L^{\prime}$ are given by:
+    \[
+    \hat{g}=n \phi\left(X_j\right)^T\left(\phi\left(X_j\right) \theta - \varepsilon_j\right) \quad \text { and } \quad \hat{g}^{\prime}=n \phi\left(X_j\right)^T \phi\left(X_j\right) \theta
+    \]
+    where $\theta \in \mathbb{R}^{d^{\prime}}$, and we have a datapoint index $j \sim \operatorname{Unif}(\{1, \ldots, n\})$. We then see that:
+    \[
+    \frac{1}{n}\left[\operatorname{Var} \hat{g}-\operatorname{Var} \hat{g}^{\prime}\right]=\operatorname{Var}\left(\Phi^T \Sigma^{-1} \varepsilon\right)-2 \operatorname{Cov}\left(\Phi^T \Sigma^{-1} \Phi \theta, \Phi^T \Sigma^{-1} \varepsilon\right)=: \Delta
+    \]
+\end{selflemma}
+\begin{proof}
+See Appendix \ref{app:proof_gradient_variance_for_objectives}.
+\end{proof}
+
+We would therefore prefer the new gradient estimator $\hat g'$ if the sum of its per-dimension variances is lower than that of $\hat g$; that is if $\Tr \Delta > 0$. We analyse two key settings:
+\begin{selflemma}[Gradient Variance at Initialisation]
+At initialisation, taking $\theta = \theta_0$ (or any other initialisation independent of $\varepsilon$),
+\begin{align}
+    \Tr\Delta &= \Tr\{\Phi^T\Sigma^{-1}\E[\varepsilon \varepsilon^T]\Sigma^{-1}\Phi\} - \Tr\{\Phi^T\Sigma^{-1}\Phi \E[\theta_0  \varepsilon^T]\Sigma^{-1} \Phi \} \\
+    &= \Tr\{\Phi^T\Sigma^{-1}\Phi \} > 0,
+\end{align}
+where we used that $\E[\varepsilon \varepsilon^T] = \Sigma^{-1}$ and since $\varepsilon$ is zero mean and independent of $\theta_0$, we have $\E[\theta_0\varepsilon^T] = \E\theta_0 \E\varepsilon^T = 0$. 
+Thus, the new objective $L'$ is always preferred at initialisation.
+\end{selflemma}
+
+\begin{selflemma}[Gradient Variance at Convergence]
+    At convergence, that is, when $\theta =  \bar{\theta}$, $L'$ is preferred if
+    \begin{equation}
+      \textstyle{ 2 \alpha \gamma > \Tr \Phi^T \Sigma^{-1} \Phi .} \label{eq:effective-dim-condition}
+    \end{equation}
+    This is satisfied if $\alpha$ is large relative to the eigenvalues of $\Phi^T \Sigma^{-1} \Phi$, that is, when the parameters are not strongly determined by the data relative to the prior.
+\end{selflemma}
+\begin{proof}
+See Appendix \ref{app:proof_effective_dim_condition} and Appendix \ref{app:large_regulariser_derivation}.
+\end{proof}
+When $L'$ is preferred both at initialisation and at convergence, we expect it to have lower variance for most minibatches throughout training. Even if the proposed objective $L'$ is not preferred at convergence, it may still be preferred for most of the optimisation, before the noise is fit well enough.
+
+\section{Bayesian Neural Networks as Linear Models}
+
+The field of Bayesian inference for neural networks is vast, and the discussion of many of these techniques are outside the scope of this thesis. Here, we briefly mention some methods in the field. A very popular class of approximate inference methods are variational inference methods that approximate neural network posteriors using tractable variational distributions \citep{graves2011practical, blundell2015weight, osawa2019practical}. Some methods also use expectation propagation and alpha divergence minimisation \citep{hernandez2015probabilistic, hernandez2016black}. Sampling-based approaches such as Hamiltonian Monte-Carlo, annealed importance sampling, and stochastic gradient sampling also exist, and are quite performant on smaller DNNs but scale poorly to large models \citep{neal2012bayesian, izmailov2021bayesian}. 
+
+Along the vein of the models we have discussed so far, there has been research showing that DNNs converge to GPs in the infinite-width limit \citep{garriga2018deep, lee2017deep, jacot2018neural}. However, we focus specifically on the Linearised Laplace Approximation (LLA), which is a family of methods that have connections to functional inference, linearised neural networks, infinite-width limits such as the Neural Tangent Kernel, and Bayesian linear models. As such, they provide a very rich theoretical formulation for tractable probabilistic inference, and are also one of the few probabilistic methods that are competitive with deterministic baselines such as deep ensembles \citep{daxberger2021laplace}.
+
+\paragraph{The Linearised Laplace Approximation.}
+
+The Laplace Approximation (LA) approximates complex, multi-modal distributions with a Gaussian, which has favourable analytic properties that often make it easy to calculate the predictive posterior distribution, and in many cases it serves as a good second-order approximation around a local minimum of the actual posterior distribution. David MacKay performed a further approximation by approximating the underlying neural network with a first-order Taylor approximation around the mode of the posterior (called a local linearisation), resulting in the Linearised Laplace Approximation (LLA) \citep{mackay1992bayesian}.
+
+In recent years, in order to scale the LLA to modern neural networks, methods opt to use Monte-Carlo samples to obtain estimates of the predictive posterior  \citep{lawrence2001variational}, as well as approximating the posterior covariance matrix in a variety of ways. These approximations include positive definite approximations such as the generalised Gauss-Newton approximation (GGN) or the Fisher approximation, block-diagonal matrices using Kronecker products \citep{ritter2018scalable}, and subset-of-parameter approximations \citep{daxberger2020expressive}.
+
+These methods, however, did not perform well initially, and \textcite{ritter2018scalable} observed that the Laplace approximation tended to spread its probability mass in lower density regions, often underestimating uncertainty. Furthermore, \textcite{foong2019between} and \textcite{immer2021improving} showed that using the default LA results in very poor predictive performance, suggesting a mismatch between the LA and the DNN.
+
+\paragraph{Adapting the LLA to modern deep learning.}
+
+In recent years, \textcite{khan2019approximate} have shown that the LLA has an equivalent Gaussian Process posterior, connecting it to the field of nonparametric Bayesian inference. Further connections were made by showing that the GGN approximation to the posterior covariance matrix result in a linearised model, which is equivalent to the LLA. Using these insights, \textcite{khan2019approximate, immer2021improving} suggested using the linear model predictions during inference instead of the original BNN, solving the observed mismatch and showing improved predictive performance. Furthermore, \textcite{immer2021improving, antoran2022adapting, antoran2021linearised} have shown that using the GLM predictive interacts poorly with some staples of deep learning - stochastic optimisation and normalisation layers, and suggest recommendations to adapt to modern settings. In the next section, we will develop the LLA under this modern lens, relying on \textcite{antoran2022adapting} as our main reference.
+
+\subsection{The Modern Linearised Laplace Approximation.}
+
+Let us consider the problem of $m$-output prediction using a neural network. Suppose that we have trained a neural network of the form $f \colon \R^{d'} \times \R^d \to \R^m$, obtaining weights $\hat{\theta}_{\text{nn}} \in \R^{d'}$, using a loss of the form\label{ntn:nn_fn}\label{ntn:nn_weights}\label{ntn:likelihood_loss_fn}\label{ntn:regularisation_fn}\label{ntn:loss_fn}
+\begin{gather}\label{eq:surrogate_loss}
+    \textstyle{\mathcal{L}(f(\theta, \cdot)) = \sum_{i=1}^n \ell(y_i, f(\theta, x_i)) + \mathcal{R}(\theta)}
+\end{gather}
+where $\ell$ is a data fit term (a negative log-likelihood) and $\mathcal{R}$ is a regulariser. We now show how to use linearised Laplace to quantify uncertainty in the network predictions $f(\hat{\theta}_{\text{nn}}, \cdot)$, where $\hat{\theta}_{\text{nn}}$ are the neural network weights obtained after standard neural network training. 
+
+\begin{definition}[The Linearised Laplace Method]
+    \label{def:lla}
+The linearised Laplace method consists of two consecutive approximations, the latter of which is necessary only if $\ell$ is non-quadratic (that is, if the likelihood is non-Gaussian):
+\begin{enumerate}[topsep=0pt]
+    \item \textbf{Linearisation.} We take a first-order Taylor expansion of $f$ around $\hat{\theta}_{\text{nn}}$, yielding the linear model:\label{ntn:linearised_nn}
+\begin{equation}\label{eq:linearised_NN}
+  h(\theta, x) = f(\hat{\theta}_{\text{nn}}, x) + \phi(x) (\theta - \hat{\theta}_{\text{nn}}) \ \ \text{for}\ \ \phi(x) = \nabla_\theta f(\hat{\theta}_{\text{nn}}, x).
+  \end{equation}
+  This is a linear model in the features $\phi(x)$ given by the network Jacobian at $x$.
+  \item \textbf{Laplace Approximation.} We approximate the loss of the linear model $\mathcal{L}(h(\theta, \cdot))$ with a quadratic, and treat it as a negative log-density for the parameters $\theta$, yielding a Gaussian posterior of the form:\label{ntn:linear_weights}
+  \begin{equation}
+    \mathcal{N}(\hat{\theta}_{\text{lin}}, \,\,(\nabla_{\theta}^2 \mathcal{L})^{-1}(h(\hat{\theta}_{\text{lin}}, \cdot))) \text{ where } \hat{\theta}_{\text{lin}} \in \argmin_\theta \mathcal{L}(h(\theta, \cdot)).
+\end{equation}
+\end{enumerate}
+\end{definition}
+\begin{selfremark}[Linearised Laplace results in a Gaussian Linear Model]
+    For an L2-regularisation loss of the form $\mathcal{R}(\theta) = \frac{1}{2} \theta^T A \theta$, we have that
+\[
+    (\nabla_{\theta}^2 \mathcal{L})^{-1}(h(\hat{\theta}_{\text{lin}}, \cdot))= (A + \Phi^T \Sigma^{-1} \Phi) = A_{\star}
+\]
+with $\Sigma$ a block diagonal matrix with blocks $\Sigma_i^{-1} = \nabla^2_{\hat y_i} \ell(y_i, \hat y_i)$ evaluated at $\hat y_i = h(\hat{\theta}_{\text{lin}}, x_i)$.
+\end{selfremark}
+
+We have thus recovered a conjugate Gaussian linear model. We treat $A$ as a learnable parameter thereafter. We also note that the EM procedure is for the conjugate Gaussian-linear model, where it carries guarantees on non-decreasing model evidence, and thus convergence to a local optimum. These guarantees do not hold for non-conjugate likelihood functions, e.g., the softmax-categorical, where the Laplace approximation is necessary.
+
+In practice, we depart from the above procedure in two ways:
+\begin{itemize}[topsep=0pt]
+    \item We use the neural network output $f(\hat{\theta}_{\text{nn}}, \cdot)$ as the predictive mean, rather than the surrogate model mean $h(\hat{\theta}_{\text{lin}}, \cdot)$. Nonetheless, we still need to compute $\hat{\theta}_{\text{lin}}$ to use within the M-step of the EM procedure. To do this, we minimise $\smash{\mathcal{L}(h(\theta, \cdot))}$ using stochastic gradient descent.
+    \item We compute the loss curvature $\Sigma_i^{-1}$ at predictions $\hat y_i = f(\hat{\theta}_{\text{nn}}, x_i)$ in place of $h(\hat{\theta}_{\text{lin}}, x_i)$, since the latter would change each time the regulariser $A$ is updated, requiring expensive re-evaluation.
+\end{itemize}
+Both of these departures are recommended within the literature \citep{antoran2022adapting}.
+
+\subsection{On the computational advantage of sample-based predictions}\label{sec:sampling_is_efficient}
+The linearised Laplace predictive posterior at an input $x$ is $\mathcal{N}(f(\hat{\theta}_{\text{nn}}, x), \phi(x) A_{\star}^{-1} \phi(x)^T)$, which is $\mathcal{O}(d'^3)$. Even given $A_{\star}^{-1}$, evaluating this na\"ively requires instantiating $\phi(x) = \nabla_{\theta} f(\hat{\theta}_{\text{nn}}, x)$, at a cost of $m$ vector-Jacobian products (i.e. backward passes). This is prohibitive for large $m$.
+However, expectations of any function $r: \R^m \to \R$ under the predictive posterior can be approximated using only samples from $\mathcal{N}(\hat{\theta}_{\text{nn}}, A_{\star}^{-1})$ as
+\begin{equation}
+   \E[r] \approx \frac{1}{k} \sum_{j=1}^k r( \psi_j) \text{ for }  \psi_j = f(\hat{\theta}_{\text{nn}}, x) + \phi(x)\zeta_j \text{ with } \zeta_1, \dotsc, \zeta_k \sim \mathcal{N}(0, A_{\star}^{-1})
+\end{equation}
+requiring only $k$ Jacobian-vector products. In practice, we find $k$ much smaller than $m$ suffices.\label{ntn:sampling_is_efficient}
+
+\section{Feature embedding normalisation: the diagonal g-prior}\label{sec:g-prior}
+
+Due to symmetries and indeterminacies in neural networks,
+the embedding function $\phi(\cdot) = \nabla_\theta f(\hat{\theta}_{\text{nn}}, \cdot)$ used in the linearised Laplace method yields features with arbitrary scales across the $d'$ weight dimensions. Consequently, the dimensions of the embeddings may have an (arbitrarily) unequal weight under an isotropic prior; that is, considering $\phi(x) \theta_0$ for $\theta_0 \sim \mathcal{N}(0, \alpha^{-1}I)$. 
+
+There are two natural solutions: 
+\begin{definition}[Scale-invariant features and scale-invariant g-prior]
+We can normalise the features by their (empirical) second moment, resulting in the normalised embedding function $\phi'$ given by\footnote{The Cholesky factorisation of a positive definite matrix as its $\nicefrac{1}{2}$th power.}
+\begin{equation}\label{eq:g-prior-scaling}
+  \smash{\textstyle{\phi'(x) =  \phi(x)\, \text{diag}(s) \spaced{for} s \in \R^{d'} \spaced{given by} s_i = [\Phi^T\Sigma^{-1} \Phi]^{-1/2}_{ii},}}
+\end{equation}
+or likewise scale the prior, setting \label{ntn:gprior}
+\[
+A = \alpha\, \text{diag}((s_{i}^{-2})_{i=1}^{d'}).
+\]
+The latter formulation is a diagonal version of what is known in the literature as the g-prior \citep{zellner_1986} or scale-invariant prior \citep{minka2000bayesian}. 
+\end{definition}
+
+Further, in our sampling-based formulation, we can easily obtain a stochastic estimate for the scaling term as follows:
+\begin{selfdefinition}[Stochastic g-prior Estimation]
+From \Cref{eq:low_variance_objective_zero_mean_posterior_samples_loss}, we have $\theta_n = \theta_0 + \theta'$, with $\theta' := A^{-1} \Phi^T \Sigma^{-1} \varepsilon$. We can then estimate the scaling factor through the following stochastic estimate\footnote{$\odot$ refers to the elementwise product and to the elementwise power when used in an exponent.}:
+\[
+s = \alpha^{-1} \left( \mathbb{E}[ \theta' \odot \theta']\right)^{\odot-\nicefrac{1}{2}} \approx  \alpha^{-1} \left[ \frac{1}{k} \sum_{j=1}^k \theta'_j \odot \theta'_j \right]^{\odot-\nicefrac{1}{2}}
+\]
+\end{selfdefinition}
+
+The g-prior may, in general, improve the conditioning of the linear system. Furthermore, when the linearised network contains normalisation layers, such as batchnorm (that is, most modern networks), the g-prior is essential. \textcite{antoran2022adapting} show that normalisation layers lead to indeterminacies in NN Jacobians, that in turn lead to an ill-defined model evidence objective. They propose learning separate regularisation parameters for each normalised layer of the network. While fixing the pathology, this increases the complexity of model evidence optimisation. As we show in Appendix \ref{app:g-prior-scale-solution}, the g-prior cancels these indeterminacies, allowing for the use of a single regularisation~parameter.
+
+Now, having established the effective linear model corresponding to the LLA for deep neural networks, we turn to the experiments. First, we will perform an ablation study on our proposed hyperparameter optimisation procedure. We then use our sample-based approach to scale uncertainty estimates to very large deep neural networks on large datasets.
+
+\section{Practical Algorithms for Sample-based Laplace}
+
+\subsection{Uncertainty Estimates for Classification} 
+\begin{algorithm}[t]
+    \caption{Sampling-based linearised Laplace inference for image classification}
+    \label{alg:sampling_classification}
+    \begin{algorithmic}
+    \Require Linearised network $h$, linearisation point $\hat{\theta}_{\text{nn}}$, observations $x_1,\dotsc,x_n$, labels $y_1, \dotsc, y_n$, negative log-likelihood function $\ell$, initial precision $\alpha > 0$, number of samples $k$
+    \Ensure Optimised precision $\alpha$ and weight samples $\zeta_1, \dotsc, \zeta_k$
+    \vspace{2mm}
+    \State \textbf{Function} $\Sigma^{-1}(i)$
+        \State \hspace{\algorithmicindent} $p_i \gets \operatorname{Softmax}(f(\hat{\theta}_{\text{nn}}, x_i))$ \Comment{Normalised neural network predictions}
+        \State \hspace{\algorithmicindent} \textbf{return} $\text{diag}(p_i) - p_i p_i^T$
+    \vspace{2mm}
+    \For{$j=1,\dotsc,k$} \Comment{Sample $k$ samples only once at the start}
+        \State $\theta_{0, j} \sim \mathcal{N}(0, \alpha^{-1} I)$ \Comment{Prior sample term}
+        \State $\theta'_j \gets \alpha^{-1} \sum_{i=1}^n \phi(x_i)^T  \varepsilon_{j}$ where $\varepsilon_{j} \sim \mathcal{N}(0, \Sigma(i))$ \Comment{Data-dependent term}
+        \State $\zeta_j \gets \theta_{0, j}$
+    \EndFor
+    \State $\hat{\theta}_{\text{lin}} \gets 0$ \Comment{Initialise linear model mean}
+    \State $s \gets \alpha^{-1} \left[ \frac{1}{k} \sum_{j=1}^k \theta'_j \odot \theta'_j \right]^{\odot -1/2}$ \Comment{Calculate g-prior scaling factor stochastically}
+    \vspace{2mm}
+    \While{$\alpha$ has not converged}
+        \For{$j=1, \dotsc, k$}
+            \State $\zeta_j \gets \text{SGD}_{z}\left(\textstyle{\|\Phi (s\odot z)\|_{\Sigma^{-1}}^2 + \alpha\|z - \theta_{0, j} - (s \odot \theta'_j) \|^2_2}, \,\, \text{init}{=}\zeta_j\right)$ \Comment{Solve \ref{eq:low_variance_objective_zero_mean_posterior_samples_loss}}
+        \EndFor
+        \State $\hat{\theta}_{\text{lin}} \gets \text{SGD}_{\theta}\left(\sum_{i=1}^n \ell(y_i, h(s \odot \theta, x_i)) + \alpha\|\theta\|^{2}_{2}, \,\, \text{init}{=}\hat{\theta}_{\text{lin}}\right)$ \Comment{Solve \ref{eq:linear-model-posterior-log-density}}
+        \State $\hat \gamma \gets \frac{1}{k} \sum_{j=1}^k \sum_{i=1}^n \|(\zeta_j \odot s)^T \phi(x_i)^T \Sigma^{-1}(i)^\frac{1}{2}\|^2_2$ \Comment{Effective dimension estimate}
+        \State $\alpha' \gets \hat \gamma / \|\hat{\theta}_{\text{lin}}\|^{2}_{2}$ \Comment{Mackay's Update}
+        \For{$j=1,\dotsc,k$}
+            \State $\theta_{0, j} \gets \sqrt{\frac{\alpha}{\alpha'}}\theta_{0, j}`'$ \Comment{Rescale prior sample with new prior precision}
+            \State $\theta'_j \gets \frac{\alpha}{\alpha'}\theta'_j$ \Comment{Rescale data-dependent term with new prior precision}
+        \EndFor
+        \State $\alpha \gets \alpha'$
+    \EndWhile
+    \State \Return Optimised precision $\alpha$ and weight samples $\zeta_1, \dotsc, \zeta_k$
+    \end{algorithmic}
+    \end{algorithm}
+
+    \Cref{alg:sampling_classification} provides an algorithm for linearised Laplace inference using the stochastic EM iteration presented in \Cref{sec:sample_em} for hyperparameter selection and the g-prior normalisation described in \Cref{sec:g-prior}. We explain the following notation and specifics of the algorithm:
+\begin{itemize}
+\item $\Sigma^{-1}(i)$ is the curvature of the cross entropy loss at $x_i$, given by \label{ntn:normalised_preds}
+\[\Sigma^{-1}(i) = \text{diag}(p_i) - p_ip_i^T \text{ where }p_i = \operatorname{Softmax}(f(\hat{\theta}_{\text{nn}}, x_i)).
+\]
+\item The prior samples $\theta_{0, j}$ scale with $\alpha^{\nicefrac{-1}{2}}$, and the data dependent terms, denoted $\theta'_j$,\label{ntn:data_dependent_terms} scale with $\alpha^{-1}$. This allows us to update each term in closed form each time $\alpha$ changes.
+\item We sample the stochastic terms $\theta_{0, j}$ and $\theta'_j$ only once at the start, which introduces a small bias that is negligible in practise, but speeds up inference. This is akin to our warm-start algorithms for hyperparameter optimisation in the GP case (see \Cref{sec:warm_start_gp}).
+\item We optimise both our samples $\zeta$ and posterior mean $\hat{\theta}_{\text{lin}}$ using stochastic gradient descent with a Nesterov momentum parameter of 0.9. 
+\end{itemize}
+ \begin{selfremark}[Polyak averaging vs Linear Scheduling]
+ We find that Polyak averaging is very effective at reducing gradient variance when optimising the sampling objective \citep{Dieuleveut2017harder}. However, it has two limitations 1) it slows down optimisation, increasing the number of steps needed 2) it doubles the memory requirement needed to store posterior samples. This decreases the number of samples that can be optimised in parallel on a single hardware accelerator. Instead, we employ a linear learning rate decay schedule, which we find to work nearly as well while not increasing computational burden. 
+ 
+ The regularised classification loss $\mathcal{L}$ is non-quadratic and thus Polyak averaging is no longer optimal \citep{Bach2014sgd}. Thus here we also employ a linear learning rate decay schedule. For optimising both the sampling and classification loss objectives we find that gradient clipping helps prevent oscillations at the start of training and as a result speeds up convergence.
+ \end{selfremark}
+
+\subsection{Tomographic Reconstruction.}
+
+\paragraph{Problem setup} Tomographic reconstruction consists in solving a linear inverse problem in imaging where we observe a set of measurements $y \in \R^{m}$, which we assume to be generated as $y \,{=}\, U x^* + \eta$ for $U \in \R^{m \times d}$ the discrete Radon transform\label{ntn:radon_transform}, $x^* \in \R^{d}$ the image to reconstruct and $\eta \sim \mathcal{N}(0, I)$ random noise. We have $m \ll d$, making the problem underconstrained. We assemble the Radon operator $U$ as a sparse matrix taking in an image of resolution $(501$px$)^2$ and outputting a measurement tensor coherent with the described geometry \cite{der2019cone,barbano2021deep, antoran2022tomography,barbano2023painless}. 
+
+\Cref{alg:sampling_kernelised} is the kernelised version of \cref{alg:sampling_classification} that we use for tomographic reconstruction. We have the following notation and specifics of the algorithm in this setup:
+\begin{itemize}
+\item Tomographic reconstruction is a regression problem for which we use a Gaussian likelihood with fixed noise $\Sigma=I$.
+\item The linear model's loss function $\mathcal{L}$ is therefore quadratic and the Laplace approximation is not needed. Both the sample loss and the linear model's loss can be optimised in closed form by solving a linear system of equations given by the observation covariance, i.e. the kernel matrix for tomography as,\label{ntn:kernel_tom}
+\[
+K_{\text{tom}} := U\Phi ( \alpha^{-1} \text{diag}(s^{\odot 2}) ) \Phi^T U^T + \Sigma
+\]
+where the linear operator $U$ combines with the neural network Jacobian to build the feature embedding $U \Phi$. 
+\item Since we have closed-form solutions that can be calculated by solving linear system of equations, we  solve against the kernel matrix using the preconditioned conjugate gradient (CG) method described by \cite{gardner18}.
+\item As a preconditioner, we compute a 400-dimensional randomised eigendecomposition preconditioner \citep[Alg. 5.6 in][]{Halko2011structure}, which we invert using the Woodbury identity. We find the preconditioner to provide important speedups to CG convergence and we re-estimate it after every hyperparameter update.
+\item We find that the GPyTorch CG implementation does not benefit from warm-starting the solution vector. Consequently, we re-draw prior and noise samples $(\theta_{0}, \varepsilon)$ at every E-step. 
+\end{itemize}
+
+\begin{algorithm}[t]
+    \caption{Kernelised sampling-based linearised NN inference for CT reconstruction}
+    \label{alg:sampling_kernelised}
+    \begin{algorithmic}
+    \Require Linearised network $h$, linearisation point $\hat{\theta}_{\text{nn}}$, measurements $Y$, discrete Radon transform $U$, U-Net Jacobian $\Phi$, initial precision $\alpha > 0$, number of samples $k$, noise precision $\Sigma^{-1}$
+    \Ensure Optimised prior precision $\alpha$
+    \vspace{2mm}
+    \State \textbf{Function} Kvp($v$, $\alpha$, $U\Phi$, s, $\Sigma$)
+        \State \hspace{\algorithmicindent} \textbf{return} $U\Phi ( \alpha^{-1} \text{diag}(s^{\odot 2}) ) \Phi^T U^T v + \Sigma v$ \Comment{Calculate $K_{\text{tom}} v$}
+    \vspace{2mm}
+    \State $s \gets ( \sum_{i<m} (U_{i}\Phi)^{ \odot 2} )^{\nicefrac{-1}{2}} $ \Comment{Calculate g-prior scaling factor stochastically}
+    \vspace{2mm}
+    \While{ $\alpha$ has not converged}
+        \State $P \gets \text{Compute-preconditioner}(\texttt{Kvp})$ \Comment{$400$-dim randomised eigendecomposition}
+        \For{$j=1, \dotsc, k$}
+            \State $\zeta_j^0 \gets U\Phi(s \odot \theta_{0, j}) + \varepsilon_j \text{ where } \varepsilon_j \sim \mathcal{N}(0, \Sigma) \text{ and } \theta_{0, j} \sim \mathcal{N}(0, A^{-1})$
+            \State $\texttt{c}_j \gets \text{CG}\left(\texttt{Kvp}, \zeta_j^0,\,\, \text{precond.}{=}P\right)$ \Comment{Solve for $\texttt{c}_j = K_{\text{tom}}^{-1} \zeta_j^0$}
+            \State $\zeta_{j} \gets \zeta_{j}^0 - U\Phi ( \alpha^{-1} \text{diag}(s^{\odot 2}) ) \Phi^T U^T \texttt{c}_{j}$ \Comment{Solution for \ref{eq:low_variance_objective_zero_mean_posterior_samples_loss} in closed-form}
+        \EndFor
+        \State $\delta \gets U(\Phi \hat{\theta}_{\text{nn}} - f(\hat{\theta}_{\text{nn}}))$ \Comment{Linear model and NN prediction difference}
+        \State $\texttt{c} \gets \text{CG}\left(\texttt{Kvp}, \, Y{+}\delta,\,\,\text{precond.}{=}P\right)$ \Comment{Solve for $\texttt{c} = K_{\text{tom}}^{-1} (Y + U(\Phi \hat{\theta}_{\text{nn}} - f(\hat{\theta}_{\text{nn}})))$}
+        \State $\hat{\theta}_{\text{lin}} \gets s \odot \alpha^{-1}\Phi^TU^T \texttt{c}$ \Comment{Solution for \ref{eq:linear-model-posterior-log-density} in closed-form}
+        \State $\hat \gamma \gets \frac{1}{k} \sum_{j=1}^k \|U\Phi( s \odot\zeta_j)\|_{2}^2$ \Comment{Effective dimension update}
+        \State $\alpha' \gets \hat \gamma / \|\bar \theta\|^{2}$ \Comment{Mackay's Update}
+        \State $\alpha \gets \alpha'$
+    \EndWhile
+    \State \Return Optimised precision $\alpha$
+    \end{algorithmic}
+    \end{algorithm}
+
+\section{Experiments}
+\label{sec:bnn_experiments}
+\subsection{Ablation study: LeNet on MNIST}
+\label{sec:lenet_MNIST}
+
+We first evaluate our approach on MNIST $m{=}10$ class image classification, where exact linearised Laplace inference is tractable. The training set consists of $n{=}60k$ observations and we employ 3 LeNet-style CNNs of increasing size: ``LeNetSmall'' ($d'{=}14634$), ``LeNet'' ($d'{=}29226$) and ``LeNetBig'' ($d'{=}46024$). The latter is the largest model for which we can store the covariance matrix on an A100 GPU. We draw samples and estimate posterior modes using SGD with Nesterov momentum (full details in Appendix \ref{app:mnist_experiments}). We use 5 seeds for each experiment, and report the mean and std. error.
+
+\paragraph{Comparing sampling objectives.} We first compare the proposed low-variance objective $L'$ with the regular objective $L$, using LeNet. The results are shown in \Cref{fig:mnist_batchsize}.
+We draw exact samples: $(\zeta^{\star}_{j})_{j\leq k}$ through matrix inversion
+and assess sample fidelity in terms of normalised squared distance to these exact samples $\tfrac{\|\zeta - \zeta^{\star}\|_{2}^{2}}{\|\zeta^{\star}\|_{2}^{2}}$. 
+All runs share a prior precision of $\alpha \approx 5.5$ obtained with EM iteration. The effective dimension is $\hat \gamma \approx 1300$. Noting that the g-prior feature normalisation results in $\textstyle{\Tr M = d'}$, we can see that condition in \Cref{eq:effective-dim-condition} is not satisfied $( 2\times 5.5 \times 1300 < 29k)$. Despite this, the proposed objective converges to more accurate samples even when using a 16-times smaller batch size (left plot). 
+The right side plots relate sample error to categorical symmetrised-KL (sym.~KL) and logit Wasserstein-2 (W2) distance between the sampled and exact lin. Laplace predictive distributions on the test-set. Both objectives' prediction errors stop decreasing below a sample error of ${\approx}0.5$ but, nevertheless, the proposed loss $L'$ reaches lower a prediction error.
+
+\begin{figure}[hbt]
+\vspace{-0.2cm}
+    \centering
+    \includegraphics[width=0.96\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/Figs/Vector/mnist_batchsize.pdf}
+    \vspace{-0.25cm}
+    \caption[Comparing sampling objectives with LeNet on MNIST.]{Left: optimisation traces for new and existing sampling losses averaged across 16 samples and 5 seeds. Right: for batch-size=1000, traces of sample-error vs distance to exact linear predictions.     \label{fig:mnist_batchsize} \vspace{-0.1cm}}
+\end{figure}
+
+\paragraph{Fidelity of sampling inference.} We compare our method's uncertainty using 64 samples against approximate methods based on the NN weight point-estimate (MAP), a diagonal covariance, and a KFAC estimate of the covariance \citep{Martens15kron,ritter2018scalable} implemented with the \href{https://github.com/AlexImmer/Laplace}{\texttt{Laplace}} library, in terms of similarity to the full-covariance lin. Laplace predictive posterior. As standard, we compute categorical predictive distributions with the probit approximation \citep{daxberger2021laplace}. All methods use the same layerwise prior precision obtained with 5 steps of full-covariance EM iteration. 
+For all three LeNet sizes, the sampled approximation presents the lowest categorical sym. KL and logit W2 distance to the exact lin. Laplace pred. posterior (\Cref{fig:mnist_preds_and_EM}, LHS). The fidelity of competing approximations degrades with model size but that of sampling increases.
+
+
+\paragraph{Accuracy of sampling hyperparameter selection.} We compare our sampling EM iteration with 16 samples to full-covariance EM on LeNet without the g-prior. \Cref{fig:mnist_preds_and_EM}, right, shows that for a single precision hyperparameter, both approaches converge in about 3 steps to the same value. In this setting, the diagonal covariance approximation diverges, and KFAC converges to a biased solution. We also consider learning layer-wise prior precisions by extending the M-step update from \cref{sec:sample_em} to diagonal but non-isotropic prior precision matrices. Here, neither the full covariance nor sampling methods converge within 15 EM steps. The precisions for all but the final layer grow, revealing a pathology of this prior parametrisation: only the final layer's Jacobian, i.e. the final layer activations, are needed to accurately predict the targets; other features are pruned away. 
+% Here, the sampling M-step shows some instability, which we correct by tying all hyperparameters for the first~3~steps.
+
+\begin{figure}[t]
+\vspace{-0.3cm}
+    \centering
+    \includegraphics[width=0.45\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/Figs/Vector/predictive_bias_size_scan.pdf}
+    \hspace{0.01\linewidth}
+    \includegraphics[width=0.23\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/Figs/Vector/EM_single_precision_curves_iclr.pdf}
+    \hspace{0.01\linewidth}
+    \includegraphics[width=0.23\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/Figs/Vector/multi_precision_EM_curves_iclr.pdf}
+    \vspace{-0.25cm}
+    \caption[Similarity to exact linearised Laplace and EM convergence with stochastic EM algorithm.]{Left: similarity to exact lin. Laplace predictions on MNIST test-set for different approximate methods applied to NNs of increasing size. Centre right: comparison of EM convergence for a single hyperparameter across approximations. Right: layerwise convergence for exact and sampling~methods.     \label{fig:mnist_preds_and_EM}}
+\end{figure}
+
+\subsection{ResNet-18 on CIFAR100} \label{sec:Res18CIFAR}
+
+We showcase the stability and performance of our approach by applying it to CIFAR100 $m{=}100$-way image classification. The training set consists of $n{=}50k$ observations, and we employ a ResNet-18 model with $d' \approx 11M$ parameters. 
+% To the best our knowledge, this is the first lin. Laplace approach that is capable of scaling to the CIFAR100 dataset, as the high-parameter and high-output dimensions prove intractable even on modern hardware.
+We perform optimisation using SGD with Nesterov momentum and a linear learning rate decay schedule. 
+Unless specified otherwise, we run 8 steps of EM with 6 samples to select $\alpha$. We then optimise $64$ samples to be used for prediction.
+We run each experiment with 5 different seeds reporting mean and std. error. Full experimental details are in Appendix \ref{app:cifar100_experiments}.% and additional results in \cref{app:additional_results}.
+
+\begin{figure}[b]
+\vspace{-0.4cm}
+    \centering
+    \includegraphics[width=0.95\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/Figs/Vector/cifar100_em.pdf}
+    \vspace{-0.3cm}
+    \caption[Convergence of stochastic EM algorithm for ResNet-18 on CIFAR100]{Left: prior precision optimisation traces for ResNet-18 on CIFAR100 varying n. samples. Middle: same for the eff. dim. Right: average sample norm and posterior mean norm throughout successive EM steps' SGD runs while varying n. samples. Note that traces almost perfectly overlap.  \vspace{-0.5cm}}
+    \label{fig:cifar100_em}
+    \vspace{-0.0cm}
+\end{figure}
+
+\paragraph{Stability and cost of sampling algorithm.} \Cref{fig:cifar100_em} shows that our sample-based EM converges in 6 steps, even when using a single sample. At convergence, $\alpha \approx 10^4$ and $\hat{\gamma} \approx 700$, so $2\times700\times10^4=1.4\times10^7>1.1\times 10^7$. Thus, \Cref{eq:effective-dim-condition} is satisfied and $L'$ is preferred. We use 50 epochs of optimisation for the posterior mode and 20 for sampling. When using 2 samples, the cost of one EM step with our method is 45 minutes on an A100 GPU; for the KFAC approximation, this takes 20 minutes.
+
+\paragraph{Evaluating performance in the face of distribution shift.} We employ the standard benchmark for evaluating methods' test Log-Likelihood (LL) on the increasingly corrupted data sets of \textcite{hendrycks2016baseline,ovadia2019}.
+We compare the predictions made with our approach to those from 5-element deep ensembles, arguably the strongest baseline for uncertainty quantification in deep learning \citep{lakshminarayanan2017,ashukha2020pitfalls}, with point-estimated predictions (MAP), and with a KFAC approximation of the lin. Laplace covariance  \citep{ritter2018scalable}. For the latter, constructing full Jacobian matrices for every test point is computationally intractable, so we use 64 samples for prediction, as suggested in \cref{sec:sampling_is_efficient}. The KFAC covariance structure leads to fast log-determinant computation, allowing us to learn layer-wise prior precisions following \textcite{Immer2021Marginal} for this baseline using 10 steps of non-sampled EM. For both lin. Laplace methods, we use the standard probit approximation (see \Cref{eq:probit_approx}) to the categorical predictive \citep{daxberger2021bayesian}.
+\Cref{fig:cifar_pred} shows that for in-distribution inputs, ensembles performs best and KFAC overestimates uncertainty, degrading LL even relative to point-estimated MAP predictions. Conversely, our method improves LL. For sufficiently corrupted data, our approach outperforms ensembles, also edging out KFAC, which fares well here due to its consistent overestimation of uncertainty. 
+
+\paragraph{Joint predictions.} Joint predictions are essential for sequential decision making, but are often ignored in the context of NN uncertainty quantification \citep{Janz19successor}. To address this, we replicate the ``\textit{dyadic sampling}'' experiment proposed by \textcite{osband2022evaluating}. We group our test-set into sets of \label{ntn:dyadic_sampling_kappa}$\kappa$ data points and then uniformly re-sample the points in each set until sets contain $\tau$ points\label{ntn:dyadic_sampling_tau}. We then evaluate the LL of each set jointly. Since each set only contains $\kappa$ distinct points, a predictor that models self-covariances perfectly should obtain an LL value at least as large as its marginal LL for all values of $\kappa$.  We use $\tau{=}10(\kappa-1)$
+% when $\kappa > 1$ 
+and repeat the experiment for 10 test-set shuffles. 
+Our setup remains the same as above, but we use Monte Carlo marginalisation instead of probit, since the latter discards covariance information. \Cref{tab:cifar_joint} shows that ensembles make calibrated predictions marginally, but their joint predictions are poor, an observation also made by \textcite{Osband2021epistemic}. Our approach is competitive for all $\kappa$, performing best in the challenging large~$\kappa$~cases.
+
+\input{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/dyadic_centred}
+
+\subsection{ResNet-50 on Imagenet}
+\label{sec:Res50IMAGENET}
+
+We demonstrate the scalability of our approach by applying it to Imagenet $m{=}1000$-way image classification \citep{imagenet}. The training set consists of $n{\approx}1.2M$ observations, and we employ a ResNet-50 model with $d' \approx 25M$ parameters. 
+% To the best our knowledge, this is the first lin. Laplace approach that is capable of scaling to the CIFAR100 dataset, as the high-parameter and high-output dimensions prove intractable even on modern hardware.
+% We perform optimisation using SGD with Nesterov momentum and a linear learning rate decay schedule. 
+Our setup largely matches that described in \Cref{sec:Res18CIFAR} for CIFAR100 but we run 6 steps of EM with 6 samples to select a single regulariser $\alpha$. We then optimise $90$ samples to be used for prediction. Our computational budget only allows for a single run. Thus, we do not provide errorbars. Full experimental details are in Appendix \ref{app:imagenet_experiments}.% and additional results in 
+
+\input{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/imagenet_dyadic}
+
+\paragraph{Stability and cost of sampling algorithm.}
+
+At each EM step, we run 10 epochs of optimisation to find the linear model's posterior mean and a single epoch of optimisation to draw samples. Each EM step takes roughly $26$ hours on a TPU-v3 accelerator. \Cref{fig:imagenet_pred} shows the regularisation strength reaches values ${\sim}150$ in 1 step and then drifts slowly towards lower values without fully converging within 6 steps.
+This suggests the optimal $\alpha$ value may lie bellow $100$. Unfortunately, we are unable to verify this, as the required computational cost exceeds our budget. 
+ % A lower sampling loss $L'$ may be obtained by optimising for more steps. We conjecture, 
+ % However, mirroring our findings on MNIST (\cref{fig:mnist_batchsize} right), effective dimension estimates and predictions remain unchanged. 
+% We further investigate this in \cref{appendix}.
+Taking $\alpha \approx 100$ and $\hat{\gamma} \approx 10^5$, we obtain $2 \alpha \gamma \approx \mathrm{Tr} \;M = 2.5\times 10^7$. According to \Cref{eq:effective-dim-condition}, both sampling objectives discussed in \Cref{sec:sample_em} will present similar variance at convergence. Thus, $L'$ is expected to present lower variance throughout optimisation, that is, before convergence, and is again preferred. 
+
+\paragraph{Marginal and joint predictions.}
+Using the same setup from the CIFAR100 joint prediction experiment above, but drawing 90 samples with our method and KFAC, we make marginal and joint predictions on the Imagenet test set. The results are shown in \Cref{tab:imagenet_joint}. Our method's regulariser optimisation trajectory in \Cref{fig:imagenet_pred} suggests a value lower than the one obtained after 6 EM steps ($\alpha=114$) may be preferred. Thus, we also report results with a value 10 times lower: $\alpha=11.4$. 
+For KFAC, we optimise layerwise prior precisions using 5 EM steps. This leads to small precisions which produce underconfident predictions and poor results. We attribute this to bias in the KFAC estimate of the covariance log-determinant. 
+For comparison, we include KFAC results with a single regularisation parameter set to our initialisation value $\alpha{=}10000$ (labelled ``init''). This maintains or improves performance across $\kappa$ values.
+Similarly to CIFAR100, ensembles obtains the strongest marginal test log-likelihood followed by our sampling approach for both regularisation strength values. KFAC overestimates uncertainty providing worse marginal performance than a single point-estimated network for both regularisation strength values. With $\alpha{=}11.4$, our sampling approach performs best in terms of joint LL. Again, we find ensembles model joint-dependencies poorly. For $\kappa$ values between 2 and 5, their performance is comparable to that of the KFAC approximation. 
+
+Concurrently with the present work, \textcite{Deng2022Accelerated} introduce ``ELLA'', a Nystrom-based approximation to the Laplace covariance. With ResNet-50 on Imagenet, the authors report a marginal ($\kappa{=}1$) test LL of -$0.948$, which is worse than our MAP model. However, differences in the MAP solution upon which the Laplace approximation is built (theirs obtains -$0.962$ LL) make \textcite{Deng2022Accelerated}'s results not directly comparable with ours. 
+ELLA does not provide a model evidence objective and thus \textcite{Deng2022Accelerated}'s result relies on validation-based tuning of the regularisation strength.
+
+\subsection{Tomographic reconstruction} \label{sec:DIP}
+
+To demonstrate our approach in dual (kernelised) form, we replicate the setting of \textcite{barbano2021dip,barbano2022design} and \textcite{antoran2022tomography}, where linearised Laplace is used to estimate uncertainty for a tomographic reconstruction outputted by a U-Net autoencoder. We provide an overview of the problem in Appendix \ref{app:DIP_experimental_details}, but refer to \textcite{antoran2022tomography} for full detail. Whereas the authors use a single EM step to learn hyperparameters, we use our sample-based variant and run 5 steps. Unless otherwise specified, we use 16 samples for stochastic EM, and 1024 for~prediction.
+
+\begin{figure}[thb]
+\vspace{-0.2cm}
+    \centering
+    \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/Figs/Vector/walnut.pdf}
+    \vspace{-0.4cm}
+    \caption[Convergence of stochastic EM algorithm for tomographic reconstruction]{Left 3 plots: traces of prior precision, eff. dim., and marginal test LL vs EM steps for the tomographic reconstruction task with $m=7680$. Right: joint test LL for varying image patch sizes. }
+    \label{fig:DIP_EM_convergence}
+    \vspace{-0.2cm}
+\end{figure}
+
+We test on the real-measured $\mu$CT dataset of $251k$ pixel scans of a single walnut released by \cite{der_sarkissian2019walnuts_data}. 
+We train $d'{=}2.97M$ parameter U-Nets on the $m{=}7680$ dimensional observation used by \cite{antoran2022tomography} and a twice-as-large setting $m{=}15360$. Here, the U-Net's input is clamped to a constant ($n=1$), and its parameters are optimised to output the reconstructed image. As a result, we do not need mini-batching and can draw samples using Matheron's rule \cref{eq:matheron}. We solve the linear system contained therein using conjugate gradient (CG) iteration implemented with \href{https://gpytorch.ai}{\texttt{GPyTorch}} \citep{gardner18}. We accelerate CG with a randomised SVD preconditioner of rank 400 \citep[alg. 5.6 in ][]{Halko2011structure}. See Appendix \ref{app:DIP_experimental_details} for full experimental details.
+
+
+\paragraph{Stability and cost of sampling algorithm.} \Cref{fig:DIP_EM_convergence} shows that sample-based EM iteration converges within 4 steps using as few as 2 samples. \Cref{Tab:walnuttab} shows the time taken to perform 5 sample-based EM steps for both the $m{=}7680$ and $m{=}15360$ settings; avoiding explicit estimation of the covariance log-determinant provides us with a two order of magnitude speedup relative to \textcite{antoran2022adapting} for hyperparameter learning. By avoiding covariance inversion, we obtain an order of magnitude speedup for prediction.
+Furthermore, while scaling to double the observations $m{=}15360$ is intractable with the previous method, our sampling method requires only a $25\%$ increase in computation time.
+
+\paragraph{Predictive performance.}
+\Cref{fig:qualitative_DIP} shows, qualitatively, that the marginal standard deviation assigned to each pixel by our method aligns with the pixelwise error in the U-Net reconstruction in a fine-grained manner.
+By contrast, MC dropout (MCDO), the most common baseline for NN uncertainty estimation in tomographic reconstruction \citep{laves2020uncertainty, Tolle2021meanfield}, spreads uncertainty more uniformly across large sections of the image.
+\Cref{Tab:walnuttab} shows that the pixelwise LL obtained with our method exceeds that obtained by \textcite{antoran2022tomography}, potentially due to us optimising the prior precision to convergence while the previous work could only afford a single EM step. 
+The rightmost plot in \Cref{fig:DIP_EM_convergence} displays joint test LL, evaluated on patches of neighbouring pixels. Our method performs best.
+MCDO's predictions are poor marginally. They improve when considering covariances, although remaining worse than lin. Laplace. 
+% See \cref{app:add_experiments} for results for $m{=}15360$.
+
+\begin{table}[t]
+\vspace{-0.2cm}
+\caption[Experimental results for tomographic reconstruction]{Tomographic reconstruction: test LL and wall-clock times (A100 GPU) for both data sizes.}
+\vspace{0.0cm}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{cccccccccc}
+\multicolumn{1}{c}{} & \multicolumn{4}{c}{$m=7680$}                                &  & \multicolumn{4}{c}{$m=15360$}                               \\ \cline{2-5} \cline{7-10} 
+\multicolumn{1}{c}{} & \multicolumn{2}{c}{LL} & \multicolumn{2}{c}{wall-clock time (min.)} &  & \multicolumn{2}{c}{LL} & \multicolumn{2}{c}{wall-clock time (min.)} \\
+\multicolumn{1}{c}{Method} &
+  \multicolumn{1}{c}{\small{marginal}} &
+  \multicolumn{1}{c}{\small{$(10\times 10)$}} &
+  \multicolumn{1}{c}{params optim.} &
+  \multicolumn{1}{c}{prediction} &
+   &
+  \multicolumn{1}{c}{\small{marginal}} &
+  \multicolumn{1}{c}{\small{$(10\times 10)$}} &
+  \multicolumn{1}{c}{params. optim.} &
+  \multicolumn{1}{c}{prediction} \\ \cline{1-5} \cline{7-10} 
+MCDO-UNet & 0.028 & 2.474 & $0$ & $3^\prime$ &  & 0.002 & 2.762 & $0$ & $3^\prime$\\
+lin.-UNet & 2.214 & 2.601 & $1260^\prime$ & $196^\prime$ & & $-$ & $-$ & $-$ & $-$\\
+sampl.-lin.-UNet & \textbf{2.341} &  \textbf{2.869}& $12^\prime$ &  $14^\prime$ &  & \textbf{2.310} & \textbf{2.972} &    $15^\prime$ &  $14^\prime$               \\ \cline{1-5} \cline{7-10} 
+\end{tabular}
+}
+\label{Tab:walnuttab}
+\vspace{-0.25cm}
+\end{table}
+
+\begin{figure}[h]
+\vspace{-0.2cm}
+    \centering
+    \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/Figs/Vector/walnut_recon.pdf}
+    \vspace{-0.6cm}
+    \caption[Tomographic reconstruction results on walnut]{Original 501$\times$501 pixel  walnut image and reconstruction error for an $m{=}7680$ dimensional observation, along with pixel-wise std-dev obtained with sampling lin. Laplace and MCDO.\vspace{-0.4cm}}
+    \label{fig:qualitative_DIP}
+\end{figure}
+
+\section{Discussion}
+This chapter extends our stochastic sampling algorithms from \Cref{chapter:gp_sampling} to the context of large-scale Bayesian linear models. Through this idea, we extend hyperparameter optimisation algorithms for Bayesian linear models to use posterior samples, resulting in the novel Stochastic EM algorithm using a stochastic estimate for Mackay's update. Through the Linearised Laplace Approximation, we are able to directly apply these stochastic inference and hyperparameter selection algorithms to large neural networks, such as ResNet models on CIFAR100 and Imagenet, without discarding covariance information, which was computationally intractable with previous methods. 
+We also demonstrated the strength of the approach on a high resolution tomographic reconstruction task, where it decreases the cost of hyperparameter selection by two orders of magnitude. The uncertainty estimates obtained through our method are well-calibrated not just marginally, but also jointly across predictions.

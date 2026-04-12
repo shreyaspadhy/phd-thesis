@@ -20,28 +20,36 @@ To address these concerns, we turn our attention to the field of \textit{Bayesia
 
 Among BNP models, the \textit{Gaussian Process} (GP) is a particularly attractive choice: by making a Gaussian assumption on the joint distribution of finite subsets of the process, we are granted a posterior distribution that is also Gaussian, and can be computed analytically. We can further rely on ideas such as Matheron's rule to condition samples from GP priors ``pathwise'' to obtain samples from the posterior distribution. Further, we note that focusing on GPs does not entirely remove us from deep learning. Via the Linearised Laplace Approximation (LLA), we can represent a wide class of BNNs as a GP, allowing us to export any theoretical and algorithmic developments in the GP literature to the BNN setting.
 
-In this chapter, we will first review the basics of Bayesian inference and GPs from a Bayesian Nonparametrics perspective, before moving on to discuss the sampling-based perspective of Bayesian inference, which allows us to approximate many quantities of interest to a high degree of accuracy using a finite number of samples from the posterior distribution. We will then show how we can overcome the cubic cost of inference and posterior sampling in GPs using a novel, stochastic gradient descent-based approach that yields \textit{near-linear} time and space complexity. We will provide non-asymptotic error bounds, and demonstrate the high performance of our approach on a range of regression and Bayesian optimisation tasks. 
+In this chapter, we will first review the basics of Bayesian inference and GPs from a Bayesian Nonparametrics perspective, before moving on to discuss the sampling-based perspective of Bayesian inference, which allows us to approximate many quantities of interest to a high degree of accuracy using a finite number of samples from the posterior distribution. We will then reframe the task of sampling as a novel stochastic optimisation problem, yielding \textit{near-linear} time and space complexity. For the remaining chapter, we will provide non-asymptotic error bounds, develop low-variance and faster convergence algorithms, and demonstrate the performance of our algorithms on a range of regression, molecular property prediction, and Bayesian optimisation tasks.
+
+The contents of this chapter are based on the following papers:
+\begin{itemize}
+    \item ``Sampling from Gaussian process posteriors using stochastic gradient descent''. J.A. Lin$^{*}$, J. Antorán$^{*}$, \textbf{S. Padhy}$^{*}$, D. Janz, J.M. Hernández-Lobato, A. Terenin. In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2023.
+    \item ``Stochastic Gradient Descent for Gaussian Processes Done Right''. J.A. Lin$^{*}$, \textbf{S. Padhy}$^{*}$, J. Antorán$^{*}$, A. Tripp, A. Terenin, C. Szepesvári, J.M. Hernández-Lobato, D. Janz. In \textit{International Conference on Learning Representations (ICLR)}, 2024.
+    \item ``Improving Linear System Solvers for Hyperparameter Optimisation in Iterative Gaussian Processes''. J.A. Lin, \textbf{S. Padhy}, B. Mlodozeniec, J. Antorán, J.M. Hernández-Lobato. In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2024.
+\end{itemize}
 
 \section{Bayesian Inference: A Nonparametrics Perspective}
 
-Unlike a parametrised model, where we have to struggle to specify priors over a finite number of model parameters, BNP models can scale their complexity adaptively to the amount of data we have available and specify priors over infinite-dimensional functions that exist on domains (such as the real line). In order to do this, we turn to the existing theory of stochastic processes that we've discussed in \Cref{chapter:sde} as a flexible framework for specifying priors over a potentially infinite collection of random variables.
+Unlike a parametrised model, where we have to struggle to specify priors over a finite number of model parameters, BNP models can scale their complexity adaptively to the amount of data we have available and specify priors over infinite-dimensional functions that exist on domains (such as the $d$-dimensional real space $\mathbb{R}^d$). In order to do this, we turn to the existing theory of stochastic processes that we've discussed in \Cref{chapter:sde} as a flexible framework for specifying priors over a potentially infinite collection of random variables.
 
-Previously, in \Cref{def:stochastic_process}, we defined a stochastic process as a collection of random variables indexed by a parameter $t \in T$, since we were explicitly interested in the case when $T$ was the time index $t \in [0, \infty)$ for stochastic differential equations. In the BNP framework, we are interested in representing a potentially infinite collection of random variables that exist on a continuous domain, such as the real line. Therefore, we redefine a stochastic process specifically as a way of representing continuous functions:
+Previously, in \Cref{def:stochastic_process}, we defined a stochastic process as a collection of random variables indexed by a parameter $t \in T$, since we were explicitly interested in the case when $T$ was the time index $t \in [0, \infty)$ for stochastic differential equations. In the BNP framework, we redefine a stochastic process as a way of representing continuous functions on the real space $\mathbb{R}^d$:
+\label{ntn:index_set}\label{ntn:function}
 
 \begin{definition}[Functions as Stochastic Processes]
     \label{def:stochastic_process_function_space}
-    Consider a function $f : X \rightarrow \mathbb{R}$ mapping an index set $X$ to the real line. When the index set is infinite, the function $f$ can be viewed as an infinite-dimensional vector collecting an infinite set of random variables. We therefore call this function a stochastic process $\{f(x)\}_{x \in X}$.
+    Consider a function $f : \mathcal{X} \rightarrow \mathbb{R}^m$ mapping an index set $\mathcal{X} \subset \mathbb{R}^d$ to the real space $\mathbb{R}^m$.\footnote{When the index set is infinite, the function $f$ can be viewed as an infinite-dimensional vector collecting an infinite set of random variables.} We call this function a stochastic process collecting a potentially infinite set of random variables $\{f(x)\}_{x \in \mathcal{X}}$.
 \end{definition}
 
-\begin{lightgraybox}{Remark: Notation for Functions}
+\begin{lightgraybox}{Remark: Notation for Functions and Probabilities}
     % \label{rem:functions_as_stochastic_processes}
-    For functions defined as in \Cref{def:stochastic_process_function_space}, we can say that $f \in \mathbb{R}^X$, where $X$ is potentially infinite. Similarly, we can consider the function evaluated on a smaller subset of values: if $A \subseteq X$ is some subset of the index set, then $f_A:=(\{f(x)\}_{x \in A}$, and $f_A \in \mathbb{R}^A$. We may straightforwardly extend this definition to single elements of the index set $f_x:= f(x) := f_{\{x\}} \in \mathbb{R}$.
+    For functions defined in \Cref{def:stochastic_process_function_space}, we can say that $f \in \mathbb{R}^{\mathcal{X}}$. Similarly, we can consider the function evaluated on a smaller subset of values: if $A \subseteq \mathcal{X}$ is some subset of the index set, then $f_A:=(\{f(x)\}_{x \in A}$, and $f_A \in \mathbb{R}^A$. We may straightforwardly extend this definition to single elements of the index set $f_x:= f(x) := f_{\{x\}} \in \mathbb{R}^m$. We use the $\mathbb{P}$ notation to refer to probability measures on infinite-dimensional index sets, distinguishing them from the explicitly finite-dimensional marginal distributions, which we will interchangeably use $\mu$, $P$ or $p$ to denote. This is consistent with our previous use of $\mathbb{P}$ to refer to path measures on SDE trajectories, which were measures on infinite collections of random variables $\{X_t\}_{t \geq 0}$.
 \end{lightgraybox}
 
-Now, we can ask ourselves the question: how do we specify a probability measure over the space of all functions? After all, we need this in order to probabilistically encode our ``prior'' beliefs about the function we are modelling. It might seem like a really daunting task to specify a coherent probability measure for an infinite-dimensional space, but there exists a really powerful result called the \textit{Kolmogorov extension theorem} that allows us to only reason about the probability distribution of finite subsets of the function (i.e. $f_A, A \subset X$), and extend this to the whole function. In order to state this theorem, let us first define some notation.
+Now, we can ask ourselves the question: how do we specify a probability measure over the space of all functions? After all, we need this in order to probabilistically encode our \emph{prior} beliefs about the function we are modelling. It might seem like a really daunting task to specify a coherent probability measure for an infinite-dimensional space, but there exists a really powerful result called the \textit{Kolmogorov extension theorem} that allows us to only reason about the probability distribution of finite subsets of the function (i.e. $f_A, A \subset \mathcal{X}$), and extend this to the whole function. In order to state this theorem, let us first define some notation.
 
-First, let us reason about the properties of our function on different subsets of the index set. We introduce a projection map $\pi_{U \rightarrow V}$ that for $V \subset U \subseteq X$ has the following property:
-
+First, let us reason about the properties of our function on different subsets of the index set. We introduce a projection map $\pi_{U \rightarrow V}$ that for $V \subset U \subseteq \mathcal{X}$ has the following property:
+\label{ntn:projection_map}
 \begin{definition}[Projection Map]
     \label{def:projection_map}
     The projection map $\pi_{U \rightarrow V}$ is defined as:
@@ -50,264 +58,814 @@ First, let us reason about the properties of our function on different subsets o
     $$
 \end{definition}
 
-We remember that the Borel $\sigma$-algebra is the canonical algebra for the real line. We now must reason about sets belonging the Borel $\sigma$-algebra of different subsets of the real line map to each other through the projection map. Let us therefore define \textit{cylinder sets}, which are the pre-images of a projection map $\pi_{X \rightarrow V}$ from a Borel set $B \in \mathcal{B}\left(\mathbb{R}^V\right)$.
-
+We remember that the Borel $\sigma$-algebra is the canonical algebra for real spaces. We now must reason about sets belonging the Borel $\sigma$-algebra of different subsets of the real space $\mathbb{R}^d$ map to each other through the projection map. Let us therefore define \textit{cylinder sets}, which are the pre-images of a projection map $\pi_{\mathcal{X} \rightarrow V}$ from a Borel set $B \in \mathcal{B}\left(\mathbb{R}^V\right)$.
+\label{ntn:cylinder_set}
 \begin{definition}[Cylinder Set]
     \label{def:cylinder_set}
     A cylinder set is defined as:
     $$
-    \pi_{X \rightarrow V}^{-1}(B)=\left\{f \in \mathbb{R}^X: \pi_{X \rightarrow V}(f) \in B\right\}
+    \pi_{\mathcal{X} \rightarrow V}^{-1}(B)=\left\{f \in \mathbb{R}^{\mathcal{X}}: \pi_{\mathcal{X} \rightarrow V}(f) \in B\right\}
     $$
-    Therefore, the cylinder set $\pi_{X \rightarrow V}^{-1}(B)$ is the set of all functions whose values on the finite set $V$ lie within the Borel set $B$.
+    Therefore, the cylinder set $\pi_{\mathcal{X} \rightarrow V}^{-1}(B)$ is the set of all functions whose values on the finite set $V$ lie within the Borel set $B$.
 \end{definition}
 
 Finally, we define the specific $\sigma$-algebra on which the probability measure over functions is defined in the Kolmogorov extension theorem. 
 
 \begin{definition}[Product $\sigma$-algebra]
     \label{def:product_sigma_algebra}
-    The product $\sigma$-algebra is the smallest $\sigma$-algebra which contains all the cylinder sets $\pi_{X \rightarrow V}^{-1}(B)$ for all finite $V \subset X$ and Borel sets $B$.
+    The product $\sigma$-algebra is the smallest $\sigma$-algebra which contains all the cylinder sets $\pi_{\mathcal{X} \rightarrow V}^{-1}(B)$ for all finite $V \subset \mathcal{X}$ and Borel sets $B$.
 \end{definition}
 
 Having set up these definitions, we can now state the Kolmogorov extension theorem:
 
 \begin{theorem}[Kolmogorov Extension Theorem]
     \label{thm:kolmogorov_extension}
-    If a family of probability measures $\mu_V$ corresponding to a finite index set $V$ obeys the following consistency relation for all $V \subset X$ and all second finite index sets with $U \supset V$:
+    If a family of probability measures $\mu_V$ corresponding to a finite index set $V$ obeys the following consistency relation for all $V \subset \mathcal{X}$ and all second finite index sets with $U \supset V$:
     $$
     \mu_U\left(\pi_{U \rightarrow V}^{-1}(B)\right)=\mu_V(B)
     $$
-    then there is a unique probability measure on the product $\sigma$-algebra, $\mathcal{P}_X$ with the property:
+    then there is a unique probability measure on the product $\sigma$-algebra, $\mathbb{P}_{\mathcal{X}}$ with the property:
     $$
-    \mathcal{P}_X\left(\pi_{X \rightarrow V}^{-1}(B)\right)=\mu_V(B) \quad \forall B \in \mathcal{B}\left(\mathbb{R}^V\right)
+    \mathbb{P}_{\mathcal{X}}\left(\pi_{\mathcal{X} \rightarrow V}^{-1}(B)\right)=\mu_V(B) \quad \forall B \in \mathcal{B}\left(\mathbb{R}^V\right)
     $$
 \end{theorem}
 
-In simpler terms, the Kolmogorov extension theorem tells us that if we have a family of probability measures $\mu_V$ corresponding to a finite index set $V$, then there exists a unique probability measure $\mathcal{P}_X$ on the product $\sigma$-algebra which has those measures as finite dimensional marginals\footnote{We use the $\mathcal{P}$ notation to refer to potentially infinite measures on the entire index set, distinguishing them from the explicitly finite marginal distributions, which we will interchangeably use $\mu$, $P$ or $p$ to denote.}. Further, this result is very general and holds even if $X$ is uncountably infinite. We can therefore deal with the infinite-dimensional space of functions by reasoning about the probability distribution of finite subsets of the function. We shall soon see how this allows us to define Gaussian processes as a specific case.
+In simpler terms, the Kolmogorov extension theorem tells us that if we have a family of probability measures $\mu_V$ corresponding to a finite index set $V$, then there exists a unique probability measure $\mathbb{P}_{\mathcal{X}}$ on the product $\sigma$-algebra which has those measures as finite dimensional marginals. Further, this result is very general and holds even if $\mathcal{X}$ is uncountably infinite. We can therefore deal with the infinite-dimensional space of functions by reasoning about the probability distribution of finite subsets of the function. We shall soon see how this allows us to define Gaussian processes as a specific case.
 
 \subsection{Bayes' Theorem for Functions}
 \label{sec:bayes_theorem_functions}
+\label{ntn:prior_prob}\label{ntn:posterior_prob}\label{ntn:likelihood_function}\label{ntn:marginal_likelihood}\label{ntn:radon-nikodym_derivative}
+Let us revisit Bayes' Theorem for the infinite-dimensional objects that we are calling functions. If we assume a \emph{prior} probability measure $\mathbb{P}$ over the space of all functions that encodes our beliefs, and further assume that we have observed some outputs $Y$ on a finite subset $X \subset \mathcal{X}$ of the index set (as in the case of a training dataset $\mathcal{D}_{\text{train}} = \{(X, Y)\}$), then we can define the posterior probability measure $\hat{\mathbb{P}}$ in terms of the Radon-Nikodym derivative:
+\[
+    \frac{\d \hat{\mathbb{P}}}{\d \mathbb{P}}(f)=\frac{p(Y \mid f_X)}{p(Y)}, \label{eq:bayes_theorem_functions}
+\]
+where the quantity $p(Y)$ is the marginal likelihood, defined as 
+\[
+    p(Y) := \int p(Y \mid f_X) \d \mathbb{P}(f_X)
+\]
+Since we are dealing with probability measures over infinite-dimensional spaces, instead of writing down density ratios like we usually do, we instead must use the Radon-Nikodym derivative, which we have defined and discussed extensively in \Cref{chapter:sde}. The likelihood function $p(Y \mid f_X)$ is the probability of the observed data $Y$ given the function $f$ on the subset $X$.
 
-We can now revisit Bayes' Theorem for the infinite-dimensional objects that we are calling functions. If we assume a ``prior'' probability measure $\mathcal{P}$ over the space of all functions that encodes our beliefs, and observed data $y$ over the index set $X$ defined by a likelihood function $p_X(y \mid f)$, then we can define the posterior probability measure $\hat{\mathcal{P}}$ as follows:
+Finally, we can consider the case where we are interested in calculating the posterior distribution over a finite subset of evaluation points $(\cdot)\subset \mathcal{X}$ of the index set. In this situation, we have the joint posterior density over the function values $f_X$ and $f_{(\cdot)}$ given the observations $Y$ as follows:
 \[
-    \frac{\d \hat{\mathcal{P}}}{\d \mathcal{P}}(f)=\frac{p_X(y \mid f)}{p(y)}, \label{eq:bayes_theorem_functions}
+    p\left(f_X, f_{(\cdot)} \mid Y\right) & =\frac{p\left(Y \mid f_X\right) p\left(f_{(\cdot)}, f_X\right)}{p(Y)} \\
+    & =\frac{p\left(y \mid f_X\right) p\left(f_X\right) p\left(f_{(\cdot)} \mid f_X\right)}{p(Y)}, \label{eq:joint_posterior_density_functions}
 \]
-where the quantity $p(y)$ is the marginal likelihood, defined as 
-\[
-    p(y) := \int p_X(y \mid f) d \mathcal{P}(f)
-\]
-Since we are dealing with probability measures over infinite-dimensional spaces, instead of writing down density ratios like we usually do, we instead must use the Radon-Nikodym derivative, which we have defined and discussed extensively in \Cref{chapter:sde}.  
+where the quantities $p(f_X)$ and $p(f_{(\cdot)}, f_X)$ are explicitly the probability densities w.r.t the Lebesgue measure. It is not necessary that these have a simple form w.r.t the Lebesgue measure, but for Gaussian processes, these will simplify to simple Gaussian densities.
 
-In many practical situations, we only observe outputs $y$ on a finite subset $D \subset X$ of the index set (as in the case of a training dataset $D = \{x_i, y_i\}_{i=1}^N$). Therefore, the likelihood only depends on the function $f$ on the subset $D$, i.e. $f_D$. We can therefore define the likelihood function $p_D(y \mid f)$ (or equivalently $p(y \mid f_D)$) as the probability of the data $y$ given the function $f$ on the subset $D$. We can then define the posterior probability measure $\hat{\mathcal{P}}$ through the Radon-Nikodym derivative:
-\[
-    \frac{\d \hat{\mathcal{P}}}{\d \mathcal{P}}(f)=\frac{p(y \mid f_D)}{p(y)}
-\]
-where the marginal likelihood is now an integral over a finite subset of the index set, i.e.
-\[
-    p(y) := \int p_D(y \mid f_D) d P(f_D).
-\]
-Finally, we can consider the case where we are interested in calculating the posterior distribution over a finite subset of evaluation points $D_{\star} \subset X$ of the index set. In this situation, we have the joint posterior density over the function values $f_D$ and $f_{D_{\star}}$ given the observations $y$ as follows:
-\[
-    p\left(f_D, f_{D_{\star}} \mid y\right) & =\frac{p\left(y \mid f_D\right) p\left(f_{D_{\star}}, f_D\right)}{p(y)} \\
-    & =\frac{p\left(y \mid f_D\right) p\left(f_D\right) p\left(f_{D_{\star}} \mid f_D\right)}{p(y)}, \label{eq:joint_posterior_density_functions}
-\]
-where the quantities $p(f_D)$ and $p(f_{D_{\star}}, f_D)$ are explicitly the probability densities w.r.t the Lebesgue measure. It is not necessary that these have a simple form w.r.t the Lebesgue measure, but for Gaussian processes, these will simplify to simple Gaussian densities.
+\begin{lightgraybox}{Remark: Notation and Dimensionality of Datasets}
+    In order to be consistent, we use $\mathcal{X}$ to refer to potentially infinite index sets (such as $\mathbb{R}^d$), and $X$ and $Y$ to refer to finite subsets of these index sets. Further, we choose $X = \{x_i\}_{i=1}^n$, with $x_i \in \mathbb{R}^d$ and $Y = \{y_i\}_{i=1}^n$, with $y_i \in \mathbb{R}^m$ with $X$ a $n \times d$ matrix and $Y$ a $n \times m$ matrix. When we consider scalar outputs (i.e. $m=1$), we use $y = \{y_i\}_{i=1}^n$ to refer to the vector of observations, of dimensionality $n$. Furthermore, we make a somewhat unconventional choice of notation to use $(\cdot)$ to refer to the points of the index set where we wish to evaluate the posterior distribution, to denote that the posterior distribution is a quantity that can be computed at any arbitrary evaluation point $(\cdot)$, and is a quantity involving the training data $f_X$ and the observations $Y$. When we discuss computational complexity involving the dimensionality of this set, we assume that we are interested in $n_{\star}$ datapoints, and we can sometimes explicitly consider the subset $X^{\star} \subset X$ of size $n_{\star}$.
+\end{lightgraybox}
 
 \subsection{Gaussian Processes}
 
-GPs are a special case of a Bayesian Nonparametrics model that reconciles the infinite flexibility we want from a stochastic process prior, with the analytic tractability that the choice of a Gaussian provides. From the Kolmogorov extension theorem, we know that any stochastic-process prior must supply a consistent family of finite-dimensional marginals; the multivariate Gaussian distribution is alluring here because it is fully determined by just a mean function and a positive-definite covariance kernel. We simply need to specify these two quantities, and we can encode a coherent and powerful prior over an infinite function space whose behaviour on every finite subset is consistent. Furthermore, the Gaussian law of probability is closed under both marginalisation and conditioning, so when we observe data under a Gaussian likelihood assumption, the posterior remains a GP. That conjugacy means predictive means, variances and sample paths can be computed with simple linear algebra, avoiding the intractable normalising constants that plague most other BNP priors.
+GPs are a special case of a Bayesian Nonparametrics model that reconciles the infinite flexibility we want from a stochastic process prior, with the analytic tractability that the choice of a Gaussian provides. From the Kolmogorov extension theorem, we know that any stochastic-process prior must supply a consistent family of finite-dimensional marginals; the multivariate Gaussian distribution is alluring here because it is fully determined by just a mean function and a positive-definite covariance kernel. We simply need to specify these two quantities, and we can encode a coherent and powerful prior over an infinite function space whose behaviour on every finite subset is consistent. Furthermore, the Gaussian law of probability is closed under both marginalisation and conditioning, so when we observe data under a Gaussian likelihood assumption, the posterior remains a GP. This conjugacy means that predictive means, variances and sample paths can be computed with simple linear algebra, avoiding the intractable normalising constants that plague most other BNP priors.
 
 Despite this simple assumption, Gaussian processes still provide highly expressive modelling. The covariance kernel lets us encode rich inductive biases, such as smoothness, periodicity, non-stationarity, and compositional structure, to name a few, while keeping the model non-parametric: the effective degrees of freedom still grow with the data because the kernel generates an infinite set of basis functions. With these properties in mind, let us define a Gaussian process in detail, and briefly discuss posterior inference and hyperparameter inference.
-
+\label{ntn:gaussian_process}\label{ntn:covariance_matrix}
 \begin{definition}[Gaussian Process]
     \label{def:gaussian_process}
-    A Gaussian process on a domain $X$ is a stochastic process $\{f(x)\}_{x \in X}$ such that the joint distribution of any finite subset of the function is a multivariate Gaussian distribution specified through a mean function $m( \cdot)$ and a covariance function $k( \cdot, \cdot^{\prime})$ which is positive definite. For any subset $D \subset X$, the joint distribution of the function values $f_D$ is a multivariate Gaussian distribution defined by the mean vector $m_D$ and the covariance matrix $K_{D, D} = k(D, D)$ as follows:
+    A Gaussian process on a domain $\mathcal{X}$ is a stochastic process $\{f(x)\}_{x \in \mathcal{X}}$ such that the joint distribution of any finite subset $X \subset \mathcal{X}$ of the function is a multivariate Gaussian distribution specified through a mean function $m( \cdot)$ and a covariance function $k( \cdot, \cdot^{\prime})$ which is positive definite. Therefore, the joint distribution of the function values $f_X$ is a multivariate Gaussian distribution defined by the mean vector $m_X$ and the covariance matrix $K_{XX} = k(X, X)$ as follows:
     \[
-        f_D \sim \mathcal{N}\left(m_D, K_{D, D}\right)
+        f_X \sim \mathcal{N}\left(m_X, K_{XX}\right)
     \]
-    where the covariance matrix $K_{D, D}$ is a symmetric positive semi-definite matrix. We denote this GP as $f \sim \operatorname{GP}(m, k)$.
+    where the covariance matrix $K_{XX}$ is a symmetric positive semi-definite matrix. We denote this GP as $f \sim \operatorname{GP}(m, k)$.
 \end{definition}
 
 \subsection{Bayesian Inference with Gaussian Processes}
 
-Let us revisit our Bayesian inference framework from \Cref{sec:bayes_theorem_functions}. Here, we assume a Gaussian process prior $\mathcal{P}$ over the space of all functions, parameterised through a mean function $m( \cdot) := 0$ and a covariance kernel $K( \cdot, \cdot)$. Further, to make our notation more explicit about the availability of training data, we assume that we have access to a training dataset $D = \{x_i, y_i\}_{i=1}^N$ of $N$ observations. We can therefore define the prior over the dataset as follows:
+Let us revisit our Bayesian inference framework from \Cref{sec:bayes_theorem_functions}. Here, we assume a Gaussian process prior $\mathbb{P}$ over the space of all functions defined by $\operatorname{GP}(m, k)$. The prior defined over the training dataset $\mathcal{D}_{\text{train}} = \{X, y\}$ (we assume that we have scalar observations $y$) is then:
 \[
-    \mathcal{P}(f_D) = \mathcal{N}\left(0, K_{D, D}\right)
+    p(f_X) = \mathcal{N}\left(0, K_{XX}\right).
 \]
-where $f_D = \{f(x_i)\}_{i=1}^N$ is the function evaluated on the training dataset. Further, for the purpose of this thesis, we will always make the assumption that we are dealing with a Gaussian likelihood, i.e. $p(y \mid f_D) = \mathcal{N}(y \mid f_D, \Sigma)$\footnote{We will discuss the case of non-Gaussian likelihoods more in \Cref{chapter:laplace}, and in the discussion of this chapter}. Using simple linear algebra and properties of the Gaussian distribution, we see that the posterior distribution is also Gaussian, resulting in the posterior distribution being defined by another GP which we denote $f \mid y \sim \operatorname{GP}(m_{\star}, K_{\star})$, with the following mean and covariance functions\footnote{We make an explicit choice of notation for the posterior mean and covariance distributions, using the placeholder $(\cdot)$ to denote that the posterior distribution is a quantity that can be computed at any arbitrary evaluation point $(\cdot)$, and is a quantity involving the training data $f_D$ and the observations $y$.}:
+For the purpose of this thesis, we will always make the assumption that we are dealing with a Gaussian likelihood, i.e. $p(y \mid f_X) = \mathcal{N}(y \mid f_X, \Sigma)$\footnote{We will discuss the case of non-Gaussian likelihoods more in \Cref{chapter:bnn_sampling}, and in the discussion of this chapter}. Using simple linear algebra and properties of the Gaussian distribution, we see that the posterior distribution is also Gaussian, resulting in the posterior distribution being defined by another GP which we denote $f \mid y \sim \operatorname{GP}(m_{\star}, k_{\star})$, with the following mean and covariance functions:\label{ntn:noise_covariance}\label{ntn:posterior_gp}
 \begin{subequations}
 \[
-    m_{{\star}}(\cdot) &= K_{(\cdot), D} \left(K_{D, D} + \Sigma\right)^{-1} y \label{eq:m_posterior_gp} \\
-    k_{\star}(\cdot, \cdot^{\prime}) &= k_{(\cdot, \cdot^{\prime})} - K_{(\cdot), D} \left(K_{D, D} + \Sigma\right)^{-1} K_{D, (\cdot^{\prime})} \label{eq:sigma_posterior_gp}
+    m_{{\star}}(\cdot) &= K_{(\cdot)X} \left(K_{XX} + \Sigma\right)^{-1} y \label{eq:m_posterior_gp} \\
+    k_{\star}(\cdot, \cdot^{\prime}) &= k_{(\cdot, \cdot^{\prime})} - K_{(\cdot)X} \left(K_{XX} + \Sigma\right)^{-1} K_{X(\cdot^{\prime})} \label{eq:sigma_posterior_gp}
 \]
 \end{subequations}
 
 \subsection{Posterior Distributions with Gaussian Processes}
 
-From \Cref{eq:m_posterior_gp} and \Cref{eq:sigma_posterior_gp}, we can see that the posterior mean and covariance matrix of the function values $f_{D_{\star}}$ given the observations $y$ and the function values $f_D$ involve the matrix inversion of the kernel matrix $K_{D, D} + \Sigma$. This is an $N \times N$ matrix, and therefore the cost of computing the posterior mean and covariance matrix is $\mathcal{O}(N^3)$, due to the explicit inversion of the kernel matrix. In this section, we discuss some techniques that are commonly used to approximate this computational cost, either by using an approximation to the posterior distribution, or by using a less computationally expensive algorithm to approximate the matrix inverse.
+From \Cref{eq:m_posterior_gp} and \Cref{eq:sigma_posterior_gp}, we can see that calculating these quantities involves the matrix inversion of the kernel matrix $K_{XX} + \Sigma$. This is an $n \times n$ matrix, and therefore the cost is $\mathcal{O}(n^3)$ due to the explicit inversion of the kernel matrix. In this section, we discuss some techniques that are commonly used to approximate this computational cost, either by using an approximation to the posterior distribution, or by using a less computationally expensive algorithm to approximate the matrix inverse.
 
 \paragraph{Variational Inference.}
-
-The basis of variational inference is to approximate the posterior measure $\hat{\mathcal{P}}$ with a simpler measure $\mathcal{Q}^{\star}$ that is the solution to the following optimisation problem:
+\label{ntn:variational_inference_gp}
+The basis of variational inference is to approximate the posterior measure $\hat{\mathbb{P}}$ with a simpler measure $\mathbb{Q}^{\star}$ that is the solution to the following optimisation problem:
 \[
-    \mathcal{Q}^{\star} = \arg \min_{\mathcal{Q}} D_{\text{KL}}\left(\mathcal{Q} \| \hat{\mathcal{P}}\right).
+    \mathbb{Q}^{\star} = \arg \min_{\mathbb{Q}} \mathcal{D}_{\text{KL}}\left(\mathbb{Q} \| \hat{\mathbb{P}}\right).
 \]
-In particular, we study the \textit{inducing points} method, which can be framed in a variational framework following \textcite[Chapter 3, Theorem 2]{de2017scalable}, which is equivalent to the framework of \textcite{titsias2009variational}. The idea is to consider a set of inducing points $Z \subset X$, which gives us the following decomposition of the KL divergence:
+In particular, we study the \textit{inducing points} method, which can be framed in a variational framework following \textcite[Chapter 3, Theorem 2]{de2017scalable}, which is equivalent to the framework of \textcite{titsias2009variational}. The idea is to consider a set of inducing points $Z \subset \mathcal{X}$, which gives us the following decomposition of the KL divergence:\label{ntn:inducing_points}
 \[
-    D_{\text{KL}}[\mathcal{Q} \| \hat{\mathcal{P}}]=D_{\text{KL}}\left[Q_Z \| P_Z\right]-\mathbb{E}_{Q_D}\left[\log p\left(y \mid f_D\right)\right]+\log p(y).
+    \mathcal{D}_{\text{KL}}\left(\mathbb{Q} \| \hat{\mathbb{P}}\right) = \mathcal{D}_{\text{KL}}\left(Q_Z \| P_Z\right)-\mathbb{E}_{Q_X}\left[\log p\left(y \mid f_X\right)\right]+\log p(y).
 \]
-Following \textcite{titsias2009variational}, we obtain the posterior mean and covariance function of the approximate, variational posterior as follows:
+Following \textcite{titsias2009variational}, we obtain the posterior mean and covariance function of the approximate, variational posterior as follows:\label{ntn:variational_posterior_gp}
 \[
-    m^{(Z)}_{\star}(\cdot) &= K_{(\cdot), Z} \left(K_{Z, Z} + K_{Z, D} \Sigma^{-1} K_{D, Z}\right)^{-1} \Sigma^{-1}y \label{eq:m_posterior_gp_variational} \\
-    k^{(Z)}_{\star}(\cdot, \cdot^{\prime}) &= k_{(\cdot, \cdot^{\prime})} + K_{(\cdot), Z} \left(\left(K_{Z, Z} + K_{Z, D} \Sigma^{-1} K_{D, Z}\right)^{-1} - K_{Z, Z}^{-1}\right) K_{Z, (\cdot^{\prime})} \label{eq:sigma_posterior_gp_variational}
+    m^{(Z)}_{\star}(\cdot) &= K_{(\cdot)Z} \left(K_{ZZ} + K_{ZX} \Sigma^{-1} K_{XZ}\right)^{-1} \Sigma^{-1}y \label{eq:m_posterior_gp_variational} \\
+    k^{(Z)}_{\star}(\cdot, \cdot^{\prime}) &= k_{(\cdot, \cdot^{\prime})} + K_{(\cdot)Z} \left(\left(K_{ZZ} + K_{ZX} \Sigma^{-1} K_{XZ}\right)^{-1} - K_{ZZ}^{-1}\right) K_{Z(\cdot^{\prime})} \label{eq:sigma_posterior_gp_variational}
 \]
-where $K_{Z, Z} = k(Z, Z)$ is the kernel matrix evaluated on the inducing points $Z$. As we can see, the computational cost of the variational posterior is $\mathcal{O}(|Z|^3)$, which is significantly lower than the $\mathcal{O}(N^3)$ cost of the exact posterior.
+where $K_{ZZ} = k(Z, Z)$ is the kernel matrix evaluated on the inducing points $Z$. As we can see, the computational cost of the variational posterior is $\mathcal{O}(|Z|^3)$, which is significantly lower than the $\mathcal{O}(n^3)$ cost of the exact posterior.
 
-\paragraph{Conjugate Gradients.}
+\paragraph{Approximate Linear System Solutions.}
 
-As we see in \Cref{eq:m_posterior_gp}, the challenge of calculating the posterior mean and covariance matrix reduces to the challenge of solving a system of linear equations of dimensionality $N$, given by
+As we see in \Cref{eq:m_posterior_gp}, the challenge of calculating the posterior mean and covariance matrix reduces to the challenge of solving a system of linear equations of dimensionality $n$, given by\label{ntn:alpha_star}
 \[
-v^{\star} = \left(K_{D, D} + \Sigma\right)^{-1} y.
+\alpha^{\star} = \left(K_{XX} + \Sigma\right)^{-1} y.
 \]
-Similarly, for \Cref{eq:sigma_posterior_gp}, we must solve $N$ linear systems per test datapoint, solving $(K_{D, D} + \Sigma)^{-1}$ against each element of the kernel matrix $K_{D, (\cdot^{\prime})}$. While the ``exact'' solution requires a matrix inversion, there are often approximate methods that can be used to solve this system of linear equations.
+Similarly, for \Cref{eq:sigma_posterior_gp}, we must solve $n$ linear systems per test datapoint, solving $(K_{XX} + \Sigma)^{-1}$ against each element of the kernel matrix $K_{X(\cdot^{\prime})}$. While the \emph{exact} solution requires a matrix inversion, there are often approximate methods that can be used to solve this system of linear equations.
 
-\emph{Conjugate gradients} (CG) are the most widely used algorithm to solve such problems, both in the context of GPs \cite{Gibbs_MacKay97a,gardner18,Artemev21} and more generally \cite{numerical07,BoydVandenberghe2014}. CG reduces GP posterior inference to a series of matrix-vector products, each of $\mathcal{O}(N^2)$ cost. Given the system $(K_{D, D} + \Sigma)^{-1} y$, the number of matrix-vector products needed to guarantee convergence of CG to within a tolerance of $\epsilon$ \cite{terenin23}, is
+\emph{Conjugate gradients} (CG) are the most widely used algorithm to solve such problems, both in the context of GPs \cite{Gibbs_MacKay97a,gardner18,Artemev21} and more generally \cite{numerical07,BoydVandenberghe2014}. CG reduces GP posterior inference to a series of matrix-vector products, each of $\mathcal{O}(n^2)$ cost. Given the system $(K_{XX} + \Sigma)^{-1} y$, the number of matrix-vector products needed to guarantee convergence of CG to within a tolerance of $\varepsilon$ \cite{terenin23}, is
 \[
-    \mathcal{O}\left(\sqrt{\operatorname{cond}((K_{D, D} + \Sigma))} \log \frac{\operatorname{cond}((K_{D, D} + \Sigma))\|y\|}{\varepsilon}\right) \\
-    \text{where }\operatorname{cond}((K_{D, D} + \Sigma))=\frac{\lambda_{\max }((K_{D, D} + \Sigma))}{\lambda_{\min }((K_{D, D} + \Sigma))}
+    \mathcal{O}\left(\sqrt{\operatorname{cond}((K_{XX} + \Sigma))} \log \frac{\operatorname{cond}((K_{XX} + \Sigma))\|y\|}{\varepsilon}\right) \\
+    \text{where }\operatorname{cond}((K_{XX} + \Sigma))=\frac{\lambda_{\max }((K_{XX} + \Sigma))}{\lambda_{\min }((K_{XX} + \Sigma))} \nonumber
 \]
-where $\lambda_{\max}((K_{D, D} + \Sigma))$ and $\lambda_{\min}((K_{D, D} + \Sigma))$ are the maximum and minimum eigenvalues of $(K_{D, D} + \Sigma)$.
-CG performs well in many GP use cases, for instance \textcite{gardner18,WangPGT2019exactgp}.
-In general, however, the condition number $\operatorname{cond}((K_{D, D} + \Sigma))$ need not be bounded, and conjugate gradients may fail to converge quickly \cite{terenin23}.
+where $\lambda_{\max}((K_{XX} + \Sigma))$ and $\lambda_{\min}((K_{XX} + \Sigma))$ are the maximum and minimum eigenvalues of $(K_{XX} + \Sigma)$.
+CG performs well in many GP use cases \citep{gardner18,WangPGT2019exactgp}.
+In general, however, the condition number $\operatorname{cond}((K_{XX} + \Sigma))$ need not be bounded, and conjugate gradients may fail to converge quickly \cite{terenin23}.
 
-\paragraph{Issues with Posterior Distributions.}
+\paragraph{Issues with Exact Posterior Distributions.}
 
-Having discussed the computational challenges of posterior inference, and a few solutions to them, we must discuss how dealing with exact posterior distributions can still be quite challenging in practice. For example, even storing the posterior distribution in its full form requires $\mathcal{O}(N^2)$ memory, which is prohibitive for large datasets. Furthermore, the posterior distribution is a function of the training data, and therefore requires re-computation of the posterior distribution when the training data changes, or when new data is observed, such as in a sequential framework like Bayesian optimisation.
+Having discussed the computational challenges of posterior inference, and a few solutions to them, we must discuss how dealing with exact posterior distributions can still be quite challenging in practice. For example, even storing the posterior distribution in its full form requires $\mathcal{O}(n^2)$ memory, which is prohibitive for large datasets. Furthermore, the posterior distribution is a function of the training data, and therefore requires re-computation of the posterior distribution when the training data changes, or when new data is observed, such as in a sequential framework like Bayesian optimisation.
+
+\subsection{Hyperparameter Optimisation of Gaussian Processes}
+\label{subsec:hyperparameter_optimisation_gp}
+
+The effectiveness of Gaussian Processes often depends on performing model selection, which amounts to finding good estimates of quantities such as kernel hyperparameters (we can explicitly write this dependence in the kernel henceforth as $k(., .'; \vartheta))$, and the amount of observation noise prescribed in the likelihood. Making a further assumption of isotropic noise, i.e. $\Sigma = \lambda I$, we consider our model class\label{ntn:gp_model_class} $\mathbb{M}_{\varphi} = \{\vartheta, \lambda\}$ describes these choices for us. Then, making the dependence on our model class explicit, we can rewrite \Cref{eq:bayes_theorem_functions} as:
+\[
+    \frac{\d \hat{\mathbb{P}}}{\d \mathbb{P}}(f)=\frac{p(\rmY \mid f_X, \mathbb{M}_{\varphi})}{p(\rmY \mid \mathbb{M}_{\varphi})},
+\]
+where the marginal likelihood term $p(\rmY \mid \mathbb{M}_{\varphi})$ describes how well the model class choice explains the training dataset that we have observed. By calculating the marginal likelihood quantity and optimising it with respect to the hyperparameters $\varphi = \{\vartheta, \lambda\}$, we can improve model selection. 
+
+\paragraph{Exact Marginal Likelihood.}
+
+For a Gaussian likelihood with 1-dimensional outputs $y$, and denoting $H_{\varphi} = K_{XX, \vartheta} + \lambda I$, \label{ntn:h_varphi}we can write the marginal likelihood in closed-form as follows:
+\[
+\mathcal{L}(\varphi) := p(\rmY \mid \varphi) = -\frac{1}{2} y^T H_{\varphi}^{-1} y - \frac{1}{2} \log \det(H_{\varphi}) - \frac{n}{2} \log(2\pi),
+\]
+with corresponding gradient:
+\[
+\nabla \mathcal{L}(\varphi) = \frac{1}{2} \left(H_{\varphi}^{-1} y\right)^T \frac{\partial H_{\varphi}}{\partial \varphi} \left(H_{\varphi}^{-1} y\right) - \frac{1}{2} \text{tr}\left(H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi}\right) \label{eq:gradient_marginal_likelihood}
+\]
+If $n$ were small enough, we could compute both $\mathcal{L}(\varphi)$ and $\nabla \mathcal{L}(\varphi)$ in $\mathcal{O}(n^3)$ time through a Cholesky decomposition. However, for large $n$, we need to use approximate methods to compute these quantities.
+
+\paragraph{Approximate Gradients with Trace Estimation.}
+
+While calculating the marginal likelihood itself can be quite challenging in many cases, it may still be possible to optimise it with respect to the hyperparameters $\varphi$ through a gradient-based approach. In this case, we need to approximate the gradient of the marginal likelihood with respect to the hyperparameters $\varphi$. The gradient $\nabla \mathcal{L}(\varphi)$ involves two computationally expensive operations: inverse matrix-vector products of the form $\alpha = H_{\varphi}^{-1} b$ and the trace term. The inverse matrix-vector products can be approximated using linear system solvers (such as conjugate gradients) and the trace term can also be reduced into inverse matrix-vector products using stochastic trace estimation, e.g. Hutchinson's trace estimator \cite{hutchinson1989stochastic}, as follows:
+\[
+    \text{tr}\left(H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi}\right) = \mathbb{}E_{z} \left[ z^T H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi} z \right] \approx \frac{1}{s} \sum_{j=1}^s z_j^T H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi} z_j
+\]
+where $s$ probe vectors $z_j$ of length $n$ are introduced and $\forall j : \mathbb{E}[z_j z_j^T] = I$ is required for the estimator to be unbiased. Common choices for the distribution of $z_j$ are standard Gaussian, $z_j \sim \mathcal{N}(0, I)$, or Rademacher, $z_j \sim \mathcal{U}(\{-1, 1\})^n$. In theory, the latter exhibit lower estimator variance. Additionally, more advanced trace estimators have also been developed \citep{Hutch++, XTrace}. However, in practice, standard Gaussian probes with Hutchinson's trace estimator seem to work well.
+
+After substituting the trace estimator into \Cref{eq:gradient_marginal_likelihood}, the approximate gradient consists of terms that involve computing $\alpha_y = H_{\varphi}^{-1} y$ and $\alpha_{j} = H_{\varphi}^{-1} z_j$ by solving large systems of linear equations:
+\[
+H_{\varphi}\left[ \alpha_y, \alpha_1, \ldots, \alpha_s \right] = \left[ y, z_1, \ldots, z_s \right]. \label{eq:linear_system_trace_estimation}
+\]
+Therefore, with an accurate, unbiased solution to the linear system, we can compute approximate gradients of the marginal likelihood, and perform gradient-based optimisation of the hyperparameters $\varphi$. In practise, there has been some work on using trace estimation coupled with linear system solvers such as Conjugate Gradients to optimise GP hyperparameters, though these methods have remained quite slow to converge, and needing many gradient steps \citep{gardner18, wu2024largescale}.
 
 \section{Sampling-Based Inference with Gaussian Processes}
 
-In this thesis, we will focus on the framework of ``pathwise conditioning'', a technique that allows us to compute individual samples from the posterior distribution by modifying samples from the prior distribution. By replacing the computation of the posterior distribution with the computation of a few samples from it instead, we can reframe the Bayesian inference problem in an approximate, sampling-based approach, where we use Monte-Carlo estimates of the posterior covariance, as well as the model evidence (or approximations thereof). 
+In this thesis, we will focus on the framework of \emph{pathwise conditioning}, a technique that allows us to compute individual samples from the posterior distribution by modifying samples from the prior distribution. By replacing the computation of the posterior distribution with the computation of a few samples from it instead, we can reframe the Bayesian inference problem in an approximate, sampling-based approach, where we use Monte-Carlo estimates of the posterior covariance, as well as the model evidence (or approximations thereof). 
 
-We have discussed the seminal result from Matheron \parencite{journel1976mining, chiles2012geostatistics, wilson2021pathwise} in the context of finite multivariate Gaussian distributions before in \Cref{thm:matherons_rule}. Turns out, it is trivially extended to the infinite-dimensional Gaussian process case, which we state here:
+We have discussed the seminal result from Matheron \parencite{journel1976mining, chiles2012geostatistics, wilson2021pathwise} in the context of finite multivariate Gaussian distributions before in \Cref{thm:matherons_rule}. Turns out, it is trivially extended to the infinite-dimensional Gaussian process case, which we state here:\label{ntn:prior_sample}\label{ntn:posterior_sample}\label{ntn:likelihood_noise}
 \begin{theorem}[Matheron's rule for Gaussian processes]
     \label{thm:matherons_rule_gp}
-Let $f \sim \operatorname{GP}(m, k)$ be a Gaussian process, $f_D$ be the function values at training points $D$ and $f(\cdot)$ a sample from the GP prior. Then, a sample from the posterior GP $f \mid y \sim \operatorname{GP}(m_{\star}, k_{\star})$ from \Cref{eq:m_posterior_gp} and \Cref{eq:sigma_posterior_gp} is expressed as
+Let $f \sim \operatorname{GP}(m, k)$ be a Gaussian process, $f_X$ be the function values at training points $X$ and $f(\cdot)$ a sample from the GP prior. Then, a sample from the posterior GP $f \mid y \sim \operatorname{GP}(m_{\star}, k_{\star})$ from \Cref{eq:m_posterior_gp} and \Cref{eq:sigma_posterior_gp} is expressed as
 \[
-    (f \mid y)(\cdot) = f(\cdot) + K_{(\cdot), D} (K_{D,D} + \Sigma)^{-1} (y - f_D - \epsilon), \quad \epsilon \sim \mathcal{N}(0, \Sigma) \label{eq:pathwise_conditioning_gp}
+    (f \mid y)(\cdot) = f(\cdot) + K_{(\cdot)X} (K_{XX} + \Sigma)^{-1} (y - f_X - \varepsilon), \quad \varepsilon \sim \mathcal{N}(0, \Sigma). \label{eq:pathwise_conditioning_gp}
+\]
+Equivalently, we can write the posterior sample in terms of the posterior mean from \Cref{eq:m_posterior_gp} as:
+\[
+ (f \mid y)(\cdot) = m_{\star}(\cdot) + \underbrace{f(\cdot) - K_{(\cdot)X} (K_{XX} + \Sigma)^{-1} (f_X + \varepsilon)}_{\text{zero-mean sample from the posterior}} \label{eq:pathwise_conditioning_gp_2}
 \]
 \end{theorem}
 \begin{proof}
-We can apply \Cref{thm:matherons_rule} to the finite-dimensional Gaussian distributions $f_D$ and $f_{(.)})$ to obtain the result.
+We can apply \Cref{thm:matherons_rule} to the finite-dimensional Gaussian distributions $f_X$ and $f_{(.)})$ to obtain the result. For \Cref{eq:pathwise_conditioning_gp_2}, we use the fact that $m_{\star}(\cdot) = K_{(\cdot)X} (K_{XX} + \Sigma)^{-1} y$.
 \end{proof}
+This result is very powerful, as it allows us to reframe the posterior inference problem as the task of computing a finite number of samples from the posterior GP and using Monte-Carlo estimates. Further, if we just care about using posterior samples to compute approximate covariance matrices, we can use \Cref{eq:pathwise_conditioning_gp_2} to obtain zero-mean samples, and add the posterior mean to them later.
 
-We can now use \Cref{thm:matherons_rule_gp} to compute a sample from the posterior GP $f \mid y \sim \operatorname{GP}(m_{\star}, k_{\star})$ by sampling a sample from the prior GP $f \sim \operatorname{GP}(m, k)$ and applying the Matheron transformation. This result is very powerful, as it allows us to reframe the posterior inference problem as the task of computing a finite number of samples from the posterior GP and using Monte-Carlo estimates. Looking at \Cref{eq:pathwise_conditioning_gp}, we see that there are some quantities that are still intractable, and we need to compute. For example, if we assume a set of test points $D_{\star} \subset X$ of cardinality $N_{\star}$, then we have the following quantities to compute: 
+Looking at \Cref{eq:pathwise_conditioning_gp}, we see that there are some quantities that are still intractable, and we need to compute. For example, if we assume $n_{\star}$ test points, then we have the following quantities to compute: 
 \begin{itemize}
-    \item the prior function samples $f(\cdot)$ at the test points $D_{\star}$, require $\mathcal{O}(N_{\star}^3)$ time to compute.
-    \item the inversion of the kernel matrix $K_{D, D} + \Sigma$ of size $N \times N$ requires $\mathcal{O}(N^3)$ time to compute.
+    \item the prior function samples $f(\cdot)$ at the test points requires $\mathcal{O}(n_{\star}^3)$ time to compute.
+    \item the inversion of the kernel matrix $K_{XX} + \Sigma$ of size $n \times n$ requires $\mathcal{O}(n^3)$ time to compute.
 \end{itemize}
 
-So, while we were aiming to reduce the computational cost of posterior inference, we have ended up with a similarly expensive problem. In \textcite{wilson2021pathwise}, the authors rely on random feature approximations to reduce this computational cost, which we discuss here for completeness. However, we can already see how naive ``pathwise conditioning'' is not a solution to our problem, and we will need a smarter strategy to compute posterior samples.
+So, while we were aiming to reduce the computational cost of posterior inference, we have ended up with a similarly expensive problem. In \textcite{wilson2021pathwise}, the authors rely on random feature approximations to reduce this computational cost, which we discuss here for completeness. However, we can already see how naive \emph{pathwise conditioning} is not a solution to our problem, and we will need a smarter strategy to compute posterior samples.
 
 \paragraph{Cholesky sampling.}
 
-The ``exact'' approach to sampling from multivariate Gaussian distributions $\mathcal{N}(m, K)$ is to use the Cholesky decomposition of the covariance matrix to modify a sample from the standard Gaussian distribution $\mathcal{N}(0, I)$, using the following transformation:
+The \emph{exact} approach to sampling from multivariate Gaussian distributions $\mathcal{N}(\mu, \Sigma)$ is to use the Cholesky decomposition of the covariance matrix to modify a sample from the standard Gaussian distribution $\mathcal{N}(0, I)$, using the following transformation:
 \[
-    \epsilon \sim \mathcal{N}(0, I) \quad \Rightarrow \quad x \leftarrow m + Lx
+    \varepsilon \sim \mathcal{N}(0, I) \quad \Rightarrow \quad x \leftarrow \mu + L \varepsilon
 \]
-where $L$ is the Cholesky factor of the covariance matrix $K$. Therefore, we can write samples from the GP prior over the test points $D_{\star}$ as follows:
+where $L$ is the Cholesky factor of the covariance matrix $\Sigma$. Therefore, we can write samples from the GP prior over the test points $(.)$ as follows:
 \[
-    \epsilon \sim \mathcal{N}(0, I) \quad \Rightarrow \quad f(\cdot) \leftarrow m_{\star} + L_{\star} \epsilon
+    \varepsilon \sim \mathcal{N}(0, I) \quad \Rightarrow \quad f(\cdot) \leftarrow m(.) + L_{\star} \varepsilon
 \]
-where $L_{\star}$ is the Cholesky factor of the covariance matrix $K_{\star, \star}$.
+where $L_{\star}$ is the Cholesky factor of the covariance matrix $K_{(.)(.)}$.
 
 \paragraph{Random feature approximations.}
 
-The Random Feature approximation is an alternate technique that allows us to obtain approximate samples from the GP prior quite efficiently \citep{rahimi2007random, terenin2022gaussian, wilson2021pathwise}. Random Fourier features are sets of $L$ random functions $\Phi: X \rightarrow \mathbb{R}^L$ whose components, indexed by $\ell \leq L$, are $\phi_{\ell}(\cdot)=L^{-1 / 2} \cos \left(2 \pi\left\langle\omega_{\ell}, \cdot\right\rangle\right)$ for $\ell$ odd, and $\phi_{\ell}(\cdot)=$ $L^{-1 / 2} \sin \left(2 \pi\left\langle\omega_{\ell}, \cdot\right\rangle\right)$ for $\ell$ even. By taking $\omega_{\ell}$ to be samples distributed according to $\rho$, the normalized spectral measure of the kernel, for any $x, x^{\prime} \in X$ we have
+The Random Feature approximation is an alternate technique that allows us to obtain approximate samples from the GP prior quite efficiently \citep{rahimi2007random, terenin2022gaussian, wilson2021pathwise}. In order to understand this approximation, we need to discuss the \emph{weight-function duality} of Gaussian processes, which we will make more use of in \Cref{chapter:bnn_sampling}. Let us first discuss a couple of seminal theorems in the context of positive definite kernels, which we state here:
+\begin{theorem}[Mercer's theorem]
+    \label{thm:mercers_theorem}
+    \citep{mercer1909functions} Let $k: \mathcal{X} \times \mathcal{X} \rightarrow \mathbb{R}$ be a positive definite kernel. Then, there exists an eigen-expansion of the kernel $k$ given by:\label{ntn:eigen_expansion}
+    \[
+        k(x, x') = \sum_{i=1}^{\infty} \lambda_i \phi_i(x) \phi_i(x'), \quad \lambda_i \geq 0, \quad \langle \phi_i, \phi_j \rangle = \delta_{ij}.
+    \]
+\end{theorem}
+\begin{theorem}[Bochner's theorem for stationary kernels]
+    \citep{rudin2017fourier} A continuous function $k(x-y)$ is \label{ntn:spectral_measure}positive-definite if and only if it can be expressed as the Fourier transform of a finite non-negative measure $\rho$ :
+    \[
+        k(x-y) &= \int_{-\infty}^{\infty} e^{i(x-y) \omega} d \rho(\omega) \label{eq:bochner_theorem}
+    \]
+\end{theorem}
+Putting these two theorems together, we can see that for the choice of stationary kernels, where $k(x, x') = k(x - x')$, we can write \Cref{eq:bochner_theorem} as:
 \[
-    k\left(x, x^{\prime}\right)=\mathbb{E}_{\omega_1, \ldots, \omega_L \sim \rho}\left\langle{\Phi}(x), {\Phi}\left(x^{\prime}\right)\right\rangle.
+    k(x, x') &= \int_{-\infty}^{\infty} e^{i \omega x} e^{i \omega x'} d \rho(\omega) \label{eq:bochner_theorem_2} \\
+    &= \mathbb{E}_{\omega \sim \rho} \left[ e^{i \omega x} e^{i \omega x'} \right]
 \]
-Given a precomputed set of Fourier features ${\Phi}$, we can estimate samples from a GP prior in a Monte Carlo fashion as follows:
+For every choice of stationary kernel that we will consider in this work (Matern, RBF, etc.), the probability distribution $\rho(\omega)$ and the kernel $k$ are real, and the integral in \Cref{eq:bochner_theorem_2} converges when the complex exponentials are replaced with cosines. Therefore, we can write the following 
 \[
-    f(\cdot) \approx \tilde{f}(\cdot)={\epsilon}^T {\Phi}(\cdot)=\sum_{\ell=1}^L \epsilon_{\ell} \phi_{\ell}(\cdot) \quad \epsilon \sim \mathcal{N}(0, I) \label{eq:random_feature_approximation}
+k(x, x') &= \mathbb{E}_{\omega \sim \rho} \left[ e^{i \omega x} e^{i \omega x'} \right] = \mathbb{E}_{\omega \sim \rho} \left[ \phi(x) \phi(x') \right] \\
+&\approx \frac{1}{L} \sum_{l=1}^L \phi_{\ell}(x) \phi_{\ell}(x')
 \]
-where $\epsilon$ is a vector of random variables drawn from the standard Gaussian distribution. The approximation error in this approximation decays as $L$ goes to infinity. 
+where $\phi_{\ell}(x)=L^{-1 / 2} \cos \left(2 \pi\left\langle\omega_{\ell}, x\right\rangle\right)$ for $\ell$ odd, and $\phi_{\ell}(x)=$ $L^{-1 / 2} \sin \left(2 \pi\left\langle\omega_{\ell}, x\right\rangle\right)$ for $\ell$ even, and $\omega_{\ell} \sim \rho$ \citep{rahimi2007random}. \label{ntn:random_feature_approximation}\label{ntn:random_feature}Therefore, writing $\Phi = [\phi_1, \ldots, \phi_L]$ as a \emph{Random Fourier Features} (RFF) matrix, we can approximate the kernel matrix $K_{XX}$ as:
+\[
+    K_{XX} \approx \Phi^T \Phi
+\]
+where $\Phi$ is a $L \times n$ matrix. We can then estimate samples from a GP prior in a Monte Carlo fashion as follows:
+\[
+    f(\cdot) \approx \tilde{f}(\cdot)={\varepsilon}^T {\Phi}(\cdot)=\sum_{\ell=1}^L \varepsilon_{\ell} \phi_{\ell}(\cdot) \quad \varepsilon \sim \mathcal{N}(0, I) \label{eq:random_feature_approximation}
+\]
+where $\varepsilon$ is a vector of random variables drawn from the standard Gaussian distribution. The approximation error in this approximation decays as $L$ goes to infinity. 
 
 \textcite{wilson2021pathwise} use Random Fourier features to approximate the ``pathwise'' conditioning update for posterior samples as:
 \[
-    (f \mid y)(\cdot) = \tilde{f}(\cdot) + \underbrace{{\Phi}(\cdot)^T {\Phi}({x})}_{\text {replaces } {K}_{(\cdot), D}} (\underbrace{{\Phi}({x})^T {\Phi}({x})}_{\text {replaces } {K}_{D, D}}+{\Sigma})^{-1}(y-\tilde{f}_D-{\epsilon}) \label{eq:random_feature_conditioning}
+    (f \mid y)(\cdot) = \tilde{f}(\cdot) + \underbrace{{\Phi}(\cdot)^T {\Phi}({x})}_{\text {replaces } {K}_{(\cdot)X}} (\underbrace{{\Phi}({x})^T {\Phi}({x})}_{\text {replaces } {K}_{XX}}+{\Sigma})^{-1}(y-\tilde{f}_D-{\varepsilon}) \label{eq:random_feature_conditioning}
 \]
-where $\tilde{f}_D$ is evaluating \Cref{eq:random_feature_approximation} at the training points $D$ and $\epsilon$ is a vector of random variables drawn from the standard Gaussian distribution.
+where $\tilde{f}_X$ is evaluating \Cref{eq:random_feature_approximation} at the training points $X$ and $\varepsilon$ is a vector of random variables drawn from the standard Gaussian distribution.
 
-\paragraph{Issues with ``Pathwise Conditioning''.}
+\paragraph{Issues with Pathwise Conditioning.}
 
-While the ``pathwise conditioning'' technique is a powerful tool for sampling from the GP posterior, we see that it also suffers from the same computational bottlenecks as the exact posterior inference. For example, we need to compute the matrix inversion of the kernel matrix $K_{D, D} + \Sigma$ of size $N \times N$ to compute the posterior mean and samples from the posterior covariance. While papers such as \textcite{wilson2021pathwise} use random feature approximations to reduce the computational cost of the matrix inversion, we lose some of our exactness in the process, having to make a trade-off between computational cost and accuracy. Similarly, we could use conjugate gradients to solve the matrix inversions in \Cref{eq:pathwise_conditioning_gp}, but in ill-conditioned problems, CG can take a very long time to converge, tending towards $\mathcal{O}(N)$ steps, each with $\mathcal{O}(N^2)$ cost. We therefore turn to a different family of optimisation algorithms to tackle the challenge of solving the linear systems that emerge in GP posterior mean calculation and posterior sampling: Stochastic Gradient Descent (SGD) algorithms.
+While the \emph{pathwise conditioning} technique is a powerful tool for sampling from the GP posterior, we see that it also suffers from the same computational bottlenecks as the exact posterior inference. We need to compute the matrix inversion of the kernel matrix $K_{XX} + \Sigma$ of size $n \times n$ to compute the posterior mean and samples from the posterior covariance. While papers such as \textcite{wilson2021pathwise} use random feature approximations to reduce the computational cost of the matrix inversion, we lose some of our exactness in the process, having to make a trade-off between computational cost and accuracy. Similarly, we could use conjugate gradients to solve the matrix inversions in \Cref{eq:pathwise_conditioning_gp}, but in ill-conditioned problems, CG can take a very long time to converge, tending towards $\mathcal{O}(n)$ steps, each with $\mathcal{O}(n^2)$ cost. We therefore turn to a different family of optimisation algorithms to tackle the challenge of solving the linear systems that emerge in GP posterior mean calculation and posterior sampling: Stochastic Gradient Descent (SGD) algorithms.
 
 \section{Stochastic Gradient Descent for Sampling}
-
+\label{sec:sgd_for_sampling}
 In recent years, stochastic gradient descent (SGD) has emerged as the leading technique for training machine learning models at scale \cite{Ruder16SGD,Zhang2023sgd}, in both deep learning and related settings like kernel methods \cite{dai2014doubly} and Bayesian modeling \cite{Mandt17Descent}.
 While the principles behind the effectiveness of SGD are not yet fully understood, empirically, SGD often leads to good predictive performance---even when it does not fully converge.
 The latter is the default regime in deep learning, and has motivated researchers to study \emph{implicit biases} and related properties of SGD \cite{Belkin2019,ZouWBGK2021benign}.
 
-In the context of GPs, SGD is commonly used to learn kernel hyperparameters---by optimizing the marginal likelihood \cite{filippone2015stochastic,Cunningham2016preconditioning,gardner18,chen20,chen22} or closely related variational objectives \cite{titsias09,hensman13}. 
-In this work, we explore applying SGD to the complementary problem of approximating GP posterior samples given fixed kernel hyperparameters.
-In this section, we ask: \emph{Do the linear systems arising in GP computations necessarily need to be solved to a small error tolerance? If not, can SGD help accelerate these computations?}
+SGD is commonly used in GPs to learn kernel hyperparameters---by optimizing the marginal likelihood, i.e. in \Cref{eq:gradient_marginal_likelihood} \citep{filippone2015stochastic,Cunningham2016preconditioning,gardner18,chen20,chen22} or closely related variational objectives \cite{titsias2009variational,hensman2013gaussian}. 
+In this work, we explore applying SGD to the complementary problem of approximating GP posterior samples given kernel hyperparameters.
+We ask: \emph{Do the linear systems arising in GP computations necessarily need to be solved to a small error tolerance? If not, can SGD help accelerate these computations?}
 
-We answer this question affirmatively, with specific contributions as follows: (i) We develop a scheme for drawing GP posterior samples by applying SGD to a quadratic problem. 
-In particular, we re-cast the pathwise conditioning technique of \textcite{wilson2021pathwise} as an optimization problem to which we apply the low-variance SGD sampling estimator of \textcite{Antoran22sampling}. 
-We extend the proposed method to inducing point Gaussian processes.
-(ii) We characterize the implicit bias in SGD-approximated GP posteriors showing that despite optimization not fully converging, these match the true posterior in regions both near and far away from the data. 
-(iii) Experimentally, we show that SGD produces strong results---compared to variational and conjugate gradient methods---on both large-scale and poorly-conditioned regression tasks, and on a parallel Thompson sampling task, where error bar calibration is paramount.
+We answer this question affirmatively, with specific contributions as follows: 
+\begin{enumerate}
+    \item[(i)] We develop primal and dual objectives for drawing GP posterior samples by applying SGD to a quadratic problem. In particular, we re-cast the pathwise conditioning technique of \textcite{wilson2021pathwise} as an optimization problem to which we develop and apply a low-variance SGD sampling estimator.
+    \item[(ii)] We empirically characterize the implicit bias in SGD-approximated GP posteriors showing that despite optimization not fully converging, these match the true posterior in regions both near and far away from the data. 
+    \item[(iii)] Experimentally, we show that SGD produces strong results---compared to variational and conjugate gradient methods---on both large-scale and poorly conditioned regression tasks, and on a parallel Thompson sampling task, where error bar calibration is paramount.
+    \item[(iv)] Further, in order to tackle GP hyperparameter optimisation, we develop \emph{pathwise} gradient estimation, using posterior samples to more efficiently perform trace estimation compared to standard techniques. We further improve iterative GP hyperparameter optimisation techniques by employing \emph{warm starts}, using properties of the SGD objective to restart optimisation at previous solutions. Experimentally, we show speed-ups of up to $72\times$ when solving to tolerance.
+\end{enumerate}
 
 \subsection{SGD For Linear System Solutions}
 
 In order to apply SGD to the problem of sampling from the GP posterior, we need to re-cast both the posterior mean and posterior sample calculation as optimisation problems. In this section, we make our notation concrete, and discuss two formulations of objectives that we can use to approximate the posterior mean and samples from the GP posterior.
 
-Given a training dataset $D = \{x_i, y_i\}_{i=1}^N$, the kernel $K_{D, D}$, an assumption of a Gaussian likelihood with isotropic noise $\Sigma = \lambda I$, we can write the form of linear system that we need to solve to compute the posterior mean and samples from the GP posterior as follows:
+Given a training dataset $\mathcal{D}_{\text{train}} = \{(x_i, y_i)\}_{i=1}^n$, the kernel $K_{XX}$, an assumption of a Gaussian likelihood with isotropic noise $\Sigma = \lambda I$, we can write the form of linear system that we need to solve as follows:
 \[
-    \alpha^\star(b) = (K_{D, D} + \lambda I)^{-1} b, \quad \alpha \in \R^N
+    \alpha^\star(b) = (K_{XX} + \lambda I)^{-1} b, \quad \alpha \in \R^n \label{eq:alpha_star}
 \]
-Now, let us define the following function:
+Now, let us define the following function:\label{ntn:representer_function}
 \[
-    h_b (\cdot) = \sum_{i=1}^N \alpha^{\star}_{i}(b) k(x_i,\cdot).
+    h(\cdot\, ; \,b) = \sum_{i=1}^n \alpha^{\star}_{i}(b) k(x_i,\cdot).
 \]
 Then we can see how we obtain the following
 \[
-    h_{y} &= \sum_{i=1}^N \alpha_{i}(y) k(x_i,\cdot) \label{eq:posterior_mean_sgd} \\
-    &= (K_{(\cdot), D}) (K_{D, D} + \lambda I)^{-1} y = m_{\star}(\cdot) \nonumber
+    h(\cdot\, ; \, y) &= \sum_{i=1}^n \alpha^{\star}_{i}(y) k(x_i,\cdot) \label{eq:posterior_mean_sgd} \\
+    &= (K_{(\cdot)X}) (K_{XX} + \lambda I)^{-1} y = m_{\star}(\cdot) \nonumber
 \]
 and similarly,
 \[
-f(\cdot) + h_{y - f_D - \epsilon} &= f(\cdot) + \sum_{i=1}^N \alpha_{i}(y - f_D - \epsilon) k(x_i,\cdot) \label{eq:posterior_sample_sgd} \\
-&= f(\cdot) + K_{(\cdot), D} (K_{D, D} + \lambda I)^{-1} (y - f_D - \epsilon) \nonumber \\
+f(\cdot) + h(\cdot\, ; \,y - f_X - \varepsilon) &= f(\cdot) + \sum_{i=1}^n \alpha^{\star}_{i}(y - f_X - \varepsilon) k(x_i,\cdot) \label{eq:posterior_sample_sgd} \\
+&= f(\cdot) + K_{(\cdot)X} (K_{XX} + \lambda I)^{-1} (y - f_X - \varepsilon) \nonumber \\
 &= (f \mid y)(\cdot) \nonumber
 \]
+Therefore, if we are able to obtain solutions to equations of the form in \Cref{eq:alpha_star}, we can obtain the posterior mean and samples.
 
-\subsection{Gradient Descent: Primal versus Dual Objectives}\label{subsec:primal_vs_dual}
+\begin{figure}[t]
+    \centering
+    \includegraphics[trim=0 0 8.5cm 0,clip,width=0.30\textwidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Figs/Vector/toy_comparison.pdf}
+    \includegraphics[trim=1.5cm 0.17cm 0 0,clip,width=0.68\textwidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Figs/Vector/toy_comparison_rebuttal.pdf}
+    \caption[Comparison of SGD, SDD, CG and SVGP on a toy task.]{Comparison of SGD (primal objective), SDD (dual objective), CG \cite{wang2019exact} and SVGP \cite{hensman2013gaussian} for GP inference with a squared exponential kernel on $10\text{k}$ datapoints from $\sin(2x)+\cos(5x)$ with observation noise $\mathcal{N}(0, 0.5)$.  We draw 2000 function samples with all methods by running them for 10 minutes on an RTX 2070 GPU. \emph{Infill asymptotics} considers  $x_i\~\mathcal{N}(0,1)$. A large number of points near zero result in a very ill-conditioned kernel matrix, preventing CG from converging. SGD and SDD converge in all of input space except at the edges of the data. SVGP can summarise the data with only 20 inducing points. Note that CG converges to the exact solution if one uses more compute, but produces significant errors if stopped too early, as occurs under the given compute budget. \emph{Large domain asymptotics} considers data on a regular grid with fixed spacing. This problem is better conditioned, allowing SGD, SDD, and CG to recover the exact solution. However, 1024 inducing points are not enough for SVGP to summarize the data.}
+\label{fig:sgd_sdd_comparison}
+\end{figure}
+\subsection{Gradient Descent: Primal Objective (SGD)}\label{subsec:primal_vs_dual}
 
 % For any $b \in \R^n$, computing the vector $\alpha^\star(b)$ of \cref{eq:alpha-star} using Cholesky factorisation takes on the order of $n^3$ operations. 
+\label{ntn:primal_objective}
+\begin{selfdefinition}[Primal objective, Gradients and Hessians]
+The vector $\alpha^\star(b)$ of \cref{eq:alpha_star} is the minimiser of the following \textit{primal} kernel ridge regression objective,
+\begin{equation}
+    \label{eq:primal_objective}
+L(\alpha; b) = \frac{1}{2}\norm{b - K_{XX} \alpha}^2 + \frac{\lambda}{2} \norm{\alpha}^2_{K_{XX}} 
+\end{equation}
+over $\alpha \in \R^n$ \cite{smola1998learning}. The \emph{primal} gradient and Hessian are
+\begin{equation}\label{eq:primal_gradient}
+    \nabla L(\alpha; b) = K_{XX} (\lambda \alpha - b + K_{XX}\alpha)
+    \spaced{and}
+    \nabla^2 L(\alpha; b) = K_{XX}(K_{XX}+\lambda I)
+\end{equation}
+respectively. We refer to the gradient descent algorithm that minimises it as \emph{Stochastic Gradient Descent (SGD)}.
+\end{selfdefinition}
 
-% The vector $\alpha^\star(b)$ of \cref{eq:alpha-star} is the minimiser of the kernel ridge regression objective,
-% \begin{equation*}
-%     \label{eq:primal_objective}
-% L(\alpha) = \frac{1}{2}\norm{b - K \alpha}^2 + \frac{\lambda}{2} \norm{\alpha}^2_K 
-% \end{equation*}
-% over $\alpha \in \R^n$ \cite{smola1998learning}. We will refer to $L$ as the \emph{primal} objective in the context of this work, to contrast with our proposed dual objective, which we shall introduce shortly.
+In order to use gradient descent to minimise $L(\alpha; b)$, we construct a sequence $\{\alpha_t\}_t$ of elements in $\R^n$, which we initialise at the standard but otherwise arbitrary choice $\alpha_0 = 0$, and set
+\begin{equation}
+    \alpha_{t+1} = \alpha_t - \beta \, \nabla L(\alpha_t; b),
+\end{equation}
+where $\beta > 0$ is a step-size \label{ntn:step_size}and $\nabla L$ is the gradient function of $L$. Now, we can still notice that computing the objective $L$ and the gradient $\nabla L$ requires computing matrix-vector products of the form $K_{XX} \alpha$, which are still $\mathcal{O}(n^2)$ operations. Further, the first term in the loss function is an inner product of the $n$-dimensional vector $(b - K_{XX} \alpha)$, which operates over the entire dataset $D$, and is not immediately amenable to minibatching. Let us therefore try to apply some approximations to both these issues.
 
-% Consider using gradient descent to minimise $L(\alpha)$. 
-% This entails constructing a sequence $(\alpha_t)_t$ of elements in $\R^n$, which we initialise at the standard but otherwise arbitrary choice $\alpha_0 = 0$, and setting
-% \begin{equation*}
-%     \alpha_{t+1} = \alpha_t - \beta \nabla L(\alpha_t),
-% \end{equation*}
-% where $\beta > 0$ is a step-size and $\nabla L$ is the gradient function of $L$. Recall that the speed at which $\alpha_t$ approaches $\alpha^\star(b)$ is determined by the condition number of the Hessian: the larger the condition number, the slower the convergence speed.
-% The intuitive reason for this correspondence is that, to guarantee convergence, the step-size needs to scale inversely with the largest eigenvalue of the Hessian, while progress in the direction of an eigenvector underlying an eigenvalue is governed by the step-size multiplied with the corresponding eigenvalue. The \emph{primal} gradient and Hessian are
-% \begin{equation}\label{eq:primal_gradient}
-%     \nabla L(\alpha) = K (\lambda \alpha - b + K\alpha)
-%     \spaced{and}
-%     \nabla^2 L(\alpha) = K(K+\lambda I)
-% \end{equation}
-% respectively, and therefore we have the following (tight) bounds on the relevant eigenvalues,
-% \begin{equation*}
-%     0 \leq \lambda_n(K(K+\lambda I )) \leq \lambda_1(K(K+\lambda I)) \leq \kappa n(\kappa n+\lambda),
-% \end{equation*}
-% where $\kappa = \sup_{x\in \cX} k(x,x)$ is finite by assumption. These bounds only allow for a step-size $\beta$ on the order of $(\kappa n(\kappa n+\lambda))^{-1}$. Moreover, since the minimum eigenvalue is not bounded away from zero, we do not have a~priori guarantees for the performance of gradient descent using $L$. 
+\paragraph{Minibatching and Random Features for the Primal Objective.}
 
-\mynote{Add mostly discussion from ICLR SDD paper, inducing points, asymptotic analysis, plots, and results.}
+\begin{figure}[htb]
+    \includegraphics{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Figs/Vector/exact_metrics_elevators.pdf}
+    \caption[Convergence of GP posterior mean with SGD and CG as a function of time.]{
+    Convergence of GP posterior mean with SGD and CG as a function of time (on an A100 GPU) on the \textsc{elevators} dataset ($n \approx 16\text{k}$) while setting the noise scale to (i) maximize exact GP marginal likelihood and (ii) to $10^{-3}$, labeled \emph{low noise}, which results in a very ill-conditioned problem. We plot, in left-to-right order, test RMSE, RMSE to the exact GP mean at the test inputs, representer weight Euclidean error $\norm{\alpha - \alpha^{*}}_{2}$, and RKHS error $\norm{\alpha - \alpha^{*}}_{K_{XX}^2}$. In the latter two plots, the low-noise setting is shown on the bottom.
+    }
+\label{fig:exact_vs_low_noise}
+\end{figure}
+\label{ntn:minbatch_primal_objective}
+Let us rewrite the primal objective in explicit summation form:
+\[
+L(\alpha; b) = \frac{1}{2} \sum_{i=1}^n \left(b_i - \sum_{j=1}^n \alpha_j K_{(x_i)X}\right)^2 + \frac{\lambda}{2} \sum_{i=1}^n \alpha^T K_{XX} \alpha
+\]
+Here, the first term is directly amenable to minibatching, giving us an unbiased estimator in $\mathcal{O}(n)$ terms. For the second term, we can use a random feature approximation for the kernel matrix to estimate the quantity in an unbiased fashion, i.e. $\|\alpha\|_{K_{XX}}^2 = \mathbb{E}_{\omega_i \sim \rho} [\alpha^T \Phi^T(x) \Phi(x) \alpha]$. Plugging in these two approximations and multiplying \Cref{eq:primal_objective} with $\lambda/2$, we therefore have the following linear-time estimator for the primal objective:
+\begin{selfdefinition}[Minibatched Primal Objective with Random Features]
+    \[
+        \tilde{L}(\alpha; b) = \frac{n}{M} \sum_{i=1}^M \frac{\left(b_i - K_{(x_i)X} \alpha\right)^2}{\lambda} + \sum_{l=1}^L \left(\alpha^T \phi_{l}(X)\right)^2 \label{eq:linear_time_primal_objective}
+    \]
+where $M$ is the minibatch size, $L$ is the number of random features used in the random feature approximation, and $\phi_l(x)$ is the $l$-th random feature evaluated on the entire training datapoints $X$.
+\end{selfdefinition}
+This objective is unbiased even when using as little as $L=1$ random features; the number of features controls the variance of the objective. Therefore, we can see how \Cref{eq:linear_time_primal_objective} is an $\mathcal{O}(n)$ estimator for the primal objective, and each gradient step is $\mathcal{O}(n)$ as well, compared to the $\mathcal{O}(n^2)$ complexity of a single conjugate gradient step. 
+
+We consider the behaviour of this objective in terms of convergence and accuracy in \Cref{fig:exact_vs_low_noise}, comparing it to the behaviour of CG algorithms. As we can see, despite SGD's significantly lower cost per-iteration than CG, its convergence to the true optima is much slower with respect to both Euclidean space, and the reproducing kernel Hilbert space (RKHS) induced by the kernel (which is given by the $K_{XX}^2$-norm). Despite this, the predictions obtained by SGD are very close to those of the exact GP, and effectively achieve the same test RMSE. Moreover, \Cref{fig:error-and-eigenfunctions} shows the SGD posterior on a 1D toy task exhibits error bars of the correct width close to the data, and which revert smoothly to the prior far away from the data. Empirically, differences between the SGD and exact posteriors concentrate at the borders of data-dense regions. 
+
+\begin{figure}[t]
+    \includegraphics{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Figs/Vector/eigenfunctions_and_error.pdf}
+    \caption[SGD error and spectral basis functions.]{SGD error and spectral basis functions. Top-left: SGD (blue) and exact GP (black, dashed) fit to a $n = 10\text{k}$, $d=1$ toy regression dataset. Top-right: 2-Wasserstein distance (W2) between both processes' marginals. The W2 values are low near the data (interpolation region) and far away from the training data. The error concentrates at the edges of the data (extrapolation region). Bottom: The low-index spectral basis functions (eigenfunctions of the kernel matrix $K_{XX}$) lie on the interpolation region, where the W2 error is low, while functions of index $10$ and larger lie on the extrapolation region where the error is large. Therefore, we can summarise that the important eigenfunctions of the linear system focus on approximating the functions close to the data manifold, and higher frequency eigenfunctions are concentrated around the boundaries of the data manifold.}
+    \label{fig:error-and-eigenfunctions}
+\end{figure}
+
+% Let us make this more precise in the following section.
+
+% \subsection{The Implicit Bias and Posterior Geometry of the Primal Objective}\label{sec:implicit_bias}
+
+
+
+% We now argue the behavior seen in \Cref{fig:error-and-eigenfunctions} is a general feature of SGD: one can expect it to obtain good performance even in situations where it does not converge to the exact solution. We characterize the behavior of SGD-computed approximate posteriors by splitting the input space $X$ into 3 regions, which we call the \emph{prior}, \emph{interpolation}, and \emph{extrapolation} regions. 
+
+% \paragraph{\textnormal{\emph{(I) The Prior Region.}}}
+% This corresponds to points sufficiently distant from the observed data. 
+% Here, for kernels that decay over space, the canonical basis functions $k(x_i, \.)$ go to zero. Thus, both the true posterior and any approximations formulated pathwise revert to the prior. More precisely, let $\mathcal{X} = \mathbb{R}^d$, let $k$ satisfy $\,\lim_{c \->\infty} k(x', c\.x) = 0$ for all $x'$ and $x$ in $\mathcal{X}$, and let $(f \mid y)(\.)$ be given by $(f \mid y)(\.) = f(\.) + \m{K}_{(\.)x} \alpha$, with $\alpha \in \R^n$. Then, by passing the limit through the sum, for any fixed $\alpha$, it follows immediately that $ \lim_{c\->\infty} (f\mid y)(c\.x) = f(c\.x)$. Therefore, SGD cannot incur error in regions which are sufficiently far away from the data.
+% This effect is depicted in \Cref{fig:error-and-eigenfunctions}.
+
+% \paragraph{\textnormal{\emph{(II) The Interpolation Region.}}} 
+% This includes points close to the training data. 
+% We characterize this region through subspaces of the RKHS, where we show SGD incurs small error.
+
+% Let $K_{XX} = U \Lambda U^T$ be the eigendecomposition of the kernel matrix.
+% We index the eigenvalues $\Lambda = \text{diag}(\lambda_1,\dotsc, \lambda_N)$ in descending order.
+% Define the \emph{spectral basis functions} as eigenvector-weighed linear combinations of canonical basis functions
+% \[
+% u^{(i)}(\.) = \sum_{j=1}^N \frac{U_{ji}}{\sqrt{\lambda_i}} k(x_j, \.)
+% .
+% \]
+% These functions---which also appear in kernel principal component analysis---are orthonormal with respect to the RKHS inner product.
+% \begin{selfproposition}[Characterisation of spectral basis functions of $K_{XX}$]
+%     \label{prop:spectral_basis}
+%     We can lift the Courant--Fischer characterization of eigenvalues and eigenvectors to the RKHS $H_k$ induced by $k$, obtaining the expression
+% \[
+% u^{(i)}(\.) &= \argmax_{u \in H_k} \cbr{\sum_{i=1}^N u(x_i)^2 : \norm{u}_{H_k} = 1, \innerprod[0]{u}{u^{(j)}}_{H_k} = 0, \forall j < i}.
+% \]
+% This means in particular that the top spectral basis function, $u^{(1)}(\.)$, is a function of fixed RKHS norm---that is, of fixed degree of smoothness, as defined by the kernel $k$---which takes maximal values at the observations $x_1,..,x_n$. 
+% Thus, $u^{(1)}$ will be large near clusters of observations.
+% The same will be true for the subsequent spectral basis functions, which also take maximal values at the observations, but are constrained to be RKHS-orthogonal to previous spectral basis functions. 
+% \end{selfproposition}
+% \begin{proof}
+% See Appendix \ref{app:courant_in_input_space}.
+% \end{proof}
+% \Cref{fig:error-and-eigenfunctions} confirms that the top spectral basis functions are indeed centered on the observed data.
+
+% Empirically, SGD matches the true posterior in this region.
+% We formalize this observation by showing that SGD converges quickly in the directions spanned by spectral basis functions with large eigenvalues.
+% Let $\proj_{u^{(i)}}(\.)$ be the orthogonal projection onto the subspace spanned by $u^{(i)}$. We have:
+
+% \begin{selfproposition}[Error Bounds for Primal Objective]
+% Let $\delta>0$. 
+% Let $\Sigma = \sigma^2 I$ for $\sigma^2 > 0$.
+% Let $m_{\text{SGD}}$ be the predictive mean obtained by Polyak-averaged SGD after $t$ steps, starting from an initial set of representer weights equal to zero, and using a sufficiently small learning rate of $0 < \eta <\frac{\sigma^2}{\lambda_1(\lambda_1 + \sigma^2)}$.
+% Assume the stochastic estimate of the gradient is $G$-sub-Gaussian.
+% Then, with probability $1-\delta$, we have for $i=1,..,N$ that
+% \[
+% \norm[1]{\proj_{u^{(i)}} m_{\star} - \proj_{u^{(i)}} m_{\text{SGD}}}_{H_k} \leq \frac{1}{\sqrt{\lambda_i}}\del{\frac{\norm{y}_2}{\eta\sigma^2t} + G\sqrt{\frac{2}{t} \log\frac{|\c{I}|}{\delta}}}
+% .
+% \]
+% \end{selfproposition}
+
+% The proof, as well as an additional pointwise convergence bound and a variant that handles projections onto general subspaces spanned by basis functions, are provided in \Cref{proof:lem:sgd-error-bound}. 
+% In general, we expect $G$ to be at most $\mathcal{O}(\lambda_1^2 \norm{y}_\infty)$ with high probability.
+
+% The result extends immediately from the posterior mean to posterior samples.
+% As consequence, \emph{SGD converges to the posterior GP quickly in the data-dense region}, namely where the spectral basis functions corresponding to large eigenvalues are located.
+% Since convergence speed on the span of each basis function is independent of the magnitude of the other basis functions' eigenvalues, SGD can perform well even when the kernel matrix is ill-conditioned (i.e. a low noise regime where the condition number is large). This is shown in \Cref{fig:exact_vs_low_noise}.
+
+% \paragraph{\textnormal{\emph{(III) The Extrapolation Region.}}}
+% This can be found by elimination from the input space of the prior and  interpolation regions, in both of which SGD incurs low error. 
+% Consider the spectral basis functions $u^{(i)}(\.)$ with small eigenvalues.
+% By orthogonality of $u^{(1)},..,u^{(N)}$, such functions cannot be large near the observations while retaining a prescribed norm. 
+% Their mass is therefore placed away from the observations. 
+% SGD converges slowly in this region, resulting in a large error in its solution in both a Euclidean and RKHS sense, as seen in \Cref{fig:exact_vs_low_noise}. 
+% Fortunately, due to the lack of data in the extrapolation region, the excess test error incurred due to SGD nonconvergence may be low, resulting in \emph{benign nonconvergence} \cite{ZouWBGK2021benign}. 
+% Similar phenomena have been observed in the inverse problems literature, where this is called \emph{iterative regularization} \cite{hansen98,jin23}.
+% \Cref{fig:error-and-eigenfunctions} shows the Wasserstein distance to the exact GP predictions is high in this region, as when initialized at zero SGD tends to return small representer weights, thereby reverting to the prior.
+
+\subsection{Gradient Descent: Dual Objective (SDD)}
+
+\begin{figure}[t]
+    \vspace{-0.2cm}
+        \centering
+        % NOTE: Make $n$ be $N$ here.
+        \includegraphics[width=5.5in]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Figs/Vector/primal_vs_dual_pol.pdf}
+        \vspace{-0.2cm}
+        \caption[Comparison of full-batch primal and dual gradient descent with varying step-sizes.]{Comparison of full-batch primal and dual gradient descent on \textsc{pol} with varying step-sizes. Primal gradient descent becomes unstable and diverges for $\beta n$ greater than $0.1$. Dual gradient descent is stable with larger step-sizes, allowing for markedly faster convergence than the primal.
+        For $\beta n =0.1$, the dual method makes more progress in the $K_{XX}$-norm, whereas the primal in the $K_{XX}^2$-norm.}
+        \label{fig:toy-gradient-primal-vs-dual}
+        \vspace{-0.2cm}
+    \end{figure}
+
+We recall that the speed at which $\alpha_t$ approaches $\alpha^\star(b)$ is determined by the condition number of the Hessian: the larger the condition number, the slower the convergence speed. The intuitive reason for this correspondence is that, to guarantee convergence, the step-size needs to scale inversely with the largest eigenvalue of the Hessian, while progress in the direction of an eigenvector underlying an eigenvalue is governed by the step-size multiplied with the corresponding eigenvalue. We can therefore write the following bounds on the eigenvalues of the Hessian:
+\begin{selfproposition}[Eigenvalue Bounds for Primal Objective]
+
+\begin{equation}
+    0 \leq \lambda_n(K_{XX}(K_{XX}+\lambda I)) \leq \lambda_1(K_{XX}(K_{XX}+\lambda I)) \leq \kappa n(\kappa n+\lambda),
+\end{equation}
+where $\kappa = \sup_{x\in \mathcal{X}} k(x,x)$ is finite by assumption. 
+\end{selfproposition}
+\label{ntn:kernel_maximum}
+These bounds only allow for a step-size $\beta$ on the order of $(\kappa (\kappa n+\lambda))^{-1}$. Moreover, since the minimum eigenvalue is not bounded away from zero, we do not have a-priori guarantees for the performance of gradient descent using $L$. 
+
+Consider, instead, minimising the \emph{dual objective}:\label{ntn:dual_objective}
+
+\begin{selfdefinition}[Dual Objective, Gradients, and Hessians]
+    \begin{equation}
+        L^*(\alpha) = \frac12 \norm{\alpha}_{K_{XX}+\lambda I}^2 - \alpha\tran b.
+    \end{equation}
+The \emph{dual gradient} and Hessian are given by
+\begin{equation}
+    \label{eq:dual_gradient}
+    g(\alpha) := \nabla L^*(\alpha) = \lambda \alpha - b + K_{XX}\alpha \spaced{and} \nabla^2L^*(\alpha) = K_{XX} + \lambda I.
+\end{equation}
+We refer to the gradient descent algorithm that minimises it as \emph{Stochastic Dual Descent (SDD)}.
+\end{selfdefinition}
+The dual $L^*$ has the same unique minimiser as $L$, namely $\alpha^\star(b)$, and the two are, up to rescaling, a strong dual pair, which we formalise in the remark:
+
+\begin{selfremark}[Strong duality]
+    \label{remark:strong_duality}
+    We have that
+\[
+\min _{\alpha \in \mathbb{R}^n} L(\alpha)=-\lambda \min _{\alpha \in \mathbb{R}^n} L^*(\alpha),
+\]
+with $\alpha^{\star}(b)$ minimising both $L$ and $L^*$.
+\end{selfremark}
+\begin{proof}
+See \Cref{app:proof_strong_duality}.
+\end{proof}
+Following immediately from the definition of the dual Hessian, we have corresponding bounds:
+\begin{selfproposition}[Eigenvalue Bounds for Dual Objective]
+
+    \begin{equation}
+        0 \leq \lambda_n(K_{XX}+\lambda I) \leq \lambda_1(K_{XX}+\lambda I) \leq (\kappa n+\lambda),
+    \end{equation}
+    where $\kappa = \sup_{x\in \mathcal{X}} k(x,x)$ is finite by assumption. 
+    \end{selfproposition}
+We can therefore see that gradient descent on $L^*$ may use a step-size of up to an order of $\kappa n$ higher than on $L$. Moreover, since the condition number of the dual satisfies $\mathrm{cond}(K_{XX}+\lambda I) \leq1+ \kappa n/\lambda $ and $\lambda$ is positive, we have faster convergence, and can provide an a~priori bound on the number of iterations required for any fixed error level for any length $n$ sequence of observations.
+
+\Cref{fig:toy-gradient-primal-vs-dual} contains an experimental comparison of gradient descent with primal and dual losses on the UCI \textsc{pol} regression task. 
+There, gradient descent with the primal objective is only stable up to $\beta n=0.1$, and diverges for larger step-sizes. In contrast, gradient descent with the dual objective is stable with a step-size as much as $500\times$ higher, converges faster and to a better solution. We show this on three evaluation metrics: distance to $\alpha^\star(y)$ measured in $\|\cdot\|^2_{K_{XX}}$, the $K_{XX}$-norm (squared) and in $\|\cdot\|^2_{K_{XX}^2}$, the $K_{XX}^2$-norm (squared), and test set root-mean-square error (RMSE). \label{ntn:kxx_norm}\label{ntn:kxx_norm_squared}To understand the difference between the two norms, note that the $K_{XX}$-norm error bounds the error of approximating $h_{\alpha^\star(b)}$ uniformly. Indeed, we have the~bound
+\begin{selfproposition}[Uniform approximation]
+    \label{prop:uniform_approximation}
+For any $\alpha, \alpha^{\prime} \in \mathbb{R}^n$,
+$$
+\|h_\alpha-h_{\alpha^{\star}(b)}\|_{\infty} \leq \sqrt{\kappa}\|\alpha-\alpha^{\star}(b)\|_{K_{XX}},
+$$
+where $\kappa=\sup _{x \in \mathcal{X}} k(x, x)$.
+\end{selfproposition}
+\begin{proof}
+See \Cref{app:proof_uniform_approximation}.
+\end{proof}
+
+Uniform norm guarantees of this type are crucial for sequential decision making tasks, such as Bayesian optimisation, where test input locations may be arbitrary. The $K_{XX}^2$-norm metric, on the other hand, reflects training error. 
+
+Examining the two gradients, its immediate that the primal gradient optimises for the $K_{XX}^2$-norm, while the dual for the $K_{XX}$-norm. And indeed, we see in \Cref{fig:toy-gradient-primal-vs-dual} that when both methods use $\beta n=0.1$, up to $70$k iterations, the dual method is better on the $K_{XX}$-norm metric and the primal on $K_{XX}^2$. Later, the dual gradient method performs better on all metrics. This, too, is to be expected, as the minimum eigenvalue of the Hessian of the dual loss is higher than that of the primal loss.
+
+\subsection{Randomised Gradients: Random Features versus Random Coordinates}\label{subsec:stochastic_approximation}
+\begin{figure}[t]
+\vspace{-0.2cm}
+    \centering
+    \includegraphics[width=5.5in]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Figs/Vector/batch_variants_pol.pdf}
+    \vspace{-0.2cm}
+    \caption[Comparison of dual (stochastic) gradient descent with random Fourier features and random coordinates.]{A comparison of dual (stochastic) gradient descent on the \textsc{pol} data set with either random Fourier features or random coordinates, using batch size $B=512$, momentum $\rho=0.9$ and averaging parameter $r=0.001$ (see \cref{subsec:acceleration_and_averaging} for explanation of latter two). Random features converge with $\beta n=5\times 10^{-4}$ but perform poorly, and diverge with a higher step-size. Random coordinates are stable with $\beta n = 50$ and show much stronger performance on all metrics. We include a version of random coordinates where only the $K_{XX}\alpha$ term is subsampled: this breaks the multiplicative noise property, and results in an estimate which is worse on both the $K_{XX}$-norm and the $K_{XX}^2$-norm metric. }
+    \label{fig:toy-features-vs-coordinates}
+    \vspace{-0.2cm}
+\end{figure}
+
+To compute either the primal or the dual gradients, presented in \Cref{eq:primal_gradient,eq:dual_gradient}, we need to compute matrix-vector products of the form $K_{XX} \alpha$, which requires $\mathcal{O}(n^2)$ computations. We now introduce and discuss two types of stochastic approximations for our dual gradient $g(\alpha)$, that reduce the cost to $\mathcal{O}(n)$ per-step, and carefully examine the noise they introduce into the gradient. 
+
+For the sake of exposition\footnote{this is not an assumption of our algorithm and is purely for expositional purposes.}, assume that we are in an $M$-dimensional (finite) linear model setting, such that $K_{XX}$ is of the form $\sum_{j=1}^M \Zj \Zj\tran$, where $\Zj\in \R^n$ collects the values of the $j$th feature of the observations $x_1,\dots,x_n$. Then, for $j \sim \mathcal{U}{\{1, \ldots, M\}}$, we have that $\E[ M \Zj \Zj\tran] = K_{XX}$, and therefore 
+\begin{equation}
+    \widetilde g(\alpha) = \lambda\alpha - b + M \Zj \Zj\tran \alpha
+\end{equation}
+is an unbiased estimate of $g(\alpha)$; we call $\widetilde g$ the random feature estimate of $g$. \label{ntn:random_feature_estimate}The alternative we consider is random coordinates, where we take $i \sim \unif{\{1, \dotsc, N\}}$, and use   
+\begin{equation}
+    \widehat g(\alpha) =  n e_i e_i\tran g(\alpha) = n e_i (\lambda \alpha_i - b_i + K_{XX,i} \alpha). 
+\end{equation}
+Observe that $\widehat g(\alpha)$ zeros all but the $i$th (of $n$) coordinate of $g(\alpha)$, and then scales the result by $n$; since $\E[n e_ie_i\tran] = I$, $\widehat g(\alpha)$ is also unbiased. \label{ntn:random_coordinate_estimate}Note that the cost of calculating either $\widetilde g(\alpha)$ or $\widehat g(\alpha)$ is linear in $n$, and therefore both achieve our goal of reduced computation time. 
+
+However, while $\widetilde g$ and $\widehat g$ may appear similarly appealing, the nature of the noise introduced by these, and thus their qualities, are quite different. 
+\begin{selfproposition}[Error Bound for Random Coordinate Approximation]
+One can show that
+\begin{align}
+\norm{ \widehat g(\alpha) - g(\alpha) } \le \norm{ (\widehat M-I) (K_{XX}+\lambda I) } \norm{\alpha - \alpha^\star(b)}\,,
+\end{align}
+where $\widehat M = n e_i e_i$\label{ntn:random_coordinate_matrix} is the random coordinate approximation to the identity matrix. The noise introduced by $\widehat g(\alpha)$ is proportional to the distance between the current iterate $\alpha$, and the target $\alpha^\star$, making it a so-called \emph{multiplicative noise} gradient oracle \cite{dieuleveut2017harder}.
+\end{selfproposition}  
+Intuitively, multiplicative noise oracles automatically reduce the amount of noise injected as the iterates get closer to their target. On the other hand, we have
+
+\begin{selfproposition}[Error Bound for Random Feature Approximation]
+    Letting $\widetilde K = M \Zj \Zj\tran$, we have that
+\begin{align}
+\norm{ \widetilde g(\alpha) - g(\alpha) } = \norm{(\widetilde K-K_{XX}) \alpha}\,,
+\end{align}
+and thus the error in $\widetilde g(\alpha)$ is \emph{not reduced} as $\alpha$ approaches $\alpha^\star(b)$. The behaviour of $\widetilde g$ is that of an \emph{additive noise} gradient oracle.
+\end{selfproposition}
+Algorithms using multiplicative noise oracles, when convergent (which can be harder to establish), often yield better performance (see, for example, \textcite{varre2021last}). 
+
+Another consideration is that when $M$, the number of features, is larger than $n$, individual features $\Zj$ may also be less informative than individual gradient coordinates $\smash{e_i e_i\tran g(\alpha)}$. Thus, picking features uniformly at random, as in $\widetilde g$, may yield a poorer estimate.
+While this can be addressed by introducing an importance sampling distribution for the features $\Zj$ \cite[per][]{li2019towards}, this adds implementation complexity, and could likewise be used to improve the random coordinate estimate.
+
+In \Cref{fig:toy-features-vs-coordinates}, we compare variants of stochastic dual descent with either random (Fourier) features or random coordinates.
+We see that random features, which produce high-variance additive noise, can only be used with very small step-sizes and have poor asymptotic performance. 
+We test two versions of random coordinates: $\widehat g(\alpha)$, where, as presented, we subsample the whole gradient, and an alternative, $n e_i e_i\tran(K_{XX}\alpha) - y - \lambda \alpha$, where only the $K_{XX}\alpha$ term is subsampled. While both are stable with much higher step-sizes than random features, the latter has worse asymptotic performance. This is a kind of \emph{Rao-Blackwellisation trap:} introducing the known value of $-y+\lambda\alpha$ in place of its estimate $n e_i e_i\tran (-y + \lambda \alpha)$ destroys the multiplicative property of the noise, making things worse, not better.
+
+There are many other possibilities for constructing randomised gradient estimates. 
+For example, \textcite{dai2014doubly} applied the random coordinate method on top of the random feature method, in an effort to further reduce the $\mathcal{O}(n)$ cost per iteration of gradient computation. However, based on the above discussion, we generally recommend estimates that produce multiplicative noise, and our randomised coordinate gradient estimates as the simplest of such estimates. 
+
+\subsection{Nesterov's Momentum and Polyak-Ruppert Iterate Averaging}\label{subsec:acceleration_and_averaging}
+
+\begin{figure}[ht]
+\vspace{-0.2cm}
+    \centering
+    \includegraphics[width=5.5in]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Figs/Vector/iterate_avg_pol.pdf}
+    \vspace{-0.2cm}
+    \caption[Comparison of momentum and averaging strategies for random coordinate estimator of the dual objective.]{Comparison of optimisation strategies for random coordinate estimator of the dual objective on the \textsc{pol} data set, using momentum $\rho = 0.9$, averaging parameter $r = 0.001$, batch size $B=128$, and step-size $\beta N = 50$. Nesterov's momentum significantly improves convergence speed across all metrics. The dashed olive line, marked \emph{arithmetic averaging}, shows the regular iterate up until 70k steps, at which point averaging commences and the averaged iterate is shown. Arithmetic iterate averaging slows down convergence in $K$-norm once enabled. Geometric iterate averaging, on the other hand, outperforms arithmetic averaging and unaveraged iterates throughout optimisation.}
+    \label{fig:toy-iterate-averaging}
+    \vspace{-0.2cm}
+\end{figure}
+
+\begin{algorithm}[tb]
+    \caption{\emph{Stochastic dual descent} for approximating $\alpha^\star(b) = (K+\lambda I)^{-1}b$}
+    \label{alg:compute-mean}
+    \input{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Includes/sdd_algorithm}
+\end{algorithm}
+
+Momentum, or acceleration, is a range of modifications to the usual gradient descent updates that aim to improve the rate of convergence, in particular with respect to its dependence on the curvature of the optimisation problem \cite{polyak1964some}. Many schemes for momentum exist, with RMSProp, AdaGrad and Adam particularly popular in the deep learning literature. However, as our objective has a constant curvature, we recommend the use of the simpler Nesterov's momentum \cite{nesterov1983method}, as adapted by \textcite{sutskever2013importance} (see \Cref{alg:compute-mean} for the form of these updates; we use a momentum of $\rho=0.9$). Examining \Cref{fig:toy-iterate-averaging}, we see that momentum is vital on this problem, independently of iterate averaging.
+
+Polyak-Ruppert averaging returns the average of the (tail of the) stochastic gradient iterates, rather than the final iterate, so as to reduce noise in the estimate \cite{polyak1990new,ruppert1988efficient,polyak1992acceleration}. While Polyak-Ruppert averaging is necessary with constant step-size and additive noise, it is not under multiplicative noise \cite{varre2021last}, and indeed can slow convergence. For our problem, we instead recommend the following averaging instead:
+\begin{definition}[Geometric Averaging]
+We let $\overline\alpha_0 = \alpha_0$ and, at each step, compute\label{ntn:geometric_averaging}\label{ntn:geometric_averaging_parameter}
+\begin{equation}
+    \overline\alpha_t = r\alpha_t + (1-r) \overline\alpha_{t-1} \spaced{for an averaging parameter} r \in (0,1),
+\end{equation}
+and return $\overline\alpha_T$. 
+\end{definition}
+Geometric averaging is an anytime approach, in that it does not rely on fixed tail-window size; thus, it can be used in combination with early stopping, and the value of $r$ can be tuned adaptively. \Cref{fig:toy-iterate-averaging} shows that geometric averaging outperforms both arithmetic averaging, and the last iterate $\alpha_T$. Here and throughout, we set $r = 100/T$.
+
+\section{Hyperparameter Optimisation with Pathwise Gradients}
+\label{sec:pathwise_gradients_hparam}
+As we established in \Cref{subsec:hyperparameter_optimisation_gp}, we are able to compute the gradient of the marginal likelihood using stochastic trace estimates. The standard estimator relies on drawing samples from standard Gaussian noise (or standard Rademacher noise) and then solving the assembled linear system of equations in \Cref{eq:linear_system_trace_estimation}. Here, we introduce the \emph{pathwise estimator}, an alternative to the standard estimator that uses posterior samples through pathwise conditioning to estimate the trace, and reduces the required number of linear system solver iterations until convergence (see \Cref{fig:initial_distance}). We modify the standard estimator to absorb $H_{\varphi}^{-1}$ into the distribution of the probe vectors, resulting in the following novel estimator:
+\begin{selfdefinition}[Pathwise Trace Estimation using Posterior Samples]
+\[
+    \text{tr}\left(H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi}\right) = \text{tr}\left(H_{\varphi}^{-1/2}\frac{\partial H_{\varphi}}{\partial \varphi} H_{\varphi}^{-1/2}\right) = E_z\left[\hat{z}^T  \frac{\partial H_{\varphi}}{\partial \varphi} \hat{z}\right] \approx \frac{1}{s} \sum_{j=1}^s \hat{z}_j^T \frac{\partial H_{\varphi}}{\partial \varphi} \hat{z}_j, \label{eq:pathwise_trace_estimation}
+\]
+where $\forall j : \mathbb{E}[\hat{z}_j \hat{z}_j^T] = H_{\varphi}^{-1}$. We then notice that:
+\[
+\begin{aligned}
+    f(x) & \sim \mathcal{N}(0, k(x, x ; {\vartheta})) \\
+    \varepsilon & \sim \mathcal{N}\left(0, \lambda I\right) \\
+    \xi &:= f(x) + \varepsilon \\
+    \hat{z} &:= H_{\varphi}^{-1} \xi
+    \end{aligned}
+    \Longrightarrow \xi \sim \mathcal{N}\left(0, H_{\varphi}\right) \Longrightarrow \hat{z} \sim \mathcal{N}\left(0, H_{\varphi}^{-1}\right)
+\]
+Solving the following linear system of equations obtains our samples:
+\[
+H_{\varphi}\left[ \alpha_y, \hat{z}_1, \ldots, \hat{z}_s \right] = \left[ y, \xi_1, \ldots, \xi_s \right]. \label{eq:pathwise_trace_linear_system}
+\]
+\end{selfdefinition}
+Rewriting our posterior samples as follows:
+\[
+(f \mid y)(\cdot) &= f(\cdot) + K_{(\cdot)X} H_{\varphi}^{-1} (y - f_X - \varepsilon) \nonumber \\
+&= f(\cdot) + K_{(\cdot)X} (\alpha_y - \hat{z}).
+\]
+We can see that obtaining posterior samples through pathwise conditioning is equivalent to obtaining samples for \emph{pathwise trace estimation}.
+
+\paragraph{Initial Distance to the Linear System Solution.}
+
+Under realistic conditions, the pathwise estimator moves the solution of the linear system closer to the origin. To show this, we have the following proposition:
+\begin{selfproposition}[Distance to Solution for Standard and Pathwise Estimators]
+    \label{prop:pathwise_dist}
+    We consider the generic linear system $H_\theta u=b$ and measure the RKHS distance between the initialisation $u_{\text {init }}$ and the solution $u=H_{\varphi}^{-1} b$ as $\|u_{\text {init }}-u\|_{H_{\varphi}}^2$. With $u_{\text {init }}=0$, which is standard \cite{gardner18,WangPGT2019exactgp,wu2024largescale}, the expected squared distance under the standard estimator is given by:
+    \[
+        \mathbb{E}\left[\|u_{\text {init }}-u\|_{H_{\varphi}}^2\right]=\operatorname{tr}\left(H_{\varphi}^{-1}\right), \label{eq:standard_dist}
+    \]
+    whereas the expected squared distance under the pathwise estimator is given by:
+    \[
+        \mathbb{E}\left[\|u_{\text {init }}-u\|_{H_{\varphi}}^2\right]=\operatorname{tr}(I)=n . \label{eq:pathwise_dist}
+    \]
+\end{selfproposition}
+\begin{proof}
+See Appendix \ref{app:proof_pathwise_dist}.
+\end{proof}
+
+The initial distance for the standard estimator is equal to the trace of $H_{\varphi}^{-1}$, whereas it is constant for the pathwise estimator. \Cref{fig:initial_distance} illustrates that this trace follows the top eigenvalue, which roughly matches the noise precision. As the model fits the data better, the noise precision increases, increasing the initial distance for the standard but not for the pathwise estimator. In practice, the latter leads to faster solver convergence, especially for problems with high noise precision (see Table 1).
+
+\begin{figure}[t]
+    \centering
+    \includegraphics{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Figs/Vector/distance_to_solution.pdf}
+    \caption[Comparison of initial distance to solution for standard and pathwise estimators.]{On the \textsc{pol} and \textsc{elevators} datasets, the pathwise estimator results in a lower RKHS distance \eqref{eq:RKHS_distance} between solver initialisation and solution, as predicted by theory (\ref{eq:standard_dist}, \ref{eq:pathwise_dist}) (left). This results in fewer iterations until reaching the tolerance (left middle). When using the standard estimator, the initial distance follows the top eigenvalue of $H_{\varphi}^{-1}$ (right middle), which is strongly related to the noise precision (right). The latter tends to increase during marginal likelihood optimisation when fitting the data. The effects are greater on \textsc{pol} due to the higher noise precision.}
+    \label{fig:initial_distance}
+\end{figure}
+
+\subsection{Warm Starting Linear System Solvers}
+\label{sec:warm_start_gp}
+Linear system solvers are typically initialised at zero \cite{gardner18,WangPGT2019exactgp}.\footnote{Notable exceptions are \textcite{Artemev21}, who warm start $\alpha_{y}$ in a sparse lower bound on $\mathcal{L}$.}
+However, because the outer-loop marginal likelihood optimisation does not change the hyperparameters much between consecutive steps, we expect that the solution to inner-loop linear systems also does not change much between consecutive steps.
+Therefore, we suggest to \emph{warm start} linear system solvers by initialising them at the solution of the previous step.
+This requires that the targets of the linear systems, $z_j$ or $\xi_j$, are not resampled throughout optimisation, which can introduce bias \cite{chen2020stochastic}.
+However, we find that warm starting consistently provides gains across all linear system solvers for both the standard and the pathwise estimator, and that the bias is negligible.
+
+\paragraph{Visualising Warm Starts}
+\Cref{fig:2d_cross_section} visualises the two top eigendirections of the inner-loop quadratic objective on \textsc{pol}.
+Throughout training, warm starting solvers at the solution to the previous linear system results in a substantially smaller initial distance to the current solution.
+\begin{figure}[t]
+    \centering
+    \includegraphics{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Figs/Vector/2d_cross_section_neurips.pdf}
+    \caption[Two-dimensional cross-sections along top eigendirections of the inner-loop quadratic objective for marginal likelihood optimisation]{Two-dimensional cross-sections along top eigendirections of the inner-loop quadratic objective after 20 marginal likelihood steps on the \textsc{pol} dataset. The current solution is placed at the origin of coordinates (left and middle). Warm starting significantly reduces the initial root-mean-square RKHS distance to the solution throughout marginal likelihood optimisation (right).}
+    \label{fig:2d_cross_section}
+    \vspace{0.25cm}
+    \includegraphics{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Figs/Vector/solver_iterations_neurips_main.pdf}
+    \caption[Required number of solver iterations to the tolerance $\tau = 0.01$ during marginal likelihood optimisation]{Required number of solver iterations to the tolerance $\tau = 0.01$ during marginal likelihood optimisation on the \textsc{pol} and \textsc{elevators} datasets. Warm starting with the previous solution reduces the required number of iterations to reach the tolerance without sacrificing predictive performance.}
+    \label{fig:solver_iterations_main}
+\end{figure}
+
+\paragraph{Effects on Linear System Solver Convergence}
+Reducing the initial RKHS distance to the solution reduces the required number of solver iterations until the tolerance $\tau = 0.01$ is reached for all solvers and all five datasets, as shown in \Cref{fig:solver_iterations_main} and \Cref{tab:results_main}.
+
+\section{Experiments and Benchmarks}\label{sec:experiments}
+
+To showcase the empirical performance of the primal (SGD) and dual (SDD) objectives, we present four experiments. The first, presented in \Cref{fig:sgd_sdd_comparison}, is a qualitative comparison of the estimates for Gaussian process regression given by SGD, SDD, CG \cite{wang2019exact} and SVGP \cite{hensman2013gaussian}. The following two experiments are on large-scale UCI regression and large-scale Bayesian optimisation. Our final experiment tests stochastic dual descent on five molecule-protein binding affinity prediction benchmarks of \textcite{Ortegon2022dockstring}. 
+% More detailed descriptions of all experimental set-ups may be found in \cref{app:experiments}. 
+\subsection{UCI Regression Baselines}
+
+We benchmark on the 9 UCI repository regression data sets \cite{dua2019UCI} used by \textcite{wang2019exact}. 
+We run SGD and SDD for $100$k iterations, with step-sizes $100\times$ larger for SDD than SGD, except for \textsc{elevators}, \textsc{keggdirected}, and \textsc{buzz}, where this causes divergence, and we use $10\times$ larger step-sizes instead. We run CG to a tolerance of $0.01$, except for the 4 largest data sets, where we stop CG after 100 iterations---this still provides CG with a larger compute budget than first-order methods. 
+CG uses a pivoted Cholesky preconditioner of rank $100$.
+For SVGP, we use $3,000$ inducing points for the smaller five data sets and $9,000$ for the larger four, so as to match the runtime of the other methods. 
+
+\begin{table}[t]
+\caption[Experimental results for UCI regression tasks]{Root mean square error (RMSE), compute time (on an A100 GPU), and negative log-likelihood (NLL), for 9 UCI regression tasks for all methods considered. We report mean values and standard error across five $90\%$-train $10\%$-test splits for all data sets, except the largest, where three splits are used. Targets are normalised to zero mean and unit variance. The recommended algorithm is SDD\textsuperscript{\ensuremath{*}} for all tasks.}
+\label{tab:UCI_regression}
+\vspace{8pt}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.1}
+\resizebox{\textwidth}{!}{%
+\input{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Includes/uci_table}}
+\end{table}
+
+The results, reported in \Cref{tab:UCI_regression}, show that SDD matches or outperforms all baselines on all UCI data sets in terms of root mean square error of the mean prediction across test data. SDD strictly outperforms SGD on all data sets and metrics, matches CG on the five smaller data sets, where the latter reaches tolerance, and outperforms CG on the four larger data sets. The same holds for the negative log-likelihood metric (NLL), computed using $64$ posterior function samples, except on \textsc{bike}, where CG marginally outperforms SDD\@. 
+Since SDD requires only one matrix-vector multiplication per step, as opposed to two for SGD, it provides about $30\%$ wall-clock time speed-up relative to SGD\@.
+We run SDD for 100k iterations to match the SGD baseline, SDD often converges earlier than that.
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=5.4in]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Figs/Vector/thompson_dual.pdf}%\vspace{-0.4cm}
+    \caption[Results for the Thompson sampling task]{Results for the Thompson sampling task. Plots show mean and standard error of the maximum function values identified, across $5$ length scales and $10$ seeds, against both the number of observations acquired and the corresponding compute time on an A100 GPU\@.
+   The compute time includes drawing posterior function samples and finding their maxima. All methods share an initial data set of 50k points, and take 30 steps of parallel Thompson sampling, acquiring $1$k points at each.}
+    \label{fig:bayesopt-task}
+    % \vspace{-0.5cm}
+\end{figure}
+
+\subsection{Large-scale Thompson Sampling}
+
+Next, we perform synthetic large-scale black-box function optimisation experiments, which  consist of finding the maxima of functions mapping $[0,1]^8 \to \R$ sampled from Matérn-$3/2$ Gaussian process priors with 5 different length-scales and 10 random functions per length-scale, using parallel Thompson sampling \cite{hernandezlobato2017Parallel}.
+We set the kernel used by each model to match that of the unknown function. All methods are warm-started with the same 50k points chosen uniformly at random on the domain. 
+We then run 30 iterations of the parallel Thompson sampling, acquiring 1000 points at each iteration. We include two variants of the experiment, one with a small compute budget, where SGD and SDD are run for 15k steps, SVGP is given 20k steps and CG is run for 10 steps, and one with a large budget, where all methods are run for 5 times as many steps. We present the results on this task in \cref{fig:bayesopt-task}, averaged over both length-scales and seeds. In both large and small compute settings, SDD makes the most progress, in terms of maximum value found, while using the least compute. The performance of SDD and SGD degrades gracefully when compute budget is limited.
+
+\subsection{Molecule-protein Binding Affinity Prediction for Drug Discovery}\label{expt:molecules}
+
+The binding affinity between a molecule and certain proteins is a widely used preliminary filter in drug discovery \cite{pinza2019docking}, and machine learning is increasingly used to estimate this quantity \cite{yang2021efficient}. In this final experiment, we show that Gaussian processes with SDD are competitive with graph neural networks for binding affinity prediction.
+
+We use the \textsc{dockstring} regression benchmark of \textcite{Ortegon2022dockstring}, which contains five tasks, corresponding to five different proteins. 
+The inputs are the graph structures of $250$k candidate molecules, and the targets are real-valued affinity scores from the docking simulator \emph{AutoDock Vina}~\cite{trott2010autodock}. 
+For each protein, we use a standard train-test splits of $210$k and $40$k molecules, respectively.
+We use Morgan fingerprints of dimension $1024$~\cite{rogers2010extended} to represent the molecules, and use a Gaussian process model based on the Tanimoto kernel of \textcite{ralaivola2005graph} with the hyperparameters of \textcite{tripp2023tanimoto}. 
+\begin{table}[t]
+    \caption[Experimental results for molecular binding affinity prediction]{Test set $R^2$ scores obtained for each target protein on the \textsc{dockstring} molecular binding affinity prediction task. Results with (\ensuremath{\cdot})\textsuperscript{\ensuremath{\dagger}} are from \textcite{Ortegon2022dockstring}, those with (\ensuremath{\cdot})\textsuperscript{\ensuremath{\ddagger}} are from \textcite{tripp2023tanimoto}. SVGP uses 1000 inducing points. SDD\textsuperscript{\ensuremath{*}} denotes this work.}
+    \label{tab:molecule_regression}
+    \vspace{8pt}
+    \centering
+    \scriptsize
+    \setlength{\tabcolsep}{2.5pt}
+    \renewcommand{\arraystretch}{1.4}
+    \input{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Includes/tanimoto}
+    % \vspace{-0.3cm}
+\end{table}
+
+In \cref{tab:molecule_regression}, following \textcite{Ortegon2022dockstring}, we report $R^2$ values. Alongside results for SDD and SGD, we include results from \textcite{Ortegon2022dockstring} for XGBoost, and for two graph neural networks, MPNN \cite{gilmer2017neural} and Attentive FP \cite{xiong2019pushing}, the latter of which is the state-of-the-art for this task. 
+We also include the results for SVGP reported by \textcite{tripp2023tanimoto}. 
+These results show that SDD matches the performance of Attentive FP on the ESR2 and FP2 proteins, and comes close on the others. 
+To the best of our knowledge, this is the first time Gaussian processes have been shown to be competitive on a large-scale molecular prediction task.
+
+\subsection{Hyperparameter Optimisation with Pathwise Gradients}
+
+Most popular methods in the GP literature for iterative GP hyperparameter optimisation are conjugate gradients (CG) \cite{gardner18,WangPGT2019exactgp,wilson20,wilson2021pathwise} and alternating projections (AP) \cite{shalev2013stochastic,tu2016large,wu2024largescale}.
+We consider these in our study and compare them to our proposed SGD algorithm, which refers to the dual objective in this section.
+Solvers are often run until the relative residual norm $\Vert {b} -{H}_{\varphi} {u} \Vert / \Vert {b} \Vert$ reaches a certain tolerance $\tau$ \cite{WangPGT2019exactgp,maddox2021iterative,wu2024largescale}.
+We set $\tau = 0.01$, following \textcite{maddox2021iterative}. The results of using the standard and pathwise gradient estimators, with and without warm starting, are shown in \Cref{tab:results_main}.
+
+\begin{table}[ht]
+    \caption[Experimental results for hyperparameter optimisation with pathwise gradients]{Test log-likelihoods, total training times, and average speed-up among datasets for CG, AP, and SGD after 100 outer-loop marginal likelihood steps with learning rate of 0.1. We consider five datasets with $n<50$k, which allows us to solve to tolerance, and report the mean over 10 data splits.}
+    \label{tab:results_main}
+    \vspace{0.2cm}
+    \centering
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{l c c | c c c c c | c c c c c | r}
+    \toprule
+    & \scriptsize{path} & \scriptsize{warm} & \multicolumn{5}{c|}{Test Log-Likelihood} & \multicolumn{5}{c|}{Total Time (min)} & \multicolumn{1}{c}{Average} \\
+    & \scriptsize{wise} & \scriptsize{start} & \textsc{pol} & \textsc{elev} & \textsc{bike} & \textsc{prot} & \textsc{kegg} & \textsc{pol} & \textsc{elev} & \textsc{bike} & \textsc{prot} & \textsc{kegg} & \multicolumn{1}{c}{Speed-Up} \\
+    \midrule
+    \multirow{4}{*}{\rotatebox[origin=c]{90}{CG}} & & & 1.27 & -0.39 & 2.15 & -0.59 & 1.08 & 4.83 & 1.58 & 5.08 & 29.9 & 28.0 & --- \\
+     & \checkmark & & 1.27 & -0.39 & 2.07 & -0.62 & 1.08 & 3.96 & 1.49 & 4.41 & 20.0 & 26.4 & \textbf{1.2} $\times$ \\
+     & & \checkmark & 1.27 & -0.39 & 2.15 & -0.59 & 1.08 & 2.28 & 1.03 & 2.74 & 11.5 & 12.8 & \textbf{2.1} $\times$ \\
+     & \checkmark & \checkmark & 1.27 & -0.39 & 2.06 & -0.62 & 1.08 & 2.47 & 1.00 & 3.07 & 13.7 & 13.0 & \textbf{1.9} $\times$ \\
+    \midrule
+    \multirow{4}{*}{\rotatebox[origin=c]{90}{AP}} & & & 1.27 & -0.39 & 2.15 & -0.59 & --- & 493. & 77.8 & 302. & 131. & > 24 h & --- \\
+     & \checkmark & & 1.27 & -0.39 & 2.07 & -0.62 & 1.08 & 27.9 & 1.67 & 19.9 & 16.4 & 211. & > \textbf{5.4} $\times$ \\
+     & & \checkmark & 1.27 & -0.39 & 2.15 & -0.59 & 1.08 & 44.0 & 36.4 & 35.1 & 55.8 & 491. & > \textbf{18.9} $\times$ \\
+     & \checkmark & \checkmark & 1.27 & -0.39 & 2.06 & -0.62 & 1.08 & 3.90 & 1.21 & 5.40 & 12.3 & 14.0 & > \textbf{72.1} $\times$ \\
+    \midrule
+    \multirow{4}{*}{\rotatebox[origin=c]{90}{SGD}} & & & 1.27 & -0.39 & 2.15 & -0.59 & 1.08 & 139. & 5.54 & 412. & 75.2 & 620. & --- \\
+     & \checkmark & & 1.27 & -0.39 & 2.07 & -0.63 & 1.08 & 73.6 & 4.58 & 156. & 24.0 & 412. & \textbf{2.1} $\times$ \\
+     & & \checkmark & 1.27 & -0.39 & 2.15 & -0.59 & 1.08 & 26.5 & 1.22 & 74.3 & 11.2 & 168. & \textbf{5.1} $\times$ \\
+     & \checkmark & \checkmark & 1.27 & -0.39 & 2.06 & -0.62 & 1.07 & 17.9 & 1.14 & 64.2 & 11.9 & 58.7 & \textbf{7.2} $\times$ \\
+    \bottomrule
+    \end{tabular}
+    }
+\end{table}
+
+
+\paragraph{Demonstration on Large Datasets.}
+
+
+\begin{figure}[t]
+    \centering
+    \includegraphics{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter6/Figs/Vector/large_datasets_main.pdf}
+    \caption[Experimental results for marginal likelihood optimisation on large datasets]{Relative residual norms and test log-likelihoods during marginal likelihood optimisation on large datasets using the pathwise estimator. Warm starting allows solver progress to accumulate over multiple marginal likelihood steps, leading to decreasing residual norms. Without warm starting, residual norms tend to remain similar or increase during optimisation. Despite reaching significantly lower residual norms, the predictive performance does not always improve.}
+    \label{fig:large_datasets_main}
+\end{figure}
+
+We now turn to larger UCI datasets where we have $391\text{k} {\,<\,} n {\,<\,} 1.8\text{M}$, and solving until reaching the tolerance becomes computationally infeasable. Thus, we introduce a compute budget of 10 solver epochs per marginal likelihood step.
+Hyperparameters are optimised using a learning rate of 0.03 for 30 Adam steps (15 for \textsc{houseelectric} due to high computational costs).
+We use the pathwise estimator because it accelerates solver convergence, and it enables efficient tracking of predictive performance during optimisation.
+
+\Cref{fig:large_datasets_main} visualises the evolution of the relative residual norm of the probe vector linear systems and the predictive test log-likelihood during marginal likelihood optimisation.
+For all solvers, warm starting leads to lower residual norms throughout outer-loop steps.
+This suggests a synergistic behaviour between early stopping and warm starting: the latter allows solver progress to accumulate across marginal likelihood steps.
+This can be interpreted as amortising the inner-loop linear system solve over multiple outer-loop steps.
+Despite the lower residual norm, CG is brittle under early stopping, obtaining significantly worse performance than AP and SGD on \textsc{buzz} and \textsc{houseelectric}. 
+AP and SGD seem to be more robust to early stopping.
+However, lower residual norms do not always translate to improved predictive performance.
+Furthermore, we find that SGD can suffer due to the optimal learning rate changing as the hyperparameters change.
+
+\section{Discussion}
+
+% We introduced stochastic dual descent, a specialised first-order stochastic optimisation algorithm for computing Gaussian process predictions and posterior samples.
+% To design this algorithm, we combined a number of ideas from the optimisation literature with Gaussian-process-specific ablations, arriving at an algorithm which is simultaneously simple and matches or exceeds the performance of relevant baselines.
+% We showed that stochastic dual descent yields strong performance on standard regression benchmarks and on a large-scale Bayesian optimisation benchmark, and matches the performance of state-of-the-art graph neural networks on a molecular binding affinity prediction task.
+
+This chapter has developed a path towards highly scalable Gaussian Process (GP) inference and learning through stochastic optimisation. We first demonstrated that stochastic gradient descent (SGD) can effectively approximate GP posterior means and, critically, generate well-calibrated posterior function samples, even without full convergence and at a fraction of the cost of traditional methods, particularly in large-scale or ill-conditioned settings. This foundational work culminated in the development of Stochastic Dual Descent (SDD), a specialized first-order algorithm that combines optimisation insights with GP-specific design to achieve state-of-the-art performance on diverse benchmarks, ranging from standard regression and large-scale Bayesian optimisation to challenging molecular property prediction tasks. The success of these methods underscores the viability of replacing exact, costly linear algebra with efficient, iterative stochastic approaches for core Bayesian inference.
+
+Building on the ability to efficiently generate posterior samples via these stochastic methods, we further investigated their application to accelerating GP hyperparameter optimisation. We introduced a pathwise gradient estimator that leverages these SGD-generated samples, significantly speeding up the iterative linear system solves inherent in marginal likelihood optimisation—achieving up to 72x speed-ups—by both improving solver conditioning and providing amortised predictions. This, combined with warm-starting techniques that carry solver progress across optimisation steps, demonstrated a powerful synergy for reducing computational burdens. 

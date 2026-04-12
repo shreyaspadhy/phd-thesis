@@ -11,27 +11,34 @@
     \graphicspath{{Chapter4/Figs/Vector/}{Chapter4/Figs/}}
 \fi
 
-In the previous chapter, we introduced a unified framework for sampling and generative modelling based on divergences on path measures. Furthermore, our framework allowed us to propose a novel extension to AIS-based algorithms through the addition of a control term, allowing us to learn more accurate proposal and target distributions and guarantee a zero-variance importance sampling estimate.
+In the preceding chapter, we introduced a unifying variational framework for generative modelling and sampling, demonstrating how diverse algorithms can be understood through the lens of minimising divergences between path measures of stochastic processes. This perspective not only provided a common theoretical grounding but also enabled the development of novel extensions to Annealed Importance Sampling, such as Controlled Monte Carlo Diffusions (CMCD), by incorporating principles from stochastic control to achieve more accurate proposal and target distributions, and even guarantee zero-variance importance sampling estimates under certain conditions.
 
-In this chapter, we turn our attention to another important paradigm in the sampling literature: \textit{conditional generative modelling}. While denoising diffusion models have been widely successful in generating high-quality images \citep{ho2020denoising}, and designing protein backbones \citep{watson2023novo}, we are interested in the task of \textit{conditioning} the time reversal process, in order to generate samples that are subject to an observed condition. Instead of generating samples from the unconditional distribution $\pi$, we instead generate samples from the conditional distribution $\picond$, which we write either in terms of a generic reward function $r(x)$ that results in $\picond(x) \propto \hat{\pi} \, \exp (r(x))$, or an explicit likelihood model $p(y \mid x)$ for some auxiliary measurements $y$ that results in $\picond(x \mid y) \propto \hat{\pi} \, p(y \mid x)$\footnote{We might notice that this decomposition of the posterior $\picond(x \mid y)$ into a product of the prior $\pi$ and the likelihood $p(y \mid x)$ is simply Bayes' theorem.}.
+Building upon this foundation of understanding generative processes through stochastic calculus, this chapter turns its attention to another critical paradigm: \emph{conditional generative modelling}. While modern diffusion models have achieved remarkable success in unconditional tasks like high-fidelity image synthesis \citep{ho2020denoising} and de novo protein backbone design \citep{watson2023novo}, many practical applications require the ability to \emph{condition} the generation process. We seek to generate samples not merely from an unconditional distribution $\pi(x)$, but from a conditional distribution $\pi_{\text{cond}} :=\pi(x|y)$ that incorporates specific observations $y$, constraints, or desired attributes. This chapter aims to develop a similarly unifying framework for these conditional generation tasks, particularly within the context of diffusion models. We will show that Doob's $h$-transform, a fundamental result from the theory of stochastic differential equations (SDEs), provides the key to understanding and unifying a wide array of existing conditional sampling algorithms. Furthermore, this framework will allow us to derive DEFT (Doob’s $h$-transform Efficient Fine-Tuning), a novel and efficient algorithm for conditional generation that leverages pre-trained unconditional models while offering strong theoretical guarantees. This chapter is based on the following paper:
+\begin{itemize}
+    \item ``DEFT: Efficient Finetuning of Conditional Diffusion Models by Learning the Generalised $ h $-transform''. A. Denker$^{*}$, F. Vargas$^{*}$, \textbf{S. Padhy}$^{*}$, K. Didi$^{*}$, S. Mathis$^{*}$, V. Dutordoir, R. Barbano, E. Mathieu, U. Komorowska, P. Liò. In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2024.
+\end{itemize}
 
-Diffusion models typically approximate the time-varying score of the underlying distribution, i.e., $s_{\theta}(x, t) \approx \nabla_x \ln \pi_t(x)$. In conditional generative modelling, we instead attempt to learn a neural network $s_\theta(x, t, y)$ that approximates the score of the conditional distribution $\nabla_{x} \ln \picondt(x \mid y)$, termed the \textit{posterior score}. The time-dependent conditional distribution is defined similarly to \Cref{eq:sm_noised_distributions} as the iteratively noised version of the conditional distribution,
+\section{The Challenge of Conditional Generation}
+
+The conditional distributions we are interested in, typically arise in two main ways: either through a generic reward or energy function $r(x,y)$ that 'tilts' the unconditional distribution, resulting in $\pi(x|y) \propto \pi(x) \exp(r(x,y))$, or more commonly, through an explicit likelihood model $p(y|x)$ corresponding to auxiliary measurements or conditions $y$, leading to $\pi(x|y) \propto \pi(x) p(y|x)$ via Bayes' theorem. In the context of diffusion models, which operate by learning to reverse a noising process, this means we need to condition the \emph{time-reversal} process itself.
+
+% In this chapter, we turn our attention to another important paradigm in the sampling literature: \textit{conditional generative modelling}. While denoising diffusion models have been widely successful in generating high-quality images \citep{ho2020denoising}, and designing protein backbones \citep{watson2023novo}, we are interested in the task of \textit{conditioning} the time reversal process, in order to generate samples that are subject to an observed condition. 
+
+% Instead of generating samples from the unconditional distribution $\pi$, we instead generate samples from the conditional distribution $\picond$, which we write either in terms of a generic reward function $r(x)$ that results in $\picond(x) \propto \hat{\pi} \, \exp (r(x))$, or an explicit likelihood model $p(y \mid x)$ for some auxiliary measurements $y$ that results in $\picond(x \mid y) \propto \hat{\pi} \, p(y \mid x)$\footnote{We might notice that this decomposition of the posterior $\picond(x \mid y)$ into a product of the prior $\pi$ and the likelihood $p(y \mid x)$ is simply Bayes' theorem.}.
+
+Diffusion models typically approximate the time-varying score of the underlying distribution, i.e., $s_{\theta}(x, t) \approx \nabla_x \ln \pi_t(x_t)$. In conditional generative modelling, we instead attempt to learn a neural network $s_\theta(x, t, y)$ that approximates the \emph{conditional score}, i.e. $\nabla_{x} \ln \pi_t(x_t \mid y)$. Using Bayes' rule, we can decompose this quantity as
 \[
-    \picondt(x \mid y) &= \int \picond(w \mid y) \mathcal{N}(x; w, \sigma_t^2) \dd w, \\
-    &\propto \pi_t(x) p(y \mid x_t). \label{eq:conditional_posterior_score}
+\nabla_x \log \pi_t(x_t \mid y)=\nabla_x \log \pi_t(x_t)+\nabla_x \log p\left(y \mid x_t\right). \label{eq:bayes_theorem_deft}
 \]
-Therefore, we can write down the posterior score from \Cref{eq:conditional_posterior_score} (or using Bayes' theorem) as
-\begin{align}
-    \label{eq:bayes_theorem}
-    \nabla_{x} \ln \picondt(x \mid y) \approx s_{\theta, t}(x) + \nabla_{x} \ln p(\m | x_t).
-\end{align}
-The time-dependent likelihood $\nabla_{x} \ln p(y | x_t)$ is often termed \textit{guidance} due to its interpretation to guide the reverse process to the conditioned inputs, and is unfortunately analytically intractable. To tackle this problem, several approximations for the \textit{guidance} have been proposed; see, for example, \textcite{chung2022diffusion,finzi2023user,jalal2021robust,rout2024solving,song2022pseudoinverse,song2021solving} and further discussion in Appendix~\ref{sec:related_work}. Instead of relying on the decomposition in \Cref{eq:bayes_theorem}, another line of work aims to learn the posterior score directly \citep{batzolis2021conditional,ho2022classifier}, which requires expensive training for new conditional sampling tasks, and access to large amounts of paired data points.
+The time-dependent likelihood $\nabla_{x} \ln p(y | x_t)$ is often termed \textit{guidance} due to its interpretation to guide the reverse process to the conditioned inputs, and is unfortunately analytically intractable\label{ntn:guidance}. To tackle this problem, several approximations for the \textit{guidance} have been proposed; see, for example, \textcite{chung2022diffusion,finzi2023user,jalal2021robust,rout2024solving,song2022pseudoinverse,song2021solving} and further discussion in Appendix~\ref{sec:related_work}. Instead of relying on the decomposition in \Cref{eq:bayes_theorem_deft}, another line of work aims to learn the conditional score directly \citep{batzolis2021conditional,ho2022classifier}, which requires expensive training for new conditional sampling tasks, and access to large amounts of paired data points.
 
-In the setting of conditional generation with diffusion models, our primary goal is to leverage large pre-trained foundation models which are prevalent in applications, but which typical front-end users are not able to backpropagate through, making approaches like \textcite{chung2022diffusion,finzi2023user} infeasible. This might be due to their prohibitive computation times or because they lie behind an API preventing the usage of autodiff frameworks.
+A primary goal in many contemporary conditional generation settings, and a focus of this chapter, is to effectively leverage large, pre-trained unconditional foundation models. These models are often very powerful but may be accessible only as black boxes (e.g., via an API) or be too computationally expensive to backpropagate through for each new conditioning task. This constraint renders some guidance techniques that require gradients of the observation model with respect to $x_0$ (as estimated from $x_t$) impractical for end-users, motivating methods that can adapt pre-trained models efficiently. In this chapter, we develop such a method, which we call \emph{DEFT} (Doob's $h$-transform Efficient Fine-Tuning).
 
-In this chapter, we propose a unified framework for conditional generation using Doob's $h$-transform, a well-known result in the stochastic differential equations (SDE) literature \citep{de2021simulating,rogers2000diffusions,sarkka2019applied,ye2022first}, which we have introduced in \Cref{sec:doobs_h_transform}. We show how a large number of conditional generative modeling algorithms can be unified under the lens of our framework, as well as provide novel theoretical guarantees on the convergence of different algorithms. 
+% In the setting of conditional generation with diffusion models, our primary goal is to leverage large pre-trained foundation models which are prevalent in applications, but which typical front-end users are not able to backpropagate through, making approaches like \textcite{chung2022diffusion,finzi2023user} infeasible. This might be due to their prohibitive computation times or because they lie behind an API preventing the usage of autodiff frameworks.
 
-Finally, using our framework, we propose DEFT \textit{(Doob's h-transform Efficient FineTuning)}, an algorithm that estimates the time-dependent likelihood directly from data, i.e., $h^* = \nabla_{x} \ln p(\m | x_t)$, while being able to leverage an existing pre-trained unconditional model. We learn the guidance term ($h$-transform) efficiently using 1) smaller networks, and 2) a small training dataset of paired data points and corresponding observations. Furthermore, through connections to stochastic control, we propose a novel network architecture for general-purpose fine-tuning, which, in conjunction with our proposed loss, achieves competitive results across a series of inverse problems in imaging and protein design, while having a much lower computational cost.
+% In this chapter, we propose a unified framework for conditional generation using Doob's $h$-transform, a well-known result in the stochastic differential equations (SDE) literature \citep{de2021simulating,rogers2000diffusions,sarkka2019applied,ye2022first}, which we have introduced in \Cref{sec:doobs_h_transform}. We show how a large number of conditional generative modeling algorithms can be unified under the lens of our framework, as well as provide novel theoretical guarantees on the convergence of different algorithms. 
+
+% Finally, using our framework, we propose DEFT \textit{(Doob's h-transform Efficient FineTuning)}, an algorithm that estimates the time-dependent likelihood directly from data, i.e., $h^* = \nabla_{x} \ln p(\m | x_t)$, while being able to leverage an existing pre-trained unconditional model. We learn the guidance term ($h$-transform) efficiently using 1) smaller networks, and 2) a small training dataset of paired data points and corresponding observations. Furthermore, through connections to stochastic control, we propose a novel network architecture for general-purpose fine-tuning, which, in conjunction with our proposed loss, achieves competitive results across a series of inverse problems in imaging and protein design, while having a much lower computational cost.
 
 
 \section{Conditioning diffusions via Doob's \texorpdfstring{$h$}{h}-transform}  \label{sec:deft_h_transform}
@@ -40,39 +47,38 @@ We have previously discussed how the Doob's $h$-transform can be used to conditi
 \begin{align}
     \dd X_t &= f_t(X_t) \, \dd t + \sigma_t \dd W_t \quad X_0 \sim  \pi, \quad X_{0:T} \sim \ora{\P}^{\pi, f} \label{eq:forward_sde_doobs}
 \end{align}
-with drift $f_t$ and diffusion $\sigma_t$, until a terminal distribution $\rho_T = \ora{\P}^{\pi, f}_T$ (Recall the notation from \Cref{eq:notation_for_path_measures}, where $\rho_T$ is the marginal distribution of the forward process at time $T$). From \Cref{def:nelson-reversal}, we know that under ergodicity assumptions on the forward process so that when $T$ is large, $\rho_T$ is close to a simple distribution $\pi_T = \mathcal{N}(0, I)$. there exists a corresponding reverse SDE with corresponding drift $b_t$ \citep{anderson1982reverse}, that allows us to take samples from $\pi_T$ and denoise them to generate samples from $\pi$,
+with drift $f_t$ and diffusion $\sigma_t$, until a terminal distribution\footnote{Recall the notation from \Cref{eq:notation_for_path_measures}, where $\rho_T$ is the marginal distribution of the forward process at time $T$.} $\rho_T = \ora{\P}^{\pi, f}_T$. From \Cref{def:nelson-reversal}, we know that under ergodicity assumptions on the forward process\footnote{When $T$ is large, $\rho_T$ is close to a simple distribution $\pi_T = \mathcal{N}(0, I)$.}, there exists a corresponding reverse SDE with corresponding drift $b_t$ \citep{anderson1982reverse}, that allows us to take samples from $\pi_T$ and denoise them to generate samples from $\pi$,
 \begin{align}
     \label{eq:back_sde}
     \dd X_t &= \left( f_t(X_t) - \sigma_t^2 \nabla_{X_t} \ln p_t(X_t) \right) \,\dd t + \sigma_t \dd \ola{W}_t, \quad X_T \sim  \pi_T, \quad X_{0:T} \sim \ola{\P}^{\pi_T, b}
 \end{align}
 where the time flows backwards, and $b_t = f_t(X_t) - \sigma_t^2 \nabla_{X_t} \ln p_t(X_t)$.
-The goal of conditional sampling is to condition the reverse SDE on a particular observation, i.e., to produce samples that satisfy constraints. For example, we might want to use \Cref{eq:back_sde} to generate samples where we already know some dimensions of the sample (e.g. knowing some pixels of the image a-priori in image inpainting). 
+The goal of conditional sampling is to condition the reverse SDE on a particular observation, i.e., to produce samples that satisfy constraints. 
 
 \subsection{Classical Noiseless Setting}
 
-Doob's $h$-transform \citep{rogers2000diffusions,de2021simulating} provides a formal mechanism for conditioning an SDE to hit a deterministic event at a given time. We will show that existing methods for conditional generative modelling arise as approximate instances of this proposed framework. Formally, we extend the general definition of Doob's $h$-transform from \Cref{def:doobs} to the time-reversal case:
+Doob's $h$-transform \citep{rogers2000diffusions,de2021simulating} provides a formal mechanism for conditioning an SDE to hit a deterministic event at a given time. Formally, we extend the general definition of Doob's $h$-transform from \Cref{def:doobs} to the time-reversal case:
 
-%\begin{mdframed}[style=highlightedBox]
 \begin{proposition}[Doob's $h$-transform on reverse SDEs \citep{rogers2000diffusions}]
     \label{prop:htrans}
 Consider the reverse SDE in \Cref{eq:back_sde}. The conditioned process $X_t | X_0 \in B$ is a solution of
 \begin{align}
 \dd H_t &= \left(b_t(H_t) - \sigma_t^2 \nabla_{H_t}\ln \ola{p}_{0 \mid t}(X_0 \in B | H_t)\right) \,\dd t + \sigma_t \dd \ola{W}_t, \quad H_T \sim  \pi_T \label{eq:back_sde_h},
 \end{align}
-with a backward drift $b_t(H_t) = f_t(H_t) - \sigma_t^2 \nabla_{H_t} \ln \ola{p}_{0 \mid t}(X_0 \in B | H_t)$, such that the backward transition density of the conditioned SDE in \Cref{eq:back_sde_h} is given by $\operatorname{Law}(H_s | H_t) = \ola{p}_{s \mid t, 0}(x_s| x_t, x_0 \in B)$ and $\mathbb{P}(X_0 \in B) = 1$. % (similarly for a forward SDE).
+with $b_t(H_t) = f_t(H_t) - \sigma_t^2 \nabla_{H_t} \ln p_t(H_t)$, such that the backward transition density of the conditioned SDE in \Cref{eq:back_sde_h} is given by $\operatorname{Law}(H_s | H_t) = \ola{p}_{s \mid t, 0}(x_s| x_t, x_0 \in B)$ and $\mathbb{P}(X_0 \in B) = 1$. % (similarly for a forward SDE).
 Furthermore, the resulting SDE will hit the specified event within a finite time $T$.
 \end{proposition}
 %
 \begin{lightgraybox}{Remark: Notation for Conditioning}
-    Here, we note that the notation for conditioning is slightly different from the notation used in \Cref{def:doobs}. In particular, we have the following notational choices:
+   We make the following notational choices:
     \begin{itemize}
-        \item We use $H_t$ to denote the conditioned process, and $X_t$ to denote the unconditional process. 
-        \item We refer to ``conditioned'' marginal probability distributions as $\ola{p}_{0 \mid t}(X_0 \in B | H_t)$, where we explicitly use an arrow to convey that the conditioning is being satisfied when the SDE moves in the reverse direction. This is somewhat different to the ``conditioned'' probability distribution used in \Cref{def:doobs}, where we had $p_{T \mid t}(X_T \in B | X_t)$ to denote the conditional probability distribution, without an explicit arrow, to convey that the conditioning is being satisfied when the SDE moves in the forward direction\footnote{This is in distinction to an ``unconditioned'' marginal probability distribution, which we denote as $p_{t}(X_t)$, without arrows, as the marginal probability distribution of the forward process should be equal to the marginal probability distribution of the reverse process as per Nelson's reversal in \Cref{def:nelson-reversal}.}.
+        \item We use $H_t$ to denote the conditioned process, and $X_t$ to denote the unconditioned process. \label{ntn:conditioned_process}
+        \item We refer to ``conditioned'' marginal probability distributions as $\ola{p}_{0 \mid t}(X_0 \in B | H_t)$, where we use an arrow to convey that the conditioning is satisfied the reverse direction. This is different to the ``conditioned'' probability distribution used in \Cref{def:doobs}, where we had $p_{T \mid t}(X_T \in B | X_t)$ to denote the conditional probability distribution, without an arrow, to convey that the conditioning is being satisfied when the SDE moves in the forward direction\footnote{In comparison, we denote the \emph{unconditioned} marginal probability distribution as $p_{t}(X_t)$, without arrows, as the marginal probability distribution of the forward process should be equal to the marginal probability distribution of the reverse process as per Nelson's reversal in \Cref{def:nelson-reversal}.}.
         \item We denote the conditioned transition probabilities for the SDE in \Cref{eq:back_sde_h} as $\operatorname{Law}(H_s | H_t) = \ola{p}_{s \mid t, 0}(x_s| x_t, x_0 \in B), s < t$, to emphasise that the transition densities of the reverse conditioned SDE are conditioned on the boundary condition $x_0 \in B$ throughout. Similarly, we would denote the transition densities of the forward SDE as $\ora{p}_{t \mid s}(x_t| x_s), s < t$.
     \end{itemize}
 \end{lightgraybox}
 
-The function $h(t, H_t) \triangleq \ola{p}_{0 \mid t}(X_0 \in B \mid H_t)$ is referred to as the \emph{$h$-transform} \citep{rogers2000diffusions,de2021simulating}. Doob's $h$-transform is a powerful tool for conditioning an SDE, but in the formulation of \Cref{prop:htrans}, we are conditioning on a deterministic event $X_0 \in B$. Concretely, we consider events of the form $X_0 \in B$ which are described by an equality constraint $\mathcal{A}(X_0) = y$ with $\mathcal{A}$ a known \emph{measurement} (or \emph{forward}) operator and $y$ an observation, which is a common setup in inverse problems such as inpainting or super-resolution.
+The function $h(t, H_t) \triangleq \ola{p}_{0 \mid t}(X_0 \in B \mid H_t)$ is referred to as the \emph{$h$-transform} \citep{rogers2000diffusions,de2021simulating}. Doob's $h$-transform is a powerful tool for conditioning an SDE, but in the formulation of \Cref{prop:htrans}, we are conditioning on a deterministic event $X_0 \in B$. Concretely, we consider events of the form $X_0 \in B$ which are described by an equality constraint $\mathcal{A}(X_0) = y$ with $\mathcal{A}$ a known \emph{measurement} (or \emph{forward}) operator and $y$ an observation, which is a common setup in inverse problems such as inpainting or super-resolution.\label{ntn:measurement_operator}
 
 \begin{corollary}\label{col:inpaint}% (hard constraint)
 Consider the reverse SDE in \Cref{eq:back_sde}, then it follows that
@@ -109,45 +115,46 @@ Sampling from \Cref{eq:rev_sde_htrans} directly provides samples $x \sim \pi$ wh
 
 \subsection{A More General Noisy Setting}
 
-Rather than conditioning an SDE on a deterministic event, one is often interested in a posterior arising from noisy observations (e.g. noisy inverse problems)
+Rather than conditioning an SDE on a deterministic event, one is often interested in a posterior arising from noisy observations (e.g. noisy inverse problems):
 \begin{align}
     Y = \text{noisy}(\mathcal{A}(X_0)), \,\, X_0 \sim \pi,
 \end{align}
-where $\mathcal{A}$ is a forward operator, ``$\text{noisy}$'' describes a noise process and unlike the classical $h$-transform, we are not enforcing a deterministic condition such as $\mathcal{A}(X_0) = Y$. We typically assume we can evaluate and sample from the likelihood $p(y | X = x_0)$. Our goal is to sample from the posterior $p(x_0 | Y = y) = p(y | x_0) \pi(X_0) / p(y)$. Unfortunately, Doob's $h$-transform does not immediately apply to this setting, as we are not conditioning on a deterministic event. In the next section however, we extend the $h$-transform to this setting, and show how it serves as a natural framework to unify many existing methods for conditional generation.
+where $\mathcal{A}$ is a forward operator, ``$\text{noisy}$'' describes a noise process with a corresponding likelihood $p(y | X = x_0)$ and unlike the classical $h$-transform, we are not enforcing a deterministic condition such as $\mathcal{A}(X_0) = Y$. We typically assume we can evaluate and sample from the likelihood $p(y | X = x_0)$. Our goal is to sample from the posterior $p(x_0 | Y = y) = p(y | x_0) \pi(X_0) / p(y)$. Unfortunately, Doob's $h$-transform does not immediately apply to this setting, as we are not conditioning on a deterministic event. In the next section however, we extend the $h$-transform to this setting, and show how it serves as a natural framework to unify many existing methods for conditional generation.
 
 \section{A Unifying Framework: The Generalised \texorpdfstring{$h$}{h}-transform}
-
+\label{sec:generalised_htrans}
 Sampling from the posterior can be achieved by a novel generalisation of the $h$-transform that we propose:
 
-\begin{proposition}[Generalised $h$-transform]
+\begin{selfproposition}[Generalised $h$-transform]
 \label{prop:noisy_cond}
 Given the following backwards SDE with marginals $p_t$
 \begin{align} 
     \dd X_t &=  b_t(X_t) \,\dd t + \sigma_t\; \dd \ola{W}_t,  \quad X_T \sim \pi_T, \label{eq:rev_sde2trans_21}
 \end{align}
 then it follows that the backward SDE 
-\begin{align} 
+\[
     \dd H_t = \left( b_t(H_t) - \sigma^2_t  \nabla_{H_t} \ln \ola{p}_{y \mid t}(Y=y|H_t)\right)\,\dd t + \sigma_t\; \dd \ola{W}_t, \quad H_T &\sim  \ora{\P}_T^{p(x_0 \mid y),f_t}\label{eq:rev_sde2trans_2}
-\end{align}
-satisfies $\operatorname{Law}(H_0) = p(x_0 | Y=y)$ with 
+\]
+satisfies $\operatorname{Law}(H_0) = p(x_0 | Y=y)$ with \label{ntn:terminal_of_conditioned_process}
 \[  
 \ola{p}_{y \mid t}(Y=y | H_t) = \int p(Y = y | x_0) \ola{p}_{0 \mid t}(x_0 | H_t) \dd x_0, \label{eq:gen_htrans_expr}
 \]
 where $p(Y = y | x_0)$ is the likelihood of the noisy observation $Y = y$, and therefore \Cref{eq:gen_htrans_expr} is the $h$-transform from \Cref{prop:htrans} integrated over the likelihood $p(Y = y | x_0)$. Furthermore, the initial density for \Cref{eq:rev_sde2trans_2} is given by
 \[
-    H_T \sim  \ora{\P}_T^{p(x_0 \mid y),f_t} = \int \ora{p}_{T|0}(x| x_0) p(x_0|y) \dd x_0 .
+    H_T \sim  \ora{\P}_T^{p(x_0 \mid y),f_t} = \int \ora{p}_{T|0}(x| x_0) p(x_0|y) \dd x_0,
 \]
 where $p(x_0 \mid y)$ is the posterior distribution of the data given the noisy observation $Y = y$, and $\ora{p}_{T|0}(x| x_0)$ refers to the transition density of the forward SDE with drift $f_t$. Therefore, $\ora{\P}^{p(x_0 \mid y),f_t}$ refers to the path measure for this forward SDE with drift $f_t$ but initial distribution $p(x_0 \mid y)$ (instead of the unconditional distribution $\pi(x_0)$).
 %
-\end{proposition}
+\end{selfproposition}
 \begin{proof}
     See Appendix \ref{app:proof_noisy_cond}.
 \end{proof}
 
 \begin{lightgraybox}{Remark: Notation for Generalised $h$-transform}
+    We make the following notational choices:
     \begin{itemize}
-        \item The generalised ``conditioned'' probability distribution is given by $\ola{p}_{y \mid t}(Y=y | H_t)$, where the $y \mid t$ emphasizes that the conditioning is on the noisy likelihood $p(y | x_0)$, and the reverse arrow emphasizes that the conditioning is on the reverse direction. 
-        \item The initial distribution for the reverse conditioned SDE requires some careful attention, as this is no longer equal to $\pi_T$ as we have had so far. Instead, it is given by $\ora{\P}^{p(x_0 \mid y),f_t}_T$, which refers to the terminal distribution at time $T$ of the path measure corresponding to a forward SDE specified similar to \Cref{eq:forward_sde_doobs} but with initial distribution which is given by the posterior distribution $p(x_0 \mid y)$ corresponding to the likelihood $p(y | x_0)$ (instead of the unconditional distribution $\pi$), which is given by
+        \item The generalised ``conditioned'' probability distribution is given by $\ola{p}_{y \mid t}(Y=y | H_t)$, where the $y \mid t$ emphasises that the conditioning is on the noisy likelihood $p(y | x_0)$, and the reverse arrow emphasises that the conditioning is on the reverse direction. 
+        \item The initial distribution for the reverse conditioned SDE requires some careful attention, as this is no longer equal to $\pi_T = \mathcal{N}(0, I)$. Instead, it is given by $\ora{\P}^{p(x_0 \mid y),f_t}_T$, which refers to the terminal distribution at time $T$ of the path measure corresponding to a forward SDE specified similar to \Cref{eq:forward_sde_doobs} but with initial distribution which is given by the posterior distribution $p(x_0 \mid y)$ corresponding to the likelihood $p(y | x_0)$ (instead of the unconditional distribution $\pi$), which is given by
         \[
             \dd X_t &= f_t(X_t) \, \dd t + \sigma_t \dd W_t \quad X_0 \sim  p(x_0 \mid y), \quad X_{0:T} \sim \ora{\P}^{p(x_0 \mid y), f}.
         \]
@@ -157,7 +164,7 @@ where $p(x_0 \mid y)$ is the posterior distribution of the data given the noisy 
 
 In practice, the initial distribution of the reverse SDE can pose an issue, as we do not know it in closed form. However, as we will show later, we can bound the error introduced by approximating this initial distribution with something tractable, i.e. $\mathcal{N}(0, I)$, and show that it decays exponentially for increasing $T$.
 
-To summarise \Cref{prop:noisy_cond}, the result gives a generalisation of the $h$-transform that allows sampling from posteriors; notice that it recovers the traditional $h$-transform in the no-noise setting. Whilst this more general formulation of the $h$-transform has been explored in unconditional generative modelling \citep{ye2022first}, this is the first work to cast conditional generative modelling in this light. We refer to the corresponding term $h(x_t, t, y) \triangleq \ola{p}_{y \mid t}(Y = y \mid H_t)$ as the \textit{generalised $h$-transform} henceforth.
+To summarise \Cref{prop:noisy_cond}, the result gives a generalisation of the $h$-transform that allows sampling from posteriors; notice that it recovers the traditional $h$-transform in the no-noise setting. Whilst this more general formulation of the $h$-transform has been explored in unconditional generative modelling \citep{ye2022first}, this is the first work to cast conditional generative modelling in this light. We refer to the corresponding term $h(x_t, t, y) \triangleq \ola{p}_{y \mid t}(Y = y \mid H_t)$ as the \textit{generalised $h$-transform} henceforth.\label{ntn:generalised_htrans}
 
 \subsection{Existing Approaches under the Generalised \texorpdfstring{$h$}{h}-transform}
 
@@ -168,7 +175,7 @@ To summarise \Cref{prop:noisy_cond}, the result gives a generalisation of the $h
     The \(\times\) marks are successive samples obtained during the simulation of the reverse SDE starting from an arbitrary point, and arrows indicate proposed updates.  
     \textbf{(a) Unconditional sampling} follows the reverse SDE of \(\pi\) towards the unconditional density, and ignores the constraint.  
     \textbf{(b) Replacement} simulates the same SDE but overwrites the observed coordinate after every step, \(x_b\!\leftarrow\!\hat{x}\) (shown in dotted red lines).  
-    \textbf{(c) Reconstruction guidance} augments the unconditional score term in the drift (shown in blue) with Tweedie’s correction \(\sigma_t^{2}\nabla_{x_t}\ln\ola{p}_{0\mid t}(x_0\mid H_t)\) (shown in red), steering the path towards the constraint.  
+    \textbf{(c) Reconstruction guidance} augments the unconditional score term in the drift (shown in blue) with an approximation of \(\nabla_{H_t} \ola{p}_{0\mid t}(x_0\mid H_t)\) using Tweedie’s formula (shown in red), steering the path towards the constraint.  
     \textbf{(d) Amortised training} uses a network trained to approximate the conditional score \(\nabla_{x_t}\ln\ora{p}_{t\mid0}(x_t\mid X_0=\hat{x})\) directly, so the trajectory follows the true conditional flow from the outset.}
 
     \label{fig:sampling_cond}
@@ -182,7 +189,7 @@ Let us consider the expression in \Cref{eq:gen_htrans_expr}. In practice, one do
 \begin{definition}[Tweedie's formula]
     Let $a$, $b$ be random variables such that the conditional distribution $p(a \mid b)$ is an exponential family distribution such as $p_0(a) \exp \left(b^{\top} T(a)-\psi(b)\right)$. Then the posterior mean $\hat{b}=\mathbb{E}[b \mid a]$ should satisfy $\left(\nabla_a T(a)\right)^{\top} \hat{b}=\nabla_a \log p(a)-\nabla_a \log p_0(a)$.
 \end{definition}
-For DDPM models, we have that $\ora{p}_{t \mid 0}(x_t \mid x_0)$ is Gaussian (by construction of the forward process), and therefore we can apply Tweedie's formula to approximate the transition density using the posterior mean, as follows:
+For DDPM models, we have that $\ora{p}_{t \mid 0}(x_t \mid x_0)$ is Gaussian (by construction of the forward process), and therefore we can apply Tweedie's formula to approximate the transition density using the posterior mean, as follows:\label{ntn:tweedies_formula}
 \[
     \hat{x}_0=\mathbb{E}\left[x_0 \mid x_t\right]=\frac{1}{\sqrt{\alpha \overline{(t)}}}\left(x_t+(1-\bar{\alpha}(t)) \underbrace{\nabla_{x_t} \log p_t\left(x_t\right)}_{\text{pre-trained } s_{\theta, t}}\right). \label{eq:tweedies_formula_ddpm}
 \]
@@ -196,30 +203,30 @@ Overall, the Gaussian-based approximations of Doob's $h$-transform lead to recon
 \begin{align}
   \dd H_t = \left( b_t(H_t) +\sigma_t^2 \nabla_{H_t} ||y - \mathrm{A} \E[X_0 | X_t = H_t]  ||^2_{\Gamma_t}\right)\dd t + \sigma_t \dd \ola{W}_t, X_T \sim  \pi_T,  \label{eq:reverse_sde_reconstruction_guidance}
 \end{align}
-where $\Gamma_t$ acts as a guidance scale \citep{rozet2023score,mathis2023nmd}, and $\mathrm{A}$ is a matrix if $\mathcal{A}$ is linear otherwise $\mathrm{A} = \mathrm{d} \mathcal{A}(\E[X_0 |X_t = H_t])$. The expectation $\E[X_0 |X_t = H_t]$ can be computed using \Cref{eq:tweedies_formula_ddpm} utilising the already trained score network, and per reverse simulation step of the SDE, requires a backpropagation step through the score network (since we take the gradient of the expectation term in \Cref{eq:reverse_sde_reconstruction_guidance} w.r.t $X_t$, and this requires a backpropagation step through the score network).
+where $\Gamma_t$ acts as a guidance scale \citep{rozet2023score,mathis2023nmd}\label{ntn:guidance_scale}, and $\mathrm{A}$ is a matrix if $\mathcal{A}$ is linear otherwise $\mathrm{A} = \mathrm{d} \mathcal{A}(\E[X_0 |X_t = H_t])$. The expectation $\E[X_0 |X_t = H_t]$ can be computed using \Cref{eq:tweedies_formula_ddpm} utilising the already trained score network, and per reverse simulation step of the SDE, requires a backpropagation step through the score network (since we take the gradient of the expectation term in \Cref{eq:reverse_sde_reconstruction_guidance} w.r.t $X_t$, and this requires a backpropagation step through the score network).
 
 \paragraph{Classifier-Free Guidance.}
 
 Methodologies such as Classifier Free Guidance (CFG) \citep{ho2022classifier} do not model the forward operator explicitly. As a result, if these methods are applied to settings such as image out-painting (where the conditioning is on a subset of the random variable), these methodologies would only denoise the missing image patches. In \Cref{eq:rev_sde2trans_2}, if we expand out $b_t(H_t)$ we get
 \begin{align}
-    \dd H_t = \left( f_t(H_t) - \underbrace{\sigma^2 \nabla_{H_t} \ln p_t(H_t) - \sigma^2_t  \nabla_{H_t} \ln \ola{p}_{y \mid t}(Y=y|H_t)}_{\text{joint score } s_{\theta, t}(x_t, t, y)} \right)\,\dd t + \sigma_t\; \dd \ola{W}_t.
+    \dd H_t = \left( f_t(H_t) - \underbrace{\sigma^2 \nabla_{H_t} \ln p_t(H_t) - \sigma^2_t  \nabla_{H_t} \ln \ola{p}_{y \mid t}(Y=y|H_t)}_{\text{joint score } s_{\theta, t}(x_t, t, y)} \right)\,\dd t + \sigma_t\; \dd \ola{W}_t. \label{eq:rev_sde_cfg}
 \end{align}
-CFG methods learn a single model that approximates the joint score using a single score network $s_{\theta, t}(x_t, t, y)$, where occasionally, the observation $y$ is masked out, teaching the model to approximate the unconditional score $\sigma^2 \nabla_{H_t} \ln p_t(H_t)$, and when $y$ is not masked out, the model learns to approximate the joint score. At inference time, CFG methods can simulate the following reverse SDE:
+\label{ntn:joint_score}CFG methods learn a single model that approximates the joint score using a single score network $s_{\theta, t}(x_t, t, y)$, where occasionally, the observation $y$ is masked out, teaching the model to approximate the unconditional score $\sigma^2 \nabla_{H_t} \ln p_t(H_t)$, and when $y$ is not masked out, the model learns to approximate the joint score. At inference time, CFG methods can simulate the following reverse SDE:
 \begin{align}
     \dd H_t = \left( f_t(H_t) - \left[ \gamma s_{\theta, t}(x_t, t, y) + (1-\gamma) s_{\theta, t}(x_t, t) \right] \right)\,\dd t + \sigma_t\; \dd \ola{W}_t,
 \end{align}
-where $\gamma$ is a scalar parameter that controls the strength of the guidance.
+where $\gamma$ is a scalar parameter that controls the strength of the guidance.\label{ntn:guidance_strength}
 
 \paragraph{Amortised Conditional Training.}
 
 It is also possible to learn the joint score directly using a dataset of datapoints paired with their observations $\mathcal{D}_{\text{cond}} = \{(x_0^{(i)}, y^{(i)})\}_{i=1}^N$, such as in Conditional Denoising Estimator (CDE) \citep{batzolis2021conditional}. The method learns a score network to approximate the joint score directly from the dataset $\mathcal{D}_{\text{cond}}$. In this section, we derive a more general loss function than CDE \citep{batzolis2021conditional}, where we can further amortise over the form of the measurement operator $\mathcal{A}$, which we find has even better empirical performance. 
 
-First, we note that since $\ola{p}_{y|t}(Y = y| X_t) = \ora{p}_{t|y}(X_t |Y = y) p_0(Y = y) / p_t(X_t)$, we can re-express the Doob's transformed SDE of a reversed OU process as:
-\begin{align}
-    \dd H_t &= -\beta_t  \left(H_t + 2\nabla_{H_t} \ln \ora{p}_{t|0}(H_t \mid Y= y )\right)\,\dd t + \sqrt{2\beta_t }\; \dd \ola{W}_t, \;\; H_T \sim  \operatorname{Law}[X_T].
-\end{align}
-We then have the following proposition, which shows that the minimiser of the loss function is given by the conditional score:
-\begin{proposition}[Amortised Conditional Score Matching]
+First, we note that $\ola{p}_{y|t}(Y = y| X_t) = \ora{p}_{t|y}(X_t |Y = y) p_0(Y = y) / p_t(X_t)$, and therefore we can write the reverse SDE from \Cref{eq:rev_sde_cfg} as:
+\[
+    \dd H_t = \left( f_t(H_t) - \sigma^2 \nabla_{H_t} \ln \ora{p}_{t|y}(X_t |Y = y) \right)\,\dd t + \sigma_t\; \dd \ola{W}_t. \label{eq:rev_sde_amortised}
+\]
+Therefore, if we can learn $\ora{p}_{t|y}(X_t |Y = y)$ in a score-matching fashion, we can use this to approximate the joint score in \Cref{eq:rev_sde_amortised}. We propose the following loss function:
+\begin{selfproposition}[Amortised Conditional Score Matching]
     \label{prop:amortised_conditional_score_matching}
     The minimiser of
     \begin{align}
@@ -227,13 +234,13 @@ We then have the following proposition, which shows that the minimiser of the lo
     ) \sim \mathcal{D}_{\text{cond}} \\ t \sim \mathrm{U}(0,T), H_t \sim \ora{p}_{t|0}(x_t|x_0)}  }\!\left[ ||h(t, H_t, y) - \nabla_{H_t}\!\ln \ora{p}_{t|0}(H_t|X_0)||^2  \!\right],%\nonumber
     \end{align}
 is given by the conditional score $f^*_t(x, y) = \nabla{x} \log \ora{p}_{t|0}(x \vert Y = y)$.
-\end{proposition}
+\end{selfproposition}
 \begin{proof}
     See Appendix \ref{app:proof_amortised_conditional_score_matching}.
 \end{proof}
 For settings where $\mathcal{A}$ varies like in image completion we sample $\mathcal{A}$ randomly and amortise it over our learned $h$-transform, i.e.  estimating $h^*_t(x, y, \mathcal{A})$. We refer to this approach as \emph{amortised conditional training}, since practically the neural network approximating the (conditional) score is amortised over $\mathcal{A}$ and $y$, instead of learning a separate network for each condition.
 
-We note that this is different from Classifier-Free Guidance, as the joint score model is not occasionally masking out the observations $y$ in an attempt to approximate both the conditional and unconditional score, depending on the inputs to the model. Further, we $\mathcal{A}$ is assumed to be known (e.g.\ an inpainting mask).
+We note that this is different from Classifier-Free Guidance, as the joint score model is not occasionally masking out the observations $y$ in an attempt to approximate both the conditional and unconditional score, depending on the inputs to the model. Further, $\mathcal{A}$ is assumed to be known (e.g.\ an inpainting mask).
 
 Whilst CDE does not focus on the measurement model, they estimate a very similar quantity as our \Cref{prop:amortised_conditional_score_matching}:
 \begin{align}
@@ -243,7 +250,7 @@ One can see that the quantities are related to one another via marginalizing the
 
 \paragraph{Replacement Sampling.}
 
-Replacement Sampling is a method for conditional generation that simulates the unconditional reverse SDE, but at each time step, replaces the coordinates within $X_t$ with the observations $y$. This process is only possible for settings where the forward operator $\mathcal{A}$ is a binary mask, and therefore $y$ is a partial observation of $X_0$. We consider $y = \mathcal{A}(X_0) = X_0^{[M]}$ in this case, where $X_0^{[M]}$ is the set of coordinates within $X_0$ that are observed. In Replacement Sampling, the model directly aims to sample from $p(X_t^{[\backslash M]} | X_0^{[ M]})$ and estimate this score while keeping the observed coordinates fixed. We can relate this approach to our amortised learning of Doob's $h$-transform, by noting that this is equivalent to learning the marginal conditional score
+Replacement Sampling is a method for conditional generation that simulates the unconditional reverse SDE, but at each time step, replaces the coordinates within $X_t$ with the observations $y$. This process is only possible for settings where the forward operator $\mathcal{A}$ is a binary mask, and therefore $y$ is a partial observation of $X_0$. We consider $y = \mathcal{A}(X_0) = X_0^{[M]}$ in this case, where $X_0^{[M]}$\label{ntn:masked_coords} is the set of coordinates within $X_0$ that are observed. In Replacement Sampling, the model directly aims to sample from $p(X_t^{[\backslash M]} | X_0^{[ M]})$ and estimate this score while keeping the observed coordinates fixed\label{ntn:replacement_sampling}. We can relate this approach to our amortised learning of Doob's $h$-transform, by noting that this is equivalent to learning the marginal conditional score
 \begin{align}
     p(x_t^{[\backslash M]} | x_0^{[ M]})   = \int   \overbrace{p(x_t | x_0^{[ M]}) }^{\propto h(t,x_t)p_t(x_t) } d x_t^{[ M]}.
 \end{align}
@@ -252,9 +259,9 @@ This can be viewed as estimating a marginal counterpart of our amortised $h$-tra
 \section{DEFT: Doob's \texorpdfstring{$h$}{h}-transform Efficient Finetuning}
 \label{sec:training_objectives}
 
-We have discussed prior works that either learn the posterior score from scratch, see e.g. \textcite{batzolis2021conditional,ho2022classifier}, or use approximations to the generalised $h$-transform, see e.g. \textcite{chung2022diffusion,kawar2022denoising}. These methods are either really expensive and data-hungry, or make cheap approximations that reduce the quality and fidelity of the obtained samples. Instead, in this section,we propose a method to learn the generalised $h$-transform directly from a very small dataset of paired datapoints $(x_0, y)$, while keeping the pre-trained unconditional network unchanged. We refer to this process as fine-tuning, as only the approximation to the generalised $h$-transform is learned. Our main result is given in the following theorem, where we give several representations of the generalised $h$-transform. 
+We have discussed prior works that either learn the posterior score from scratch \citep{batzolis2021conditional,ho2022classifier}, or use approximations to the generalised $h$-transform \citep{chung2022diffusion,kawar2022denoising}. These methods are either really expensive and data-hungry, or make cheap approximations that reduce the quality and fidelity of the obtained samples. Instead, in this section, we propose a method to learn the generalised $h$-transform directly from a very small dataset of paired datapoints $(x_0, y)$, while keeping the pre-trained unconditional network unchanged. We refer to this process as fine-tuning, as only the approximation to the generalised $h$-transform is learned. Our main result is given in the following theorem, where we give several representations of the generalised $h$-transform. 
 
-\begin{theorem}[Representations of conditional SDE sampling] 
+\begin{selftheorem}[Representations of conditional SDE sampling] 
 \label{theorem:representation_h}
 For a given $y \sim \text{noisy}(\mathcal{A}(x_0))$, let $\ola{\Q}$ be the path measure of the conditional SDE 
 \begin{align} \label{eq:vpsderev0_main}
@@ -262,90 +269,93 @@ For a given $y \sim \text{noisy}(\mathcal{A}(x_0))$, let $\ola{\Q}$ be the path 
 \end{align}
 where $H_T \sim  \ora{\P}^{p(x_0 \mid y),f_t}_T$. The generalised $h$-transform admits the following representations:
 \begin{enumerate}
-    \item[1)] The path measure induced by the $h$-transformed SDE satisfies $\dd\ola{\Q}^* = \dd \ola{\P} \frac{\dd p(x_0|y)}{\dd \ola{\P}_0}$,
+    \item[1)] The path measure induced by the $h$-transformed SDE satisfies $\dd\ola{\Q}\!= \!\dd \ola{\P} \frac{\dd p(x_0|y)}{\dd \ola{\P}_0}$,
     %\begin{align}
     %    \dd\Q^* = \dd\P \frac{\dd p(x_0|y)}{\dd \P_0} \nonumber
     %\end{align}
-    where $\ola{\P}$ is the path measure of the unconditioned reverse SDE in \Cref{eq:rev_sde2trans_2} and $\ola{\P}_0$ is it's time $0$ marginal.
-    \item[2)] The $h$-transform admits a \textbf{denoising score matching} representation
+    where $\ola{\P}$ is the path measure of the unconditioned reverse SDE in \Cref{eq:rev_sde2trans_2} and $\ola{\P}_0$ is its time $0$ marginal.\footnote{This Radon-Nikodym derivative says that the reverse path measure $\ola{\Q}$ is the same as the unconditioned reverse path measure $\ola{\P}$ but with a different initial distribution $\ola{\P}_0 = p(x_0|y)$.}
+    \item[2)] The $h$-transform admits a \textbf{denoising score matching} representation\footnote{Under appropriate conditions on the likelihood, the space of admissible controls $\mathcal{H}$ can be taken to be the set of $C_1$-vector fields with linear growth in space; see \textcite{nusken2021solving}.}
     \begin{align}
 h_t^* &= \argmin_{h_t \in \mathcal{H}} \mathcal{L}_\text{SM}^\m(h_t) \nonumber \\ &\mathcal{L}_\text{SM}^\m(h_t) \coloneqq  \!\!\!\!\!\! \!\!
-    \mathop{\mathbb{E}}_{\substack{ X_0 \sim p(x_0 | \m) \\ t\sim \mathrm{U}(0,T) \\ H_t \sim \ora{p}_{t|0}(x_t|x_0)}  }\!\!\left[ \| \left({h_t(H_t)}\!+\!\nabla_{H_t} \ln p_t(H_t) \right)\!-\!\nabla_{H_t}\ln {p}(H_t  |X_0) \|^2\right] \nonumber \end{align}
+    \mathop{\mathbb{E}}_{\substack{ X_0 \sim p(x_0 | \m) \\ t\sim \mathrm{U}(0,T) \\ H_t \sim \ora{p}_{t|0}(x_t|x_0)}  }\!\!\left[ \| \left({h_t(H_t)}\!+\!\nabla_{H_t} \ln p_t(H_t) \right)\!-\!\nabla_{H_t}\ln {p}(H_t  |X_0) \|^2\right] \label{eq:sm_obj} \end{align}
     \item[3)] The $h$-transform admits the following \textbf{stochastic control} formulation
     \begin{align}
-    h_t^* =\argmin_{h_t \in \mathcal{H}} \left\{ \mathcal{L}_\text{SC}^\m(h_t) \coloneqq \E_{\ola{\Q}}\left[\frac{1}{2}\int_0^T \sigma_t^{2}|| h_t(H_t) ||^2 \dd t\right] - \E_{H_0 \sim \ola{\Q}_0} [\ln p(y| H_0)] \right\} \nonumber,
+    h_t^* =\argmin_{h_t \in \mathcal{H}} \left\{ \mathcal{L}_\text{SC}^\m(h_t) \coloneqq \E_{\ola{\Q}}\left[\frac{1}{2}\int_0^T \sigma_t^{2}|| h_t(H_t) ||^2 \dd t\right] - \E_{H_0 \sim \ola{\Q}_0} [\ln p(y| H_0)] \right\} \label{eq:stoch_control_obj},
     \end{align}
-    where $\ola{\Q}$ is the path measure for the conditional SDE being controlled.
+    where $\ola{\Q}$ is the path measure for the conditional SDE being controlled.\label{ntn:path_measure_for_controlled_sde}
     % \item[4)] The path measure induced by the $h$-tranformed SDE solves the a Schr\"{o}dinger bridge problem with boundary conditions $\ola{\Q}_0 = \ora{\P}^{p(x_0 \mid y),f_t}_T \approx \mathcal{N}(0,I)$, $\ola{\Q}_T = p(x_0|y)$ and with the unconditional process $\ola{\P}$ as its reference. 
     % \begin{align}
     %     \Q^* = \argmin_{\Q:\,\, \Q_0 = Q^{f_t}_T[ p(x_0|y)],\,\Q_T = p(x_0|y)} \KL(\Q || \P)\nonumber
     % \end{align}
     % where $\P$ as before is the path measure associated with our unconditioned reverse SDE. 
 \end{enumerate}
-\end{theorem}
+\end{selftheorem}
 \begin{proof}
-    1) follows from \textcite{bernton2019schr,vargas2021solving}. For a proof of 2), see Appendix \ref{app:proof_representation_h_2}.
+    (1) follows from \textcite{bernton2019schr,vargas2021solving}. For a proof of (2), see Appendix \ref{app:proof_representation_h_2}. For a proof of (3), see Appendix \ref{app:proof_stochastic_control}.
 \end{proof}
-Under appropriate conditions on the likelihood, the space of admissible controls $\mathcal{H}$ can be taken to be the set of $C_1$-vector fields with linear growth in space; see \textcite{nusken2021solving}. In the following sections, we will discuss the representations in 2) and 3) in more detail.  
+
+In the following sections, we will discuss the representations in (2) and (3) in more detail.
 
 \subsection{DEFT: Fine-tuning by score matching}
 \label{sec:offline_finetuning}
-
-The score matching objective in \Cref{theorem:representation_h}, (2), offers a simulation-free loss function to estimate the generalised $h$-transform. While the theorem's formulation focuses on learning the $h$-transform for a specific measurement $y$, this loss function can naturally be extended and amortized over the full range of measurements, i.e.,
-\begin{align}
-    \min_{h \in \mathcal{H}} \E_{y \sim Y}[\mathcal{L}_\text{SM}^y(h)], \label{eq:finetuning_loss_amortised}
-\end{align}
-to obtain $h^{*}_t(x, y) = \nabla_{x}\ln p_t(y | x)$. Further, for settings where the operator may vary, we can additionally amortise over the forward operator $\mathcal{A} \sim p$ and learn $h^{*}_t\!(x, y, \mathcal{A}) = \nabla_{x}\ln p_t(y | x, \mathcal{A})$. We exploit this to amortise over inpainting masks, see Section~\ref{sec:image_rec}, and motif scaffolding, see Section~\ref{sec:protein_design}. 
-For the DDPM \citep{ho2020denoising} discretisation of the SDE and a pre-trained epsilon matching model $\epsilon_t^{\theta^*}$, the fine-tuning objective in \Cref{eq:finetuning_loss_amortised} reduces to
-\begin{align}
-    \label{eq:ddpm_finetuning}
-    \min_\phi \mathbb{E}_{(X_0, Y), \epsilon, t} \left[ \| ( h^\phi_t(H_t, Y) + \epsilon^{\theta^*}_t(H_t)) - \epsilon \|^2 \right],
-\end{align}
-with $H_t = \sqrt{\Bar{\alpha}_t} X_0 + \sqrt{1 - \Bar{\alpha}_t} \epsilon$, $ (X_0, Y) \sim \mathcal{D}_{\text{cond}}, \epsilon \sim \mathcal{N}(0, I)$, where $h_t^\phi$ represents the neural network used to approximate the generalised $h$-transform. Note that the loss function in \Cref{eq:ddpm_finetuning} only requires evaluation of the pre-trained model, without needing to backpropagate through the weights $\theta^{*}$, which is often quite expensive and sometimes impossible in closed APIs. Training under the DDPM discretisation can be performed according to Algorithm~\ref{algo:finetune_dobsh_training}. Sampling with DEFT is further explained in Algorithm~\ref{algo:finetune_dobsh_sampling}, and pictorially represented in Figure~\ref{fig:condov}. As an additional insight into the behaviour of the $h$-transform that makes it more flexible and capable of modelling non-linear tasks than standard reconstruction guidance methods, we show that the $h$-transform can be interpreted as a correction term for the Tweedie estimate \citep{efron2011tweedie}.
-We can express the conditional Tweedie's estimate as 
-\begin{equation}
-    \label{eq:h_transform_tweedie}
-    \begin{split}
-           \E[x_0 | x_t, y] &\approx \hat{x}_0(x_t, y) \\ &= \frac{x_t - \sqrt{1 - \bar \alpha_t} \left(h^{\phi^*}_t(x_t, y) + \epsilon^{\theta^*}_t(x_t)\right) }{\sqrt{\bar \alpha_t}} = \hat{x}_0(x_t) - \frac{\sqrt{1 - \bar \alpha_t}}{\sqrt{\bar \alpha_t}} h^{\phi^*}_t(x_t, y), 
-    \end{split}
-\end{equation}
-where $\hat{x}_0(x_t)$ is the unconditional Tweedie estimate. \Cref{eq:h_transform_tweedie} highlights that the $h$-transform can also be interpreted as a correction factor to the unconditional denoised estimate commonly used in baselines such as DPS \parencite{chung2022diffusion}. This extension is similar to \textcite{ravula2023optimizing,zhang2023adding}. 
 
 \begin{figure}[!t]
     \centering
     %\includegraphics[width=0.98\textwidth]{Figs/cond_overview.pdf}
     \includegraphics[width=0.95\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Vector/DEFT_sampling_stheta_plus_network_plus_x0hat.pdf"}
     % \vspace{-0.3cm}
-    \caption[DEFT reverse diffusion setup.]{DEFT reverse diffusion setup. The pre-trained unconditional diffusion model $s_t^\theta$ and the fine-tuned $h$-transform $h_t^\phi$ are combined at every sampling step. We propose a special network to parametrise the $h$-transform including the guidance term $\nabla_{\hat{x}_0} \log p(\m|\hat{x}_0)$ as part of the architecture. Here $\hat{x}_0$ denotes the unconditional denoised estimate given $s_t^\theta(x_t)$. During training, we only need to fine-tune $h_t^{\phi}$ (usually $4$-$9\%$ the size of $s_t^{\theta}$) using a small dataset of paired measurements, keeping $s_\theta^t$ fixed. During sampling, we do not need to backpropagate through either model, resulting in speed-ups during evaluation.}
+    \caption[DEFT reverse diffusion setup]{DEFT reverse diffusion setup. The pre-trained unconditional diffusion model $s_t^\theta$ and the fine-tuned $h$-transform $h_t^\phi$ are combined at every sampling step. We propose a special network to parametrise the $h$-transform including the guidance term $\nabla_{\hat{x}_0} \log p(\m|\hat{x}_0)$ as part of the architecture. Here $\hat{x}_0$ denotes the unconditional denoised estimate given $s_t^\theta(x_t)$. During training, we only need to fine-tune $h_t^{\phi}$ (usually $4$-$9\%$ the size of $s_t^{\theta}$) using a small dataset of paired measurements, keeping $s_\theta^t$ fixed. During sampling, we do not need to backpropagate through either model, resulting in speed-ups during evaluation.}
     \label{fig:condov}
     % \vspace{-0.3cm}
 \end{figure}
 
+The score matching objective in \Cref{theorem:representation_h}, (2), offers a simulation-free loss function to estimate the generalised $h$-transform. While the theorem's formulation focuses on learning the $h$-transform for a specific measurement $y$, this loss function can naturally be extended and amortised over the full range of measurements, i.e.,
+\begin{align}
+    \min_{h \in \mathcal{H}} \E_{y \sim Y}[\mathcal{L}_\text{SM}^y(h)], \label{eq:finetuning_loss_amortised}
+\end{align}
+to obtain $h^{*}_t(x, y) = \nabla_{x}\ln p_t(y | x)$. Further, for settings where the operator may vary, we can additionally amortise over the forward operator $\mathcal{A} \sim p$ and learn $h^{*}_t\!(x, y, \mathcal{A}) = \nabla_{x}\ln p_t(y | x, \mathcal{A})$. We exploit this to amortise over inpainting masks, see Section~\ref{sec:image_rec}, and motif scaffolding, see Section~\ref{sec:protein_design}. 
+
+\begin{selfdefinition}[DEFT Epsilon-Score Matching for DDPM]
+For the DDPM \citep{ho2020denoising} discretisation of the SDE and a pre-trained epsilon matching model $\varepsilon_t^{\theta^*}$, the fine-tuning objective in \Cref{eq:finetuning_loss_amortised} reduces to\label{ntn:epsilon_network}\label{ntn:param_h}
+\begin{align}
+    \label{eq:ddpm_finetuning}
+    \mathcal{L}_\text{DEFT, SM} := \min_\phi \mathbb{E}_{(X_0, Y), \varepsilon, t} \left[ \| ( h^\phi_t(H_t, Y) + \varepsilon^{\theta^*}_t(H_t)) - \varepsilon \|^2 \right],
+\end{align}
+with $H_t = \sqrt{\Bar{\alpha}_t} X_0 + \sqrt{1 - \Bar{\alpha}_t} \varepsilon$ from the DDPM discretisation\label{ntn:ddpm_alpha_bar}, $ (X_0, Y) \sim \mathcal{D}_{\text{cond}}$, and $\varepsilon \sim \mathcal{N}(0, I)$, where $h_t^\phi$ represents the neural network used to approximate the generalised $h$-transform. 
+\end{selfdefinition}
+Note that the loss function in \Cref{eq:ddpm_finetuning} only requires evaluation of the pre-trained model, without needing to backpropagate through the weights $\theta^{*}$, which is often quite expensive and sometimes impossible in closed APIs. Training under the DDPM discretisation can be performed according to Algorithm~\ref{algo:finetune_dobsh_training}. Sampling with DEFT is further explained in Algorithm~\ref{algo:finetune_dobsh_sampling}, and pictorially represented in Figure~\ref{fig:condov}. As an additional insight into the behaviour of the $h$-transform that makes it more flexible and capable of modelling non-linear tasks than standard reconstruction guidance methods, we have the following remark:
+
+\begin{selfremark}[DEFT as a correction term for the Tweedie estimate]
+    \label{prop:deft_tweedie}
+    The $h$-transform can be interpreted as a correction term for the Tweedie estimate \citep{efron2011tweedie}, seen as 
+    \begin{equation}
+        \label{eq:h_transform_tweedie}
+        \begin{split}
+               \E[x_0 | x_t, y] &\approx \hat{x}_0(x_t, y) \\ &= \frac{x_t - \sqrt{1 - \bar \alpha_t} \left(h^{\phi^*}_t(x_t, y) + \varepsilon^{\theta^*}_t(x_t)\right) }{\sqrt{\bar \alpha_t}} = \hat{x}_0(x_t) - \frac{\sqrt{1 - \bar \alpha_t}}{\sqrt{\bar \alpha_t}} h^{\phi^*}_t(x_t, y), 
+        \end{split}
+    \end{equation}
+    where $\hat{x}_0(x_t)$ is the unconditional Tweedie estimate.
+\end{selfremark}
+
+ \Cref{eq:h_transform_tweedie} highlights that the $h$-transform can also be interpreted as a correction factor to the unconditional denoised estimate commonly used in baselines such as DPS \parencite{chung2022diffusion}. This extension is similar to \textcite{ravula2023optimizing,zhang2023adding}. 
+
 \begin{algorithm}[H]
     \caption{$\vert$ $h$-transform fine-tuning}
     \label{algo:finetune_dobsh_training}
-    \begin{algorithmic}[1]
+    \begin{algorithmic}
     \Require Dataset drawn from $\pi(x_0, y)$ \Comment{Dataset law $\pi$}
     \Require Noise schedule $\beta_t = \beta(t), \bar{\alpha}_t = \bar{\alpha}(t)$, parametrising process $\pi \to \pi_t$
-    \Require Trained noise predictor function $\epsilon^\theta_t(x)$ with parameters $\theta$
+    \Require Trained noise predictor function $\varepsilon^\theta_t(x)$ with parameters $\theta$
     \Require Untrained $h$-transform $h^\phi_t(x, \hat{x}_0, y)$ with parameters $\phi$
     \Repeat
-        \State $x_0 \sim \pi$
-        \State $t \sim \text{Uniform}(\{1,...,T\})$
-    
-        % Sample measurements
-        \State $y \sim p(y|x_0)$  \Comment{Simulate observations}
+        \State $x_0 \sim \pi$, $t \sim \text{Uniform}(\{1,...,T\})$, $y \sim p(y|x_0)$, $\varepsilon_t \sim \mathcal{N}(0, I)$  \Comment{Take samples}
         % Forward noise
-        \LComment{Forward noise full sample via sampling from $\ora{p}_{t \vert 0}(x_0)$}
-        \State $\epsilon_t \sim \mathcal{P}_\text{noise}$
-        \State $x_t \gets \sqrt{\bar\alpha_t} x_0 + \sqrt{1 - \bar\alpha_t} \epsilon_t$ 
+        \State $x_t \gets \sqrt{\bar\alpha_t} x_0 + \sqrt{1 - \bar\alpha_t} \varepsilon_t$ \Comment{Calculate noised sample with $\ora{p}_{t \vert 0}(x_0)$}
         % Estimate noise
-        \State ${\hat{\epsilon}} \gets \epsilon^\theta_t(x_t)$ \Comment{Estimate noise of sample with pretrained model}
-        \State $\hat{x}_0 \gets (x_t - \sqrt{1 - \bar\alpha_t} {\hat{\epsilon}}_{\theta})/\sqrt{\bar\alpha_t}$
-        \State $\hat{\epsilon}_\phi \gets h^\phi_t(x_t, \hat{x}_0, y)$ \Comment{Estimate noise of sample with $h$-transform}
-        \State \text{Take gradient descent step w.r.t. $\phi$ on} 
-        \Statex $\quad \nabla_{\theta}L(\epsilon, \hat{\epsilon}_\theta + \hat{\epsilon}_\phi)$
-        \Comment{Typically, $L(x_\text{true}, x_\text{pred}) = || x_\text{true} - x_\text{pred} ||^2$}
+        % \State ${\hat{\varepsilon}} \gets \varepsilon^\theta_t(x_t)
+        \State $\hat{x}_0 \gets (x_t - \sqrt{1 - \bar\alpha_t} {{\varepsilon}}^{\theta}_t(x_t))/\sqrt{\bar\alpha_t}$ \Comment{Estimate noise with pre-trained model}
+        \State $\hat{\varepsilon}_\phi \gets h^\phi_t(x_t, \hat{x}_0, y)$ \Comment{Estimate noise of sample with $h$-transform}
+        \State \text{Take gradient descent step w.r.t. $\phi$ on $\mathcal{L}_\text{DEFT, SM}$ from \Cref{eq:ddpm_finetuning}}
     \Until converged or max epoch reached
     
     \end{algorithmic}
@@ -355,34 +365,26 @@ where $\hat{x}_0(x_t)$ is the unconditional Tweedie estimate. \Cref{eq:h_transfo
     \begin{algorithm}[H]
     \caption{$\vert$ $h$-transform DDIM sampling}
     \label{algo:finetune_dobsh_sampling}
-    \begin{algorithmic}[1]
+    \begin{algorithmic}
     \Require Trained $h$-transform $h^\phi_t(x, \hat{x}_0, y)$ with parameters $\phi$
-    \Require Unconditionally trained noise predictor $\epsilon^\theta_t(x_t)$ 
+    \Require Unconditionally trained noise predictor $\varepsilon^\theta_t(x_t)$ 
     \Require Noise schedule $\beta_t = \beta(t), \bar{\alpha}_t = \bar{\alpha}(t)$, parametrising process $\pi \to \pi_T$
     \Require Schedule $\sigma_t = \sigma(t)$
     \Require Observation $y$
-    \LComment{Sample a starting point $x_T$}
-    \State $x_T \sim \pi_T$\Comment{Often $\pi_T = \mathcal{N}(0,\mathbf{I})$}
-        
-    \Statex
-    \LComment{Iteratively denoise for $T$ steps}
-    \For{$t$ in $(T, T-1, \dots, 1)$}
+    \State $x_T \sim \mathcal{N}(0, I)$ \Comment{Sample a starting point $x_T$}
+    \For{$t$ in $(T, T-1, \dots, 1)$} \Comment{Iteratively denoise for $T$ steps}
             % Predict noise
-            \LComment{Predict unconditional noise with learned network}
-            \State ${\hat{\epsilon}} \gets \epsilon^\theta_t(x_t)$
+            \State ${\hat{\varepsilon}} \gets \varepsilon^\theta_t(x_t)$ \Comment{Predict unconditional noise with learned network}
     
             % Estimate x0hat 
-            \State $\hat{x}_0 \gets \dfrac{x_t -\sqrt{1 - \bar\alpha_t} {\hat{\epsilon}}}{\sqrt{\bar\alpha_t}} $ 
-    
+            \State $\hat{x}_0 \gets \dfrac{x_t -\sqrt{1 - \bar\alpha_t} {\hat{\varepsilon}}}{\sqrt{\bar\alpha_t}}$ \Comment{Estimate unconditional denoised estimate} 
+
             % Calculate h-transform 
-            \State $\hat{\epsilon}_\phi \gets h^\phi_t(x_t, \hat{x}_0, \m)$
-    
-            \LComment{Estimate posterior noise}
-            \State $\hat{\epsilon} \gets {\hat{\epsilon}} + \hat{\epsilon}_\phi$
-    
-            \State $\epsilon_t \sim \mathcal{N}(0, I)$ if $t>1$ else $\epsilon_t \gets 0$
+            \State $\hat{\varepsilon}_\phi \gets h^\phi_t(x_t, \hat{x}_0, \m)$ \Comment{Estimate $h$-transform}
+            \State $\hat{\varepsilon} \gets {\hat{\varepsilon}} + \hat{\varepsilon}_\phi$ \Comment{Estimate posterior noise}
+            \State $\varepsilon_t \sim \mathcal{N}(0, I)$ if $t>1$ else $\varepsilon_t \gets 0$
             % Peform DDIM step
-            \State $x_{t-1} \gets \sqrt{\bar\alpha_{t-1}} \left(\dfrac{x_t -\sqrt{1 - \bar\alpha_t} \hat{\epsilon}}{\sqrt{\bar\alpha_t}} \right) + \sqrt{1 - \bar\alpha_{t-1} - \sigma_t^2} \hat{\epsilon} + \sigma_t \epsilon_t$
+            \State $x_{t-1} \gets \sqrt{\bar\alpha_{t-1}} \left(\dfrac{x_t -\sqrt{1 - \bar\alpha_t} \hat{\varepsilon}}{\sqrt{\bar\alpha_t}} \right) + \sqrt{1 - \bar\alpha_{t-1} - \sigma_t^2} \hat{\varepsilon} + \sigma_t \varepsilon_t$ \Comment{DDIM Step}
         \EndFor
         \State \Return $x_0$
     \end{algorithmic}
@@ -394,152 +396,203 @@ where $\hat{x}_0(x_t)$ is the unconditional Tweedie estimate. \Cref{eq:h_transfo
 
 A limitation to the fine-tuning objective with DEFT is that it requires a small dataset of paired datapoints and measurements. In this section, we propose an alternative approach by expressing the solution to the conditional sampling problem as a stochastic optimal control objective, which is highlighted in \Cref{theorem:representation_h}, (3). This allows us to learn the $h$-transform by optimising a variational inference-type problem. Importantly, this stochastic control objective only requires the availability of a single noisy observation $y$ instead of a paired fine-tuning dataset. Further, the stochastic control objective can even be used in other conditional sampling tasks, for example in reward tilted distributions, i.e. where the goal is to sample from $\pi_{\text{cond}}(x) \propto e^{r(x)}\pi(x)$. Here $e^{r(x)}$ serves the same purpose as the likelihood, but there is no explicit measurement $y$ \citep{domingo2024adjoint}. 
 
-In the Stochastic Control objective, one can learn the conditional score by minimising the following objective (from \Cref{theorem:representation_h}, (3)):
-\begin{align}
-    h_t^* =\argmin_{h_t \in \mathcal{H}} \left\{ \mathcal{L}_\text{SC}^\m(h_t) \coloneqq \E_{\ola{\Q}}\left[\frac{1}{2}\int_0^T \sigma_t^{2}|| h_t(H_t) ||^2 \dd t\right] - \E_{H_0 \sim \ola{\Q}_0} [\ln p(y| H_0)] \right\} \label{eq:stochastic_control_objective}
-\end{align}
-In the following proposition, we show that the minimisation of the above objective results in the correct solution to the conditional sampling problem, obtaining samples from the conditional density:
-\begin{proposition}
-    \label{prop:app_stochastic_control}
-    The following stochastic control problem
-    \begin{align}
-        h^* =\argmin_{f} \E_{\ola{\Q}}\left[\frac{1}{2}\int_0^T \sigma_t^{2}|| h(H_t) ||^2 \dd t\right] - \E_{H_0 \sim \ola{\Q}_0} [\ln p(y| H_0)] \label{eq:stochastic_control_objective_2}
-    \end{align}
-    with 
-    \begin{align} \label{eq:vpsderev0}
-    &H_T \sim \ora{\P}^{p(x_0|y),f_t}_T \nonumber\\
-         \dd H_t &= \left( f_t(H_t) - \sigma^2_t (\nabla_{H_t} \ln p_t(H_t)+ h_t(H_t)) \right)\,\dd t + \sigma_t\; { \dd \ola{W}}_t,
-    \end{align}
-    is minimised by the conditional score SDE in Equation \eqref{eq:rev_sde2trans_2}, that is
-    \begin{align}
-        h^*_t(x) = \nabla_{x}\ln \E_{X_0 \sim p_{0 |t}(\cdot|x)}[p(y| X_0) ] =\nabla_{x}\ln \ola{p}_{y|t}(y |x).
-    \end{align}
-    Furthermore, $h^*$ solves an associated half-bridge problem \citep{bernton2019schr} with the SDE in Eqn. \eqref{eq:back_sde} as its reference process and $p(x_0|y)$ as its source distribution.
-\end{proposition}
-\begin{proof}
-    See Appendix \ref{app:proof_stochastic_control}.
-\end{proof}
+In the Stochastic Control objective, one can learn the conditional score by minimising the objective in \Cref{eq:stoch_control_obj} from \Cref{theorem:representation_h}, (3). We can further discretise the objective for a specific choice of a VP-SDE from \textcite{song2021solving}, obtaining a tractable loss function:
+% In the following proposition, we show that the minimisation of the above objective results in the correct solution to the conditional sampling problem, obtaining samples from the conditional density:
+% \begin{selfproposition}
+%     \label{prop:app_stochastic_control}
+%     The following stochastic control problem
+%     \begin{align}
+%         h^* =\argmin_{f} \E_{\ola{\Q}}\left[\frac{1}{2}\int_0^T \sigma_t^{2}|| h(H_t) ||^2 \dd t\right] - \E_{H_0 \sim \ola{\Q}_0} [\ln p(y| H_0)] \label{eq:stochastic_control_objective_2}
+%     \end{align}
+%     with 
+%     \begin{align} \label{eq:vpsderev0}
+%     &H_T \sim \ora{\P}^{p(x_0|y),f_t}_T \nonumber\\
+%          \dd H_t &= \left( f_t(H_t) - \sigma^2_t (\nabla_{H_t} \ln p_t(H_t)+ h_t(H_t)) \right)\,\dd t + \sigma_t\; { \dd \ola{W}}_t,
+%     \end{align}
+%     is minimised by the conditional score SDE in Equation \eqref{eq:rev_sde2trans_2}, that is
+%     \begin{align}
+%         h^*_t(x) = \nabla_{x}\ln \E_{X_0 \sim p_{0 |t}(\cdot|x)}[p(y| X_0) ] =\nabla_{x}\ln \ola{p}_{y|t}(y |x).
+%     \end{align}
+%     Furthermore, $h^*$ solves an associated half-bridge problem \citep{bernton2019schr} with the SDE in Eqn. \eqref{eq:back_sde} as its reference process and $p(x_0|y)$ as its source distribution.
+% \end{selfproposition}
+% \begin{proof}
+%     See Appendix \ref{app:proof_stochastic_control}.
+% \end{proof}
 
-\begin{definition}[VP-SDE Stochastic Control and Discretisation]
-
-
-Specifically, for a VP-SDE \citep{song2021solving}, the objective in \Cref{eq:stochastic_control_objective_2} reduces to
+\begin{selfdefinition}[VP-SDE Stochastic Control and Discretisation]
+    \label{def:discrete_stoch_control}
+For a VP-SDE \citep{song2021solving} with noising schedule $\beta_t$, pre-trained score network $s_{\theta^{\star}}$, and conditional $h$-transform network $h_{\phi}$, the objective in \Cref{eq:stoch_control_obj} reduces to\label{ntn:vpsde_noise}
 \begin{align}
     \argmin_{h} \E_{\ola{\Q}}\left[\int_0^T \frac{\beta_t}{2}|| h(\bH_t) ||^2 \dd t\right] - \E_{\bH_0 \sim \ola{\Q}_0} [\ln p(\vy| \bH_0)] \label{eq:dds}.
 \end{align}
-Further, we can discretise this objective easily. Let us consider the pre-trained score SDE with an added tuning network:
-\begin{align} \label{eq:vpsderev2}
-&\bH_T \sim \gN(0,I)\nonumber\\
-    \dd \bH_t &= -\beta_t (\bH_t+ 2s_{\theta}(\bH_t) + 2h_{\phi}(\bH_t)) \,\dd t + \sqrt{2\beta_t }\;{\dd \rv{W} }_t,
-\end{align}
-now using an exponential-like discretisation \citep{de2022convergence}:
-\begin{align} \label{eq:vpsderev2disc}
-&\bH_{t_K} \sim \gN(0,I)\nonumber\\
-   \bH_{t_{k-1}} &= \left(\sqrt{1- \alpha_{k}}\bH_{t_k}+ 2(1-\sqrt{1- \alpha_{k}})\left(s_{\theta^*}(\bH_{t_k}) + h_{\phi}(\bH_{t_k})\right) \right) + \sqrt{\alpha_{k}}\varepsilon_k,
-\end{align}
-where $\alpha_k = 1- \exp\left(\int_{t_{k-1}}^{t_k}\beta_s \dd s\right)$. We denote the distribution of the above discrete time chain as $q_\phi$. Now if we follow the sketch in Proposition 3 of \textcite{vargas2023denoising} the discretised objective then becomes:
+Further, we obtain a discretisation with $\alpha_k = 1- \exp\left(\int_{t_{k-1}}^{t_k}\beta_s \dd s\right)$:\label{ntn:exp_alpha}
 \begin{align}
-  \argmin_\phi  \E_{\bH \sim q_\phi}\left[2 \sum_{k=1}^K \frac{\lambda_k^2}{\alpha_k}|| h_{\phi}(k, \bH_{t_k})||^{2} -\ln p(\vy|\bH_{0})\right] \label{eq:objdisc}
+    \mathcal{L}_{\text{DEFT, SC}} := \argmin_\phi  \E_{\bH \sim q_\phi}\left[\sum_{k=1}^K \frac{\alpha_k}{2}|| h_{\phi}(k, \bH_{t_k})||^2 - \ln p(\vy|\bH_{0})\right]. \label{eq:stochdiscrete}
+  \end{align}
+  where the discrete steps follow:
+  \begin{align} \label{eq:vpsderev3disc}
+    \bH_{t_{k-1}} &= \left(\sqrt{1- \alpha_{k}}\bH_{t_k}+ \alpha_k\left(s_{\theta^*}(\bH_{t_k}) + h_{\phi}(\bH_{t_k})\right) \right) + \sqrt{\alpha_{k}}\varepsilon_k,
 \end{align}
-where $\lambda_k = 1-\sqrt{1-\alpha_k}$. For a more stable/simple objective following \textcite{vargas2023denoising} we can make the approximation $\lambda_k = 1-\sqrt{1-\alpha_k}\approx \alpha_k / 2$ for small time steps. This leads to the following discretisation:
-\begin{align} \label{eq:vpsderev3disc}
-&\bH_{t_K} \sim \gN(0,I) \nonumber\\
-   \bH_{t_{k-1}} &= \left(\sqrt{1- \alpha_{k}}\bH_{t_k}+ \alpha_k\left(s_{\theta^*}(\bH_{t_k}) + h_{\phi}(\bH_{t_k})\right) \right) + \sqrt{\alpha_{k}}\varepsilon_k,
-\end{align}
-and objective:
+where $H_{t_K} \sim \mathcal{N}(0, I)$ and $\varepsilon_k \sim \mathcal{N}(0, I)$.
+\end{selfdefinition}
+\begin{proof}
+    See Appendix \ref{app:proof_stochastic_control_discrete}.
+\end{proof}
+
+\paragraph{Scaling up the Control Objective.} \label{app:vargrad}
+Naively trying to minimise \Cref{eq:stochdiscrete} is demanding, as the full chain $\{H_t\}_t$ has to be kept in memory, which is infeasible for high dimensional problems. To alleviate this problem, one could make use of the stochastic adjoint sensitivity method \citep{li2020scalable}, in which an adjoint SDE is solved to estimate the gradients of the stochastic control loss in Theorem~\ref{theorem:representation_h} (3). This method has the advantage of a constant memory cost. However, the computational cost increases as both the reverse SDE and the adjoint SDE must be simulated. Instead, we discuss two alternative approaches to reduce the memory requirements.
+
+
+\paragraph{VarGrad (Log-Variance) Loss.} We can make use of a Log-Variance loss (also known as VarGrad, see \textcite{richter2020vargrad, richter2023improved}) similar to \Cref{def:cmcd_var_loss} to reduce the memory requirements. In contrast to the representation of \Cref{eq:stoch_control_obj} as a KL objective (see \Cref{eq:half} in the appendix), we have:
+
+\begin{selfdefinition}[Log-Variance Loss for Stochastic Control Objective]
+    \label{def:logvar_deft_loss}
+The Log-Variance loss is given by:
 \begin{align}
-  \argmin_\phi  \E_{\bH \sim q_\phi}\left[\sum_{k=1}^K \frac{\alpha_k}{2}|| h_{\phi}(k, \bH_{t_k})||^2 - \ln p(\vy|\bH_{0})\right]. \label{eq:stochdiscrete}
+\label{eq:var_grad_stochastic_control}
+  D_{\mathrm{logvar}}(\ola{\mathbb{Q}}\| \ola{\mathbb{P}} ; \ola{\mathbb{U}}) = \mathbb{E}_{\mH^{g_t}_{0:T} \sim \ola{\mathbb{U}}} \left[\left(\ln   \frac{\dd  \ola{\mathbb{Q}} }{\dd  \ola{\mathbb{P}}}(\mH^{g_t}_{0:T})  - \mathbb{E}\left[\ln   \frac{\dd  \ola{\mathbb{Q}}}{\dd  \ola{\mathbb{P}}}(\mH^{g_t}_{0:T})\right] \right)^2\right], 
 \end{align}
+where $\ola{\mathbb{Q}}$ and $\ola{\mathbb{P}}$ are defined as in the proof of \Cref{theorem:representation_h}, (3) in Appendix \ref{app:proof_stochastic_control}\footnote{i.e., $\ola{\mathbb{Q}}$ is given by the conditional SDE that we are trying to optimise, and $\ola{\mathbb{P}}$ is the path measure of the unconditional SDE in the reverse direction}. We have freedom over our choice of reference process $\ola{\mathbb{U}}$, and we choose it to be the path measure of the following SDE, which is the conditional SDE with the $h$-transform replaced by $g_t=\mathrm{stop\_grad}(h_t)$:
+\[
+    \dd \bH_t = \left( f_t(\bH_t) - \sigma^2_t (\nabla_{\bH_t} \ln p_t(\bH_t)+ g_t(\bH_t)) \right)\,\dd t + \sigma_t\; \dd \rv{W}_t, \bH_T \sim \ora{\P}^{p(x_0 \mid y),f_t}_T.
+\]
+\end{selfdefinition}
+\begin{proof}
+See Appendix \ref{app:proof_cmcd_var_loss}.
+\end{proof}
 
-\end{definition}
+This choice of reference process allows us to detach the trajectories, saving us from having to score all gradients in memory.
+%\begin{align}
+%  D_{\mathrm{logvar}}(\mathbb{Q}, \mathbb{P} ; \mathbb{W}) =\mathbb{E}_{\mH^{2 \beta_t \mathrm{stop\_grad}(h_t)}_{0:T} \sim \mathbb{W}} \left[\left(\ln   \frac{\dd  \mathbb{Q} }{\dd  \mathbb{P}}(\mH^{2 \beta_t \mathrm{stop\_grad}(h_t)}_{0:T})  - \mathbb{E}\left[\ln   \frac{\dd  \mathbb{Q} }{\dd  \mathbb{P}}(\mH^{2 \beta_t \mathrm{stop\_grad}(f_t)}_{0:T})\right] \right)^2\right]
+%\end{align}
 
-However, the stochastic control objective is not directly applicable for high-dimensional training, as the complete chain $\{H_t\}_t$ must be kept in memory and backpropagated through or adjoint methods have to be used~\cite{li2020scalable}. In Appendix \ref{app:vargrad}, we discuss several alternatives and present experiments for scaling up the above objective, e.g., methods like VarGrad \citep{richter2020vargrad} and Trajectory Balance \citep{malkin2022trajectory}. VarGrad allows us to detach the trajectory from the gradient computation, drastically reducing the memory footprint. Further, we show initial experiments for conditional sampling in \ref{sec:stoch_cont_exp}. The stochastic control objective serves as a conceptual bridge between sampling from unnormalised densities using diffusion models \citep{vargas2023denoising,vargas2021bayesian,zhang2021path} and conditional score-based generative modelling.
+%This allows us to detach the trajectories $\mH^{2 \beta_t \mathrm{stop\_grad}(f_t)}_{0:T}$  saving us from having to store $K * \mathrm{dim}(\vx_0)$ gradients in memory which is challenging for images.
+
+\paragraph{Trajectory Balance} An alternative to the VarGrad loss in Eqn.~\eqref{eq:var_grad_stochastic_control} is the following:
+
+\begin{selfdefinition}[Trajectory Balance Loss for Stochastic Control Objective]
+    The trajectory balance \cite{malkin2022trajectory,malkin2022gflownets} loss is given by:
+    \label{def:tbloss_deft_loss}
+\begin{align}
+    \label{eq:tbloss}
+  \mathcal{L}_{\mathrm{TB}}(\ola{\mathbb{Q}}, \ola{\mathbb{P}} ; \ola{\mathbb{U}}, k) = \mathbb{E}_{\mH^{g_t}_{0:T} \sim \ola{\mathbb{U}}} \left[\left(\ln \frac{\dd  \ola{\mathbb{Q}} }{\dd  \ola{\mathbb{P}}}(\mH^{g_t}_{0:T})  - k \right)^2\right],
+\end{align}
+where $k \in \R$ is a learnable parameter and $\ola{\mathbb{U}}$ is the same reference process as in \Cref{def:logvar_deft_loss}.\label{ntn:trajectory_balance_loss}
+\end{selfdefinition}
+
+We again choose $g_t = \mathrm{stop\_grad}(h_t)$.\label{ntn:stop_grad} This loss is also motivated by a valid divergence, see \textcite{nusken2021solving}. In difference to the VarGrad loss from \Cref{eq:var_grad_stochastic_control}, the inner expectation is exchanged with $k$, which approximates a running mean. In practice, we optimise $k$ and $h_t$ at the same time. 
+
+\paragraph{Trajectory Subsampling} We observe that backpropagating gradients for only a random subset of discrete timesteps in the RND can be an effective strategy. This subsampling reduces memory costs at the expense of increased variance and the introduction of a small bias. Nevertheless, the reduced memory usage per example enables larger batch sizes, which can mitigate these effects. Notably, we found that backpropagating for only $20\%$ of the timesteps still achieves comparable performance.
 
 \subsection{Likelihood-informed Inductive Bias}
 
 \label{sec:network_architecture}
-If the likelihood is differentiable, we can impose an inductive bias on the $h$-transform approximation. Specifically, the generalized $h$-transform can be expressed as an expectation, and we can apply the DPS approximation \cite{chung2022diffusion} as follows
+If the likelihood is differentiable, we can impose an inductive bias on the $h$-transform approximation. Specifically, the generalised $h$-transform can be expressed as an expectation, and we can apply the DPS approximation \cite{chung2022diffusion} as follows
 \begin{align*}
     \nabla_{\vx_t} \ln \ola{p}_{y|t}(\m | \vx_t) = \nabla_{\vx_t} \ln \E_{\vx_0 \sim \ola{p}(\vx_0 | \vx_t)}[ p(\m | \vx_0)] &\approx \nabla_{\vx_t} \ln  p(\m | \E[\hat{\vx}_0|\vx_t])
     \\ &\approx  \nabla_{\vx_t} \ln p(\m | \hat{\vx}_0(\vx_t) ),
 \end{align*}
-where we use Tweedie's estimate from \Cref{eq:tweedies_formula_ddpm} based on the pre-trained unconditional diffusion model in the last step. The DPS approximation has been validated in many different conditional sampling tasks, so it would make for a good initialisation of the learned $h$-transform. However, the DPS approximation requires the Jacobian of the unconditional model, which is expensive to compute and known to be poorly conditioned. Further, in applications where we only have access to the forward pass of the unconditional model, the Jacobian is infeasible to compute. Similar to \textcite{poole2023dreamfusion}, we found that omitting this term still leads to an expressive architecture, while greatly reducing the computational cost. Thus, we propose the following network architecture 
+where we use Tweedie's estimate from \Cref{eq:tweedies_formula_ddpm} based on the pre-trained unconditional diffusion model in the last step. The DPS approximation has been validated in many conditional sampling tasks, so it would make for a good initialisation of the learned $h$-transform. However, the DPS approximation requires the Jacobian of the unconditional model, which is expensive to compute and known to be poorly conditioned. Further, in applications where we only have access to the forward pass of the unconditional model, the Jacobian is infeasible to compute. Similar to \textcite{poole2023dreamfusion}, we found that omitting this term still leads to an expressive architecture, while greatly reducing the computational cost. Thus, we propose the following network architecture 
 \begin{align}
     \label{eq:sampling_architecture}
     h_t^\phi(\vx_t, \m) = \text{NN}_1^\phi(\vx_t, \hat{\vx}_0(\vx_t), \nabla_{\hat{\vx}_0} \ln p(\m | \hat{\vx}_0(\vx_t)), t) + \text{NN}_2^\phi(t) \nabla_{\hat{\vx}_0} \ln p(\m | \hat{\vx}_0(\vx_t)),  
 \end{align}
-to parametrise the $h$-transform, where the last layer of $\text{NN}_1^\phi$ is initialised with $\mathbf{0}$ and $\text{NN}_2^\phi$ is initialised to output $\mathbf{1}$. This initialisation provides a computationally efficient approximation to the $h$-transform, which still guides the sampling.
+to parametrise the $h$-transform, where the last layer of $\text{NN}_1^\phi$ is initialised with $0$s and $\text{NN}_2^\phi$ is initialised to output $1$s. This initialisation provides a computationally efficient approximation to the $h$-transform, which still guides the sampling.
 
-This type of network architecture has been proposed within the sampling community to apply diffusion models to normalising constant estimation \citep{phillips2024particle,vargas2023denoising,zhang2021path}. The theoretical connection to stochastic control in Section \ref{sec:stochastic_control}, motivates us further to adapt the architectures from the sampling field to the conditional generative modelling setting. We ablate the different components of our proposed architecture in Appendix~\ref{app:ablation_arch} and find that the additional components greatly improve performance empirically.
+This type of network architecture has been proposed within the sampling community to apply diffusion models to normalising constant estimation \citep{phillips2024particle,vargas2023denoising,zhang2021path}. The theoretical connection to stochastic control in Section \ref{sec:stochastic_control}, motivates us further to adapt the architectures from the sampling field to the conditional generative modelling setting. In \Cref{tab:ct_ablation} we ablate the different components of our proposed architecture and find that the additional components greatly improve performance empirically on a medical CT reconstruction task (which we provide more details for in Appendix \ref{app:experimental_details_images}).
+
+\begin{table}[t]
+    \centering
+    \caption[PSNR and SSIM for computed tomography on LoDoPab-CT with different parametrisation of the $h$-transform.]{PSNR and SSIM for computed tomography on LoDoPab-CT with different parametrisation of the $h$-transform. The forward operator $A$ is linear, and we added Gaussian noise with standard deviation $\sigma_y = 1.0$. $A^*$ denotes the backprojection. Here, instead of the backprojection, we made use of the filtered backprojection, which is a common technique for computed tomography \cite{hauptmann2020multi}.}
+    \begin{tabular}{lcc}
+    \toprule
+    Parametrisation & \textbf{PSNR} & \textbf{SSIM} \\ \midrule
+    $\text{NN}_1^\phi(\vx, \hat{\vx}_0, \nabla_{\hat{\vx}_0} \ln p(\m | \hat{\vx}_0), t) + \text{NN}_2^\phi(t) \nabla_{\hat{\vx}_0} \ln p(\m | \hat{\vx}_0)$ & $35.81$ & $0.876$ \\ 
+    %$\text{NN}_1^\phi(\vx, \hat{\vx}_0, A^* \m, t) + \text{NN}_2^\phi(t) \nabla_{\hat{\vx}_0} \ln p(\m | \hat{\vx}_0)$ & ??.?? & ?.??? \\ 
+    $\text{NN}_1^\phi(\vx, \nabla_{\hat{\vx}_0} \ln p(\m | \hat{\vx}_0), t) + \text{NN}_2^\phi(t) \nabla_{\hat{\vx}_0} \ln p(\m | \hat{\vx}_0)$ & $35.74$ & $0.875$ \\ 
+    $\text{NN}_1^\phi(\vx, \hat{\vx}_0, A^*\m, t)$  & $34.04$ & $0.851$ \\ 
+    $\text{NN}_1^\phi(\vx, A^*\m, t)$ & $26.62$ & $0.724$ \\ 
+    \bottomrule 
+    \end{tabular}
+    \label{tab:ct_ablation}
+    \end{table}
 
 \section{Experiments}
 \label{sec:exp}
-We evaluate the DEFT framework from Section~\ref{sec:offline_finetuning} on both linear and non-linear natural and medical image reconstruction tasks, as well as the motif scaffolding problem in protein design. Further, in Appendix \ref{app:flowers_experiments} we provide a comparison of the conditional training framework with DEFT on the {\scshape Flowers}~\citep{nilsback08} image dataset. We provide our code \href{https://github.com/alexdenker/DEFT}{\url{https://github.com/alexdenker/DEFT}}.
+We evaluate the DEFT framework from Section~\ref{sec:offline_finetuning} on both linear and non-linear natural and medical image reconstruction tasks, as well as the motif scaffolding problem in protein design. We open-source our code\footnote{\href{https://github.com/alexdenker/DEFT}{\url{https://github.com/alexdenker/DEFT}}}.
 
-\begin{figure*}
-\begin{figure}[H]
+
+\subsection{Image reconstruction}
+\label{sec:image_rec}
+We test a wide variety of both linear and non-linear image reconstruction tasks on the $256\times 256$px ImageNet dataset \cite{russakovsky2015imagenet}. We make use of a pre-trained unconditional diffusion model with $\sim500$M parameters \citep{dhariwal2021diffusion}\footnote{Checkpoints are available at \url{https://github.com/openai/guided-diffusion}}. We perform all our evaluations on a $1k$ subset of the validation set\footnote{\url{https://bit.ly/eval-pix2pix}}. For all inverse problems under consideration, the $h$-transform was trained on a separate $1$k subset of the validation set. For linear inverse problems, we compare against $\Pi$GDM \cite{song2022pseudoinverse}, DDRM \cite{kawar2022denoising}, DPS \cite{chung2022diffusion} and RED-diff \cite{mardani2023variational}. Additionally, we evaluate I$^2$SB \cite{liu20232}. The performance of I$^2$SB can be seen as an upper-bound to DEFT, as it is a conditional diffusion trained on the complete ImageNet dataset. For non-linear tasks, we only compare against DPS and RED-diff as both $\Pi$GDM and DDRM are not directly applicable to non-linear forward operators. For DEFT we make use of the DDIM sampling scheme with $100$ time steps \cite{song2021denoising}. For the comparison methods we used the same hyperparameters as in \textcite{mardani2023variational} without further tuning, including the number of sampling steps (1000 for DPS and RED-Diff, 20 for DDRM and 100 for $\Pi$GDM).
+
+We compute PSNR and SSIM, which are commonly used distortion measures, along with perceptual metrics such as Learned Perceptual Image Patch Similarity (LPIPS) \cite{zhang2018unreasonable}, Kernel Inception Distance (KID) \cite{binkowski2018demystifying}, and top-1 classifier accuracy of a pre-trained ResNet50 model \cite{he2016deep}. There is a well-known tradeoff between optimising distortion metrics versus perceptual quality, and depending on the task, one may wish for better performance along one axis at the cost of the other. For natural image tasks involving in-painting and super-resolution, it is common to prefer "natural"-looking images, which score better on perceptual similarity, whereas for tasks involving (medical) image reconstruction
+%of an operator, such as HDR, phase retrieval, non-linear deblurring and medical image reconstruction, 
+it is standard to prefer a lower distortion metric \cite{blau2018perception}. Further, we calculate the total time (including training for DEFT) for evaluation $1$k validation images in the "Time (hrs)" row. Furthermore, we report the effective time taken to sample a single image in the "Time per sample (s)" row. This time is calculated by fitting the largest batch size of validation images that fit on a single A100 GPU and dividing the time taken for the batch by the batch size. 
+
+\begin{figure}[!t]
 \centering
-\begin{subfigure}[t]{.135\textwidth}
+\begin{subfigure}[t]{.135\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/Inpainting/inp_overlay_1.png"}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.135\textwidth}
+\begin{subfigure}[t]{.135\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/Inpainting/inp_dps_1.png"}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.135\textwidth}
+\begin{subfigure}[t]{.135\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/Inpainting/inp_pigdm_1.png"}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.135\textwidth}
+\begin{subfigure}[t]{.135\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/Inpainting/inp_ddrm_1.png"}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.135\textwidth}
+\begin{subfigure}[t]{.135\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/Inpainting/inp_reddiff_paper_1.png"}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.135\textwidth}
+\begin{subfigure}[t]{.135\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/Inpainting/inp_deft_1.png"}
 \end{subfigure}%
 
-\begin{subfigure}[t]{.135\textwidth}
+\begin{subfigure}[t]{.135\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/Inpainting/inp_overlay_2.png"}
-  \caption*{Ground truth}
+  \caption*{GT}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.135\textwidth}
+\begin{subfigure}[t]{.135\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/Inpainting/inp_dps_2.png"}
   \caption*{DPS}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.135\textwidth}
+\begin{subfigure}[t]{.135\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/Inpainting/inp_pigdm_2.png"}
   \caption*{$\Pi$GDM}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.135\textwidth}
+\begin{subfigure}[t]{.135\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/Inpainting/inp_ddrm_2.png"}
   \caption*{DDRM}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.135\textwidth}
+\begin{subfigure}[t]{.135\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/Inpainting/inp_reddiff_2.png"}
   \caption*{RED-diff}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.135\textwidth}
+\begin{subfigure}[t]{.135\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/Inpainting/inp_deft_2.png"}
   \captionsetup{justification=centering}
   \caption*{DEFT}
 \end{subfigure}%
-\caption{Results for inpainting. We show the ground truth with the inpainting mask superimposed. 
+\caption[Inpainting results on ImageNet with DEFT]{Results for inpainting. We show the ground truth with the inpainting mask superimposed. As we can see, DEFT produces semantically consistent in-filling compared to other baselines, while at a much lower time per sample.
 } \label{fig:inpainting_results}
 \end{figure}
-\begin{table}[H]
+\begin{table}[!t]
 \centering
-\caption{Results on inpainting and 4x super-resolution. Best values are shown in \textbf{bold}, second best values are \underline{underlined}. We report both the total time to sample $1$k images, and the time per sample in seconds. The time to sample includes the training time for DEFT. These tasks aim to generate "natural"-looking images and therefore perceptual similarity metrics (KID, LPIPS and top-1) are more relevant. I$^2$SB (grey column) can be considered an upper bound on performance.}
-\resizebox{0.81\textwidth}{!}{%
+\caption[Experimental results on inpainting and 4x super-resolution]{Results on inpainting and 4x super-resolution. Best values are shown in \textbf{bold}, second-best values are \underline{underlined}. We report both the total time to sample $1$k images, and the time per sample in seconds. The time to sample includes the training time for DEFT. These tasks aim to generate ``natural''-looking images and therefore perceptual similarity metrics (KID, LPIPS and top-1) are more relevant. I$^2$SB (grey column) can be considered an upper bound on performance.}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}lccccc>{\columncolor{lightgray}}cccccc>{\columncolor{lightgray}}c@{}}
 \toprule
 & \multicolumn{6}{c}{\textbf{Inpainting}}                          & \multicolumn{6}{c}{\textbf{Super-resolution}}                    \\
@@ -557,71 +610,59 @@ Time per sample (s) $(\downarrow)$ & 100.6 &  10.2       & 1.22 & 28.3 &  4.36 &
 \label{tab:image_results_inp_sr}
 \end{table}
 
-\end{figure*}
-
-
-\subsection{Image reconstruction}
-\label{sec:image_rec}
-We test a wide variety of both linear and non-linear image reconstruction tasks on the $256\times 256$px ImageNet dataset \cite{russakovsky2015imagenet}. We make use of a pre-trained unconditional diffusion model with $\sim500$M parameters \citep{dhariwal2021diffusion}\footnote{Checkpoints are available at \url{https://github.com/openai/guided-diffusion}}. We perform all our evaluations on a $1k$ subset of the validation set\footnote{\url{https://bit.ly/eval-pix2pix}}. For all inverse problems under consideration, the $h$-transform was trained on a separate $1$k subset of the validation set. For linear inverse problems, we compare against $\Pi$GDM \cite{song2022pseudoinverse}, DDRM \cite{kawar2022denoising}, DPS \cite{chung2022diffusion} and RED-diff \cite{mardani2023variational}. Additionally, we evaluate I$^2$SB \cite{liu20232}. The performance of I$^2$SB can be seen as an upper-bound to DEFT, as it is a conditional diffusion trained on the complete ImageNet dataset. For non-linear tasks, we only compare against DPS and RED-diff as both $\Pi$GDM and DDRM are not directly applicable to non-linear forward operators. For DEFT we make use of the DDIM sampling scheme with $100$ time steps \cite{song2021denoising}. For the comparison methods we used the same hyperparameters as in \cite{mardani2023variational} without further tuning, including the number of sampling steps (1000 for DPS and RED-Diff, 20 for DDRM and 100 for $\Pi$GDM).
-
-We compute PSNR and SSIM, which are commonly used distortion measures, along with perceptual metrics such as Learned Perceptual Image Patch Similarity (LPIPS) \cite{zhang2018unreasonable}, Kernel Inception Distance (KID) \cite{binkowski2018demystifying}, and top-1 classifier accuracy of a pre-trained ResNet50 model \cite{he2016deep}. There is a well-known tradeoff between optimising distortion metrics versus perceptual quality, and depending on the task, one may wish for better performance along one axis at the cost of the other. For natural image tasks involving in-painting and super-resolution, it is common to prefer "natural"-looking images, which score better on perceptual similarity, whereas for tasks involving (medical) image reconstruction
-%of an operator, such as HDR, phase retrieval, non-linear deblurring and medical image reconstruction, 
-it is standard to prefer a lower distortion metric \cite{blau2018perception}. Further, we calculate the total time (including training for DEFT) for evaluation $1$k validation images in the "Time (hrs)" row. Furthermore, we report the effective time taken to sample a single image in the "Time per sample (s)" row. This time is calculated by fitting the largest batch size of validation images that fit on a single A100 GPU and dividing the time taken for the batch by the batch size. 
-
-\begin{figure*}   
-\begin{figure}[H]
+\begin{figure}[!t]
 \centering
-\begin{subfigure}[t]{.162\textwidth}
+\begin{subfigure}[t]{.162\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/NonLinearDeblurring/blur_gt_1.png"}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.162\textwidth}
+\begin{subfigure}[t]{.162\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/NonLinearDeblurring/blur_deg_1.png"}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.162\textwidth}
+\begin{subfigure}[t]{.162\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/NonLinearDeblurring/blur_dps_1.png"}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.162\textwidth}
+\begin{subfigure}[t]{.162\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/NonLinearDeblurring/blur_reddiff_1.png"}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.162\textwidth}
+\begin{subfigure}[t]{.162\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/NonLinearDeblurring/blur_deft_1.png"}
 \end{subfigure}%
  
-\begin{subfigure}[t]{.162\textwidth}
+\begin{subfigure}[t]{.162\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/NonLinearDeblurring/blur_gt_2.png"}
   \caption*{Ground truth}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.162\textwidth}
+\begin{subfigure}[t]{.162\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/NonLinearDeblurring/blur_deg_2.png"}
   \caption*{Measurements}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.162\textwidth}
+\begin{subfigure}[t]{.162\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/NonLinearDeblurring/blur_dps_2.png"}
   \caption*{DPS}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.162\textwidth}
+\begin{subfigure}[t]{.162\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/NonLinearDeblurring/blur_reddiff_2.png"}
   \caption*{RED-diff}
 \end{subfigure}%
 \hfill
-\begin{subfigure}[t]{.162\textwidth}
+\begin{subfigure}[t]{.162\myexpandedtextwidth}
   \includegraphics[width=\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/ImageNet/NonLinearDeblurring/blur_deft_2.png"}
   \captionsetup{justification=centering}
   \caption*{DEFT}
 \end{subfigure}%
-\caption{Results for non-linear deblurring. We show both the ground truth, the measurements and samples for DPS, RED-diff and DEFT. DEFT is able to reconstruct high-quality images.}  \label{fig:non-linear_deblur}
+\caption[Results for non-linear deblurring]{Results for non-linear deblurring. We show both the ground truth, the measurements and samples for DPS, RED-diff and DEFT. DEFT is able to reconstruct high-quality images.}  \label{fig:non-linear_deblur}
 \end{figure}
-\begin{table}[H]
+\begin{table}[!t]
 \centering
-\caption{Results on different non-linear image reconstruction tasks. Best values are shown in \textbf{bold}, second best values are \underline{underlined}.}
-\resizebox{0.81\textwidth}{!}{%
+\caption[Experimental results on different non-linear image reconstruction tasks]{Results on different non-linear image reconstruction tasks. Best values are shown in \textbf{bold}, second-best values are \underline{underlined}.}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{lccccccccc}
 \toprule
  &
@@ -715,44 +756,16 @@ Time per sample (s) $(\downarrow)$ &
 % \vspace{-0.3cm}
 \label{tab:image_results_nonlinear}
 \end{table}
-\end{figure*}
 
-\paragraph*{Inpainting} First, we evaluate DEFT on the linear inverse problem of image inpainting. We make use of the inpainting masks for the 1k subset used by \cite{saharia2022palette}\footnotemark[2], which includes masks that obscure $20\!\%-\!30\%$ of the image. Results are shown in Table~\ref{tab:image_results_inp_sr}, including the computational time for sampling all $1000$ validation images. For DEFT, this computational time additionally includes the $3.9$ hrs of training time of the $h$-transform additionally with the $1.2$ hrs of evaluation. Even with the added training time, we reduce the overall computational time for DEFT, compared to DPS and RED-diff. A visual comparison is provided in Figure~\ref{fig:inpainting_results}. Further, in Figure~\ref{fig:inp_diversity} in the Appendix, we show the diversity of samples using different initial seeds. Even though $\Pi$GDM and DDRM are faster methods, they perform significantly worse, and are only applicable for linear inverse problems. Inpainting is a task that prefers "natural"-looking image samples, and DEFT outperforms all other methods on perceptual metrics such as LPIPS and KID, being a close second on top-1 accuracy. 
+\paragraph*{Inpainting} First, we evaluate DEFT on the linear inverse problem of image inpainting. We make use of the inpainting masks for the 1k subset used by \cite{saharia2022palette}, which includes masks that obscure $20\!\%-\!30\%$ of the image. Results are shown in Table~\ref{tab:image_results_inp_sr}, including the computational time for sampling all $1000$ validation images. For DEFT, this computational time additionally includes the $3.9$ hrs of training time of the $h$-transform additionally with the $1.2$ hrs of evaluation. Even with the added training time, we reduce the overall computational time for DEFT, compared to DPS and RED-diff. A visual comparison is provided in Figure~\ref{fig:inpainting_results}. Further, in Figure~\ref{fig:inp_diversity} in the Appendix, we show the diversity of samples using different initial seeds. Even though $\Pi$GDM and DDRM are faster methods, they perform significantly worse, and are only applicable for linear inverse problems. Inpainting is a task that prefers ``natural''-looking image samples, and DEFT outperforms all other methods on perceptual metrics such as LPIPS and KID, being a close second on top-1 accuracy. 
 
 \paragraph{Super-resolution} For another linear inverse problem, we evaluate $4$x noiseless super-resolution. Here, the forward operator is given by a bicubic downsampling. The results are presented in Table~\ref{tab:image_results_inp_sr}. While DEFT has a lower PSNR compared to the baseline methods, we see significant improvement on perceptual quality metrics (KID, LPIPS, and top-1 accuracy). We show visual results in Figure~\ref{fig:sr_results}.
 
 \paragraph{High dynamic range} For the first non-linear tasks, we make use of the high dynamic range (HDR) task described in \cite{mardani2023variational}. Here, the forward operator is given by $\Pm(\vx) = \text{clip}(2\vx; -1, 1)$, where $\vx$ denotes the RGB image scaled to the range $[-1,1]$. The results are presented in Table~\ref{tab:image_results_nonlinear}. We observe that DPS struggles with this specific non-linear tasks, while DEFT achieves good results. We show a visual comparison in the Appendix, see Figure~\ref{fig:hdr}.
 
-\paragraph{Phase retrieval} The goal in phase retrieval is to recover the image from intensity measurements only, i.e., the forward operator is given by $\Pm(\vx) = | \mathcal{F} \vx |$, with $\mathcal{F}$ as the Fourier transform. We study the same 2x oversampling setting as in \cite{chung2022diffusion,mardani2023variational}. Phase retrieval is a challenging non-linear inverse problem, as the forward operator is invariant to translations, global phase shifts and complex conjugation. In Figure~\ref{fig:phase_retrieval} in the appendix, we show samples for different initial seeds and observe a wide variety of image quality. We also observe this behaviour for the baseline methods. However, DEFT is able to achieve better performance compared to RED-diff and DPS, see also Table~\ref{tab:image_results_nonlinear}. However, there is room for further improvement to achieve good reconstructions on a consistent basis.
+\paragraph{Phase retrieval} The goal in phase retrieval is to recover the image from intensity measurements only, i.e., the forward operator is given by $\Pm(\vx) = | \mathcal{F} \vx |$, with $\mathcal{F}$ as the Fourier transform.\label{ntn:fourier_transform} We study the same 2x oversampling setting as in \cite{chung2022diffusion,mardani2023variational}. Phase retrieval is a challenging non-linear inverse problem, as the forward operator is invariant to translations, global phase shifts and complex conjugation. In Figure~\ref{fig:phase_retrieval} in the appendix, we show samples for different initial seeds and observe a wide variety of image quality. We also observe this behaviour for the baseline methods. However, DEFT is able to achieve better performance compared to RED-diff and DPS, see also Table~\ref{tab:image_results_nonlinear}. However, there is room for further improvement to achieve good reconstructions on a consistent basis.
 
-\paragraph{Non-linear deblurring} The non-linear deblurring task was originally proposed by \cite{chung2022diffusion}. Here, the forward operator is defined by a trained neural network \cite{tran2021explore}, resulting in a highly non-linear blur. Quantitative results are presented in Table~\ref{tab:image_results_nonlinear}. This non-linear reconstruction task was also evaluated for RED-diff in \cite{mardani2023variational}. However, we found that the forward operator of the original implementation\footnote{\url{https://github.com/NVlabs/RED-diff/tree/master}} leads to a nearly trivial reconstruction task. In Appendix~\ref{app:blur_mardani}, we show results with the code from \cite{mardani2023variational}, while Table~\ref{tab:image_results_nonlinear} shows the results with our implementation of the forward operator. Further, in Figure~\ref{fig:non-linear_deblur} we provide a visual comparison, where DEFT is able to recover the ground truth quite faithfully.
-
-\paragraph{Ablation: Size of fine-tuning dataset}
-As DEFT requires a dataset for fine-tuning, we ablate the number of training samples. We trained DEFT on a subset of 10, 100 and 200 ImageNet images for Inpainting. We see improvements of all metrics, when training on a larger dataset. The results are presented in Table~\ref{tab:inpainting_number_of_samples}. For the KID, we outperform RED-diff (KID: 0.86) even when trained on only 200 images. However, even with 10 images, we perform quite competitively, showcasing that our method is very sample-efficient when it comes to learning a conditional transform.
-%\vspace{-0.5cm}
-
-\begin{table}[th]
-\centering
-\caption{Varying the size of the fine-tuning dataset for DEFT for Inpainting on ImageNet.}
-\resizebox{0.4\textwidth}{!}{%
-\begin{tabular}{lcccc}
-\toprule
- \multicolumn{5}{c}{\textbf{DEFT on ImageNet for Inpainting}} \\ 
-\small Number of images & \small 10 & \small 100 & \small 200 & \small 1000 \\ \midrule
-PSNR $(\uparrow)$ & $20.87$ & $20.99$ & $22.11$ & $22.18$  \\
-SSIM $(\uparrow)$ & $0.83$ & $0.84$& $0.847$ & $0.85$  \\
-KID $(\downarrow)$  & $1.85$ & $0.978$ & $0.401$ & $0.29$  \\
-LPIPS $(\downarrow)$  & $0.123$ & $0.112$ & $0.096$ & $0.09$   \\
-top-1 $(\uparrow)$  & $68.8$ & $69.6$ & $70.6$ & $71.7$  \\
-  \bottomrule 
-\end{tabular}%
-}%
-% \vspace{-0.5cm}
-\label{tab:inpainting_number_of_samples}
-\end{table}
-
-
-
+\paragraph{Non-linear deblurring} The non-linear deblurring task was originally proposed by \cite{chung2022diffusion}. Here, the forward operator is defined by a trained neural network \cite{tran2021explore}, resulting in a highly non-linear blur. Quantitative results are presented in Table~\ref{tab:image_results_nonlinear}. This non-linear reconstruction task was also evaluated for RED-diff in \cite{mardani2023variational}. However, we found that the forward operator of the original implementation\footnote{\url{https://github.com/NVlabs/RED-diff/tree/master}} leads to a nearly trivial reconstruction task. Table~\ref{tab:image_results_nonlinear} shows the results with our own implementation of the forward operator. Further, in Figure~\ref{fig:non-linear_deblur} we provide a visual comparison, where DEFT is able to recover the ground truth quite faithfully.
 
 % \newpage
 % \subsection{Computed tomography}
@@ -817,6 +830,28 @@ top-1 $(\uparrow)$  & $68.8$ & $69.6$ & $70.6$ & $71.7$  \\
 
 
 \subsection{Conditional protein design: motif scaffolding}\label{sec:protein_design} 
+
+\begin{figure}
+    \centering
+    \vspace{-2cm}
+    \begin{subfigure}[t]{.333\textwidth}
+        \includegraphics[width=\linewidth,trim=0 4.5cm 0 0]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/amortised_6EXZ.png}
+        \caption*{Amortised}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}[t]{.333\textwidth}
+        \includegraphics[width=\linewidth,trim=0 4.5cm 0 0]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/dps_6EXZ.png}
+        \caption*{DPS}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}[t]{.333\textwidth}
+        \includegraphics[width=\linewidth,trim=0 4.5cm 0 0]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/deft_6EXZ.png}
+        \caption*{DEFT $9\%$}
+    \end{subfigure}%
+    
+    \caption[Comparison of samples from the amortised model, DPS and DEFT (9\%) on the tasks 6EXZ med]{Comparison of samples from the amortised model, DPS and DEFT (9\%) on the tasks 6EXZ med. One can see that while the amortised and DEFT samples incorporate the motif into a realistic backbone, this is not the case for DPS. We generally observed that at small guidance scales DPS produced realistic backbones without the desired motif and at high guidance scales it placed the motif into an unrealistic backbone.} \label{fig:protein_compare_samples}
+    \end{figure}
+
 We evaluate DEFT on the contiguous motifs of the RFDiffusion benchmark \cite{watson2023novo}. In this motif scaffolding task, we sample protein $C_\alpha$ atom coordinates $\mx \in \R^{d}$ such that the generated backbone contains a targeted motif, i.e. a subset of $C_\alpha$ coordinates $\my \in \R^{n}$, similar to an image outpainting task. The forward operator is therefore given by $\my=\Pm(\mx) = \mathrm{A} \mx$, where $\mathrm{A} \in \{0,1\}^{n \times d}$ denotes a masking matrix which only selects the $n$ observed $C_\alpha$ coordinates.
 
 %As a basis for our motif scaffolding experiments, 
@@ -834,49 +869,103 @@ The overall in-silico success, defined by scRMSD $< 2$\AA~ and motifRMSD $< 1$\A
 %The task of motif scaffolding in our protein setting amounts to sampling protein C alpha atom coordinates $\mx \in \R^{d}$ such that it contains a given subset of C alpha coordinates $\my \in \R^{n}$, i.e.\ $\my=\Pm(\mx) = \mathrm{A} \mx$, where $\Pm \in \{0,1\}^{n \times d}$ is a masking matrix which selects $n$ observed C alpha coordinates.
 %We perform two sets of motif scaffolding experiments. We firstly compare the conditional training approach, i.e., {\scshape amortised} training in Appendix~\ref{app:amort_cond_training},  to {\scshape replacement} and {\scshape reconstruction guidance}. Upon observing that {\scshape amortised} performs significantly better, we then dive into a more detailed analysis of this method on the RFDiffusion benchmark, as well as a new SCOPe-based benchmark that is created from a hierarchical structure and sequence-based split described below. 
 
-\vspace{-0.2cm}
-\begin{figure}[tbh]
-\centering
-\hspace*{-1.3cm}
-\begin{minipage}[b]{0.55\textwidth}
-\includegraphics[width=0.98\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/insilicio_success.pdf"}
-% \put(-80,10){\rotatebox{90}{hello}}
-% \caption{Samples conditioned on inner patch.}
-\vspace{-0.3cm}
-\caption{Comparison of DPS, DEFT and amortised training for motif scaffolding for 12 contiguous targets. 4\% and 9\% are the relative sizes of the h-transform compared to the unconditional model.\label{fig:rfdiff_comp}}
-\end{minipage}
-% \hfill
-\hspace*{0.1cm}
-\begin{minipage}[b]{0.35\textwidth}
+% \vspace{-0.2cm}
+% \begin{figure}[tbh]
+% \centering
+% \hspace*{-1.3cm}
+% \begin{minipage}[b]{0.55\textwidth}
+% \includegraphics[width=0.98\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/insilicio_success.pdf"}
+% % \put(-80,10){\rotatebox{90}{hello}}
+% % \caption{Samples conditioned on inner patch.}
+% \vspace{-0.3cm}
+% \caption{Comparison of DPS, DEFT and amortised training for motif scaffolding for 12 contiguous targets. 4\% and 9\% are the relative sizes of the h-transform compared to the unconditional model.\label{fig:rfdiff_comp}}
+% \end{minipage}
+% % \hfill
+% \hspace*{0.1cm}
+% \begin{minipage}[b]{0.35\textwidth}
 
-\adjustbox{max width=1.26\textwidth}{
-\centering
-% \small
-% \vspace{-0}
-\begin{tabular}{lccc}
-\toprule
-\scshape Metric & \scshape DPS & \scshape DEFT & \scshape Amortised \\
-\midrule
-%\textbf{\scshape SCOPe} \\
-%\% Designable $(\uparrow)$ & $0.34_{\pm 0.01}$ & $0.27_{\pm 0.01}$ & $0.28_{\pm 0.01}$\\
-%LPIPS $(\downarrow)$ & $0.25_{\pm 0.00}$ & $0.29_{\pm 0.01}$ & $0.33_{\pm 0.01}$\\
-%\midrule
-\% Success $(\uparrow)$ & $1.3$ & $9.2$ & $24.5$\\
-\% scRMSD < 2 \AA $(\uparrow)$ & $44.3$ & $28.9$ & $42.$\\
-\% mRMSD < 1 \AA $(\uparrow)$ & $4.1$ & $24.0$ & $45.8$\\
+% \adjustbox{max width=1.26\textwidth}{
+% \centering
+% % \small
+% % \vspace{-0}
+% \begin{tabular}{lccc}
+% \toprule
+% \scshape Metric & \scshape DPS & \scshape DEFT & \scshape Amortised \\
+% \midrule
+% %\textbf{\scshape SCOPe} \\
+% %\% Designable $(\uparrow)$ & $0.34_{\pm 0.01}$ & $0.27_{\pm 0.01}$ & $0.28_{\pm 0.01}$\\
+% %LPIPS $(\downarrow)$ & $0.25_{\pm 0.00}$ & $0.29_{\pm 0.01}$ & $0.33_{\pm 0.01}$\\
+% %\midrule
+% \% Success $(\uparrow)$ & $1.3$ & $9.2$ & $24.5$\\
+% \% scRMSD < 2 \AA $(\uparrow)$ & $44.3$ & $28.9$ & $42.$\\
+% \% mRMSD < 1 \AA $(\uparrow)$ & $4.1$ & $24.0$ & $45.8$\\
 
-\bottomrule
-\end{tabular}
-}
-\vspace{0.45cm}
-% \vspace{0.05cm}
-\vspace{-0.3cm}
-\captionof{table}{{\scshape RFDiff} benchmark metrics (averaged over the 11 targets, 100 samples each). Success: scRMSD < 2\AA, motifRMSD < 1\AA. Details in \cref{sec:protein_design}.}
-\label{tab:image-outpainting_prot}
+% \bottomrule
+% \end{tabular}
+% }
+% \vspace{0.45cm}
+% % \vspace{0.05cm}
+% \vspace{-0.3cm}
+% \captionof{table}{{\scshape RFDiff} benchmark metrics (averaged over the 11 targets, 100 samples each). Success: scRMSD < 2\AA, motifRMSD < 1\AA. Details in \cref{sec:protein_design}.}
+% \label{tab:image-outpainting_prot}
+% \end{minipage}
+% \vspace{-0.4cm}
+% \end{figure}
+% \label{fig:protein_comp}
+
+% Ensure these packages are loaded in your preamble (SP.sty might handle some)
+% \usepackage{graphicx}
+% \usepackage{caption} % For \captionof and \captionsetup
+% \usepackage{adjustbox} % For \adjustbox
+% \usepackage{booktabs} % For \toprule, \midrule, \bottomrule
+% \usepackage{amsmath}   % For \AA
+% \usepackage{cleveref}  % For \cref (likely in SP.sty)
+
+\begin{figure}[tbh] % Or [!htb] for more flexibility
+\centering % Centers the combined minipages if their total width < \linewidth
+\begin{minipage}[b]{0.48\textwidth} % Minipage for the table, [b] for bottom alignment
+    \centering % Center the table within this minipage if it's narrower
+    \adjustbox{max width=\linewidth}{% % Adjusts table to fit minipage width
+    % \small % Optionally, make font smaller if table is dense
+    \vspace{2.5cm}
+    \begin{tabular}{lccc}
+    \toprule
+    \scshape Metric & \scshape DPS & \scshape DEFT & \scshape Amortised \\
+    \midrule
+    %\textbf{\scshape SCOPe} \\
+    %\% Designable $(\uparrow)$ & $0.34_{\pm 0.01}$ & $0.27_{\pm 0.01}$ & $0.28_{\pm 0.01}$\\
+    %LPIPS $(\downarrow)$ & $0.25_{\pm 0.00}$ & $0.29_{\pm 0.01}$ & $0.33_{\pm 0.01}$\\
+    %\midrule
+    \% Success $(\uparrow)$ & $1.3$ & $9.2$ & $24.5$\\
+    \% scRMSD < 2 \AA $(\uparrow)$ & $44.3$ & $28.9$ & $42.$ \\ % Consider if "42." should be "42.0" or "42"
+    \% mRMSD < 1 \AA $(\uparrow)$ & $4.1$ & $24.0$ & $45.8$\\
+    \bottomrule
+    \end{tabular}%
+    }
+    % Original vspaces: \vspace{0.45cm} \vspace{-0.3cm} -> net \vspace{0.15cm}
+    % This space is between the table and its caption.
+    \vspace{2cm} 
+    \captionof{table}[RFDiffusion benchmark metrics]{{\scshape RFDiff} benchmark metrics (averaged over the 11 targets, 100 samples each). Success: scRMSD < 2\AA, motifRMSD < 1\AA. Details in \cref{sec:protein_design}.}
+    \label{tab:image-outpainting_prot} % Label for the table part
 \end{minipage}
-\vspace{-0.4cm}
+\hfill
+\begin{minipage}[b]{0.51\textwidth} % Minipage for the image, [b] for bottom alignment
+    \centering % Center the image within this minipage if it's narrower
+    \includegraphics[width=0.98\linewidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/insilicio_success.pdf"}
+    % \put(-80,10){\rotatebox{90}{hello}} % Keep if needed
+    \vspace{-0.3cm} % Original vspace, keep if it improves appearance
+    \caption[Comparison of DPS, DEFT and amortised training for motif scaffolding for 12 contiguous targets]{Comparison of DPS, DEFT and amortised training for motif scaffolding for 12 contiguous targets. 4\% and 9\% are the relative sizes of the h-transform compared to the unconditional model.}
+    \label{fig:rfdiff_comp} % Label for the image part
+\end{minipage}% % '%' prevents unwanted space between minipages in source
+% Adds flexible space between minipages. Alternatively, use \hspace*{0.1cm} for fixed space.
+
+
+% \vspace{-0.4cm} % This was at the end of your original figure env.
+                    % It reduces space *after* the entire figure float. Keep if desired.
+\label{fig:protein_comp} % Overall label for the combined figure (image + table).
+                            % Place it after any potential main caption for the Figure environment,
+                            % or here if captions are only for parts.
 \end{figure}
-\label{fig:protein_comp}
 
 %\paragraph{Data}\label{app:scope_data}
 %We evaluate on the RFDiffusion motif benchmark \citep{watson2023novo} and on a self-curated SCOPe benchmark based on a hierarchical structure-based split, jointly with a sequence-similarity-based split.
@@ -920,75 +1009,20 @@ The overall in-silico success, defined by scRMSD $< 2$\AA~ and motifRMSD $< 1$\A
 % \section{Discussion}
 % \label{discussion}
 
-\subsection{Scaling up the Control Objective} \label{app:vargrad}
-Naively trying to minimise Eqn.~\eqref{eq:stochdiscrete} is demanding, as the full chain has to be kept in memory, which is infeasible for high dimensional problems. To alleviate this problem, one could make use of the stochastic adjoint sensitivity method \citep{li2020scalable}, in which an adjoint SDE is solved to estimate the gradients of the stochastic control loss in Theorem~\ref{theorem:representation_h} 3). This method has the advantage of a constant memory cost. However, the computational cost increases as both the reverse SDE and the adjoint SDE must be simulated. Instead, we discuss two alternative approaches to reduce the memory requirements.
-
-\paragraph{VarGrad} We can make use of a VarGrad \citep{richter2020vargrad, richter2023improved} type loss to reduce the memory requirements. In contrast to the KL loss of Eqn.~\eqref{eq:stochastic_control_objective_2}, then the VarGrad loss is given by:
-\begin{align}
-\label{eq:var_grad_stochastic_control}
-  D_{\mathrm{logvar}}(\mathbb{Q}, \mathbb{P} ; \mathbb{W}) = \mathbb{E}_{\mH^{g_t}_{0:T} \sim \mathbb{W}} \left[\left(\ln   \frac{\dd  \mathbb{Q} }{\dd  \mathbb{P}}(\mH^{g_t}_{0:T})  - \mathbb{E}\left[\ln   \frac{\dd  \mathbb{Q} }{\dd  \mathbb{P}}(\mH^{g_t}_{0:T})\right] \right)^2\right], 
-\end{align}
-where $\mathbb{Q}$ and $\mathbb{P}$ are defined as in the proof of Proposition~\ref{prop:app_stochastic_control}, i.e., $\mathbb{Q}$ is given by the conditional SDE and $\mathbb{P}$ is given by the unconditional SDE. The RND in Eqn.~\eqref{eq:rnd_vargrad} is evaluated at the trajectory of a reference process $\mathbb{W} = \mathrm{Law}(\mH^{g_t}_{0:T})$, given by
-\begin{align} 
-\bH_T &\sim Q_T^{f_t}[p(\vx_0|\vy)] \nonumber\\
-     \dd \bH_t &= \left( f_t(\bH_t) - \sigma^2_t (\nabla_{\bH_t} \ln p_t(\bH_t)+ g_t(\bH_t)) \right)\,\dd t + \sigma_t\; \bwd{ \dd \rv{W}}_t.
-\end{align}
-The Radon–Nikodym derivative (RND) in Eqn~\eqref{eq:var_grad_stochastic_control} can be evaluated as (Using the RND for time reverse SDEs see Equation 64 in \citep{vargas2024transport}):
-\begin{align}
-\label{eq:rnd_vargrad}
-\ln   \frac{\dd  \mathbb{Q} }{\dd  \mathbb{P}}(\mH^{g_t}_{0:T}) & =  -\frac{1}{2}\int_0^T \sigma_t^{2} \| h_t(\mH_t^{g_t}) \|^2 \dd t  +   \int_0^T \sigma_t^2 (g_t^\top h_t) (\mH_t^{g_t}) \dd t - \ln p(\vy| \vx_0^{g_t} )  \nonumber\\
-&+  \int_0^T \sigma_t h_t^\top (\mH_t^{g_t})\bwd{ \dd \rv{W}}_t,
-\end{align}
-for the reference process $\mathbb{W}$. The core advantage of VarGrad is that we can choose this reference process. In particular, the choice $g_t=\mathrm{stop\_grad}(h_t)$ gives us a way to detach the trajectories, saving us from having to score all gradients in memory. 
-
-%\begin{align}
-%  D_{\mathrm{logvar}}(\mathbb{Q}, \mathbb{P} ; \mathbb{W}) =\mathbb{E}_{\mH^{2 \beta_t \mathrm{stop\_grad}(h_t)}_{0:T} \sim \mathbb{W}} \left[\left(\ln   \frac{\dd  \mathbb{Q} }{\dd  \mathbb{P}}(\mH^{2 \beta_t \mathrm{stop\_grad}(h_t)}_{0:T})  - \mathbb{E}\left[\ln   \frac{\dd  \mathbb{Q} }{\dd  \mathbb{P}}(\mH^{2 \beta_t \mathrm{stop\_grad}(f_t)}_{0:T})\right] \right)^2\right]
-%\end{align}
-
-%This allows us to detach the trajectories $\mH^{2 \beta_t \mathrm{stop\_grad}(f_t)}_{0:T}$  saving us from having to store $K * \mathrm{dim}(\vx_0)$ gradients in memory which is challenging for images.
-
-\paragraph{Trajectory Balance} An alternative to the VarGrad loss in Eqn.~\eqref{eq:var_grad_stochastic_control} is the following trajectory balance \cite{malkin2022trajectory,malkin2022gflownets} loss
-\begin{align}
-    \label{eq:tbloss}
-  \mathcal{L}^{\mathbb{W}}_{\mathrm{TB}}(\mathbb{Q}, \mathbb{P} ; k) = \mathbb{E}_{\mH^{g_t}_{0:T} \sim \mathbb{W}} \left[\left(\ln   \frac{\dd  \mathbb{Q} }{\dd  \mathbb{P}}\left(\mH^{g_t}_{0:T}\right)  - k \right)^2\right],
-\end{align}
-where $k \in \R$ is a learnable parameter and $\mathbb{W}$ is the same reference process as above. We again choose $g_t = \mathrm{stop\_grad}(h_t)$ This loss is also motivated by a valid divergence, see \cite{nusken2021solving}. In difference to the VarGrad loss~\eqref{eq:var_grad_stochastic_control}, the inner expectation is exchanged with $k$, which approximates a running mean. In practice, we optimise $k$ and and $h_t$ at the same time. 
-
-\paragraph{Trajectory Subsampling} We observed that backpropagating gradients for only a random subset of discrete timesteps in the RND can be an effective strategy. This subsampling reduces memory costs at the expense of increased variance and the introduction of a small bias. Nevertheless, the reduced memory usage per example enables larger batch sizes, which can mitigate these effects. Notably, we found that backpropagating for only $20\%$ of the timesteps still achieves comparable performance.
-
 
 \subsection{Stochastic Optimal Control - Experiments}
 \label{sec:stoch_cont_exp}
-We provide some initial proof of concept experiments on the MNIST dataset \cite{mnisthandwrittendigit} of handwritten digits. In particular, we make use of a parallel beam Radon transform with $5$ angles as the forward operator and perturb the observations with $10\%$ additive Gaussian noise. All SDEs are discretised using an Euler-Maruyma scheme and the integrals are estimated using simple quadrature rules. We use a non-equidistant time grid according to a square root function, i.e., let $0=t_0 \le \dots \le t_{K-1}=1$ be an equidistant grid of $[0,1]$ for $K$ time points. We then use $t_0^2, t_1^2, \dots, t_{K-1}^2$ as the time points for evaluating the SDEs. This gives us a finer discretisation closer to $t=0$. The unconditional MNIST model is based on the attention U-Net architecture \cite{dhariwal2021diffusion} with about $3$M parameters. The $h$-transform is implemented using the same DEFT parametrisation as in Section~\ref{sec:network_architecture} with about \num{70000} parameters. We compare \texttt{EM-backprop}, i.e., directly backpropagting through the discrete SDE solver (see e.g. \citep{li2020scalable}), with \texttt{VarGrad} and \texttt{TrajectoryBalance} from Section~\ref{app:vargrad}. For \texttt{EM-backprop} we use a batch size of $16$ and use $60$-$80$ time steps. Instead, for \texttt{VarGrad} and \texttt{TrajectoryBalance} we were able to use a batch size of $26$ and $80$-$140$ time steps. For training we used a single GeForce RTX 3090 and the training time took about $1$h. The results are presented in Figure~\ref{fig:stoch_control_loss}, where the loss trajectory of Eqn.~\eqref{eq:stoch} and the mean PSNR of samples is shown. Both \texttt{VarGrad} and \texttt{TrajectoryBalance} are able to minimise the stochastic optimal control objective to the same extend as \texttt{EM-backprop}. Further, in Figure~\ref{fig:trajectory_balance_training} we provide an overview of the \texttt{TrajectoryBalance} training. Here, we observe that $k$ is working as a estimator of the mean RND with a lower variance.
+We provide some initial proof of concept experiments on the MNIST dataset \cite{mnisthandwrittendigit} of handwritten digits. In particular, we make use of a parallel beam Radon transform with $5$ angles as the forward operator and perturb the observations with $10\%$ additive Gaussian noise. All SDEs are discretised using an Euler-Maruyma scheme and the integrals are estimated using simple quadrature rules. We use a non-equidistant time grid according to a square root function, i.e., let $0=t_0 \le \dots \le t_{K-1}=1$ be an equidistant grid of $[0,1]$ for $K$ time points. We then use $t_0^2, t_1^2, \dots, t_{K-1}^2$ as the time points for evaluating the SDEs. This gives us a finer discretisation closer to $t=0$. The unconditional MNIST model is based on the attention U-Net architecture \cite{dhariwal2021diffusion} with about $3$M parameters. The $h$-transform is implemented using the same DEFT parametrisation as in Section~\ref{sec:network_architecture} with about \num{70000} parameters. We compare \texttt{EM-backprop}, i.e., directly backpropagating through the discrete SDE solver (see e.g. \textcite{li2020scalable}), with \texttt{VarGrad} and \texttt{TrajectoryBalance} from Section~\ref{app:vargrad}. For \texttt{EM-backprop} we use a batch size of $16$ and use $60$-$80$ time steps. Instead, for \texttt{VarGrad} and \texttt{TrajectoryBalance} we were able to use a batch size of $26$ and $80$-$140$ time steps. For training, we used a single GeForce RTX 3090 and the training time took about $1$h. The results are presented in \Cref{fig:stoch_control_loss}, where the loss trajectory of \Cref{eq:stochdiscrete} and the mean PSNR of samples is shown. Both \texttt{VarGrad} and \texttt{TrajectoryBalance} are able to minimise the stochastic optimal control objective to the same extend as \texttt{EM-backprop}. Further, in \Cref{fig:stoch_control_loss} we provide an overview of the \texttt{TrajectoryBalance} training. Here, we observe that $k$ is working as an estimator of the mean RND with a lower variance.
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.95\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/stochastic_optimal_control_loss.pdf"}
-    \caption{Left: Tracking the stochastic optimal control loss \eqref{eq:stoch} for the three methods. Right: Mean PSNR of samples.}
+    \includegraphics[width=0.49\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/stochastic_optimal_control_loss.pdf"}
+    \includegraphics[width=0.49\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/tb_loss.pdf"}
+    \caption[Experimental results on stochastic optimal control with trajectory balance]{Left: Tracking the stochastic optimal control loss from \Cref{eq:stochdiscrete} for the three methods. Middle-Left: Mean PSNR of samples. Training using \texttt{TrajectoryBalance}. Middle-Right: The trajectory balance objective loss \eqref{eq:tbloss} over training steps. Right: The mean RND and the trained $k$. We see that $k$ follows the mean RND. However, it has a smaller variance.}
     \label{fig:stoch_control_loss}
 \end{figure}
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=0.95\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter5/Figs/Raster/Figs/tb_loss.pdf"}
-    \caption{Training using \texttt{TrajectoryBalance}. Left: The trajectory balance objective loss \eqref{eq:tbloss} over training steps. Right: The mean RND and the trained $k$. We see that $k$ follows the mean RND. However, it has a smaller variance.}
-    \label{fig:trajectory_balance_training}
-\end{figure}
-
-
-\section{Conclusion}
-\label{sec:conclusion}
+\section{Discussion}
+\label{sec:deft_discussion}
 We presented a unified mathematical framework, based on Doob's $h$-transform, to better understand and classify different conditional diffusion methods.
 Under this framework, we proposed DEFT, a novel parameter-efficient conditional fine-tuning method that does not require backpropagation through large pre-trained score networks, resulting in efficient sampling. We evaluated DEFT on several image reconstruction tasks and showed that it reliably outperformed standard methods, both in time, reconstruction quality and perceptual similarity metrics. While DEFT requires additional training on a small dataset of paired measurements, we find that it is still faster than many existing baselines due to being able to use fewer sampling steps during evaluation, and not needing to backpropagate during evaluation.
-
-\vspace{-0.4cm}
-\paragraph*{Limitations and future work} The DEFT framework uses
-% relies on the availability of 
-a (small) fine-tuning dataset, 
-% which is 
-in contrast to zero-shot conditional sampling approaches, e.g., DPS \cite{chung2022diffusion} or $\Pi$GDM \cite{song2022pseudoinverse}. Fine-tuning on small datasets may have the risk of 
-% reproducing and 
-overfitting to biases inherent in the data. 
-In contrast to zero-shot conditional sampling, DEFT assumes no knowledge of the forward operator. However, the forward operator can be incorporated as an inductive bias within the network architecture to improve performance.
-% 
-We also proposed a zero-shot approach through the optimal control loss in Section~\ref{sec:online_finetuning}, which only needs a single observation $\m$ to learn the $h$-transform. Though we show promising results scaling this approach to the MNIST dataset in Appendix~\ref{app:amort_cond_training}, the computational burden of simulating the full SDE at each iteration is still high, which might make this optimal control loss infeasible for high-dimensional data. However, there is promising recent work on partial trajectory optimisation \cite{zhang2023diffusion}, which may reduce the computational burden of the stochastic control objective, making it competitive with existing methods.

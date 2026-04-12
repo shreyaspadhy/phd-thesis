@@ -15,28 +15,30 @@ In the previous chapter, we discussed a large collection of sampling algorithms,
 \begin{equation}
     \frac{\mathrm{d} X_t}{\mathrm{d} t} = \mu(X_t) + \sigma(X_t) \times \text{``noise''}, \label{eq:sde_intuitive_2}
 \end{equation}
-where the equation is akin to an ordinary differential equation (ODE) with a drift parameter $\mu$, and random noise injected into it at each time step scaled by a diffusion parameter $\sigma$. As a result, the solution to this equation is no longer deterministic, but a random variable at each time step. This means that while the explicit value of $X_t$ is not known at each time step without knowing the initial condition $X_0$ as well as the noise, we can always write down the probability distribution $\P(X_t)$ at each time step. In this chapter, we will develop the mathematical machinery required to discuss stochastic processes and SDEs. We will then briefly show how some of our implied connections from the previous chapter arise naturally from simple design choices in the SDE framework. Finally, we highlight drawbacks of the existing SDE framework, preventing the development of a unified framework, allowing us to tackle this task in the upcoming chapters.
+where the equation is akin to an ordinary differential equation (ODE) with a drift parameter $\mu$, and random noise injected into it at each time step scaled by a diffusion parameter $\sigma$. As a result, the solution to this equation is no longer deterministic, but a random variable at each time step. This means that while the explicit value of $X_t$ is not known at each time step without knowing the initial condition $X_0$ as well as the noise, we can always write down the probability distribution $\P(X_t)$ at each time step. In this chapter, we will develop the mathematical machinery required to discuss stochastic processes and SDEs. We will then briefly show how some of our implied connections from the previous chapter arise naturally from simple design choices in the SDE framework. Finally, we highlight drawbacks of the existing SDE framework, especially when considering SDEs in opposite directions of time, prompting us to develop a novel theorem in the next chapter.
 
 \section{A Review of Probability Theory}
 
 \begin{figure}[!t]
     \centering
     \includegraphics[width=\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter3/Figs/Vector/sde_prob.pdf"}
-    \caption{A simulation of an ODE (\protect\thickblackdash) and multiple realisations of an SDE (\protect\thingreydash) with drift parameter $-\mu_0 X_t$ and diffusion parameter $\sigma_0 \times \text{noise}$. At each time step, the ODE takes a deterministic step, while the SDE takes a random step. At $t=0.5$, the random variable $X_t$ will have unique values determined by the intersection of the dotted black line with the realisations of the SDE. On the right, we plot the probability distribution $\P(X_t)$ at $t=0.5$, which is a Gaussian distribution for this specific choice of parameters.}
+    \caption[Comparison of an ODE and an SDE trajectories]{A simulation of an ODE (\protect\thickblackdash) and multiple realisations of an SDE (\protect\thingreydash) with drift parameter $-\mu_0 X_t$ and diffusion parameter $\sigma_0 \times \text{noise}$. At each time step, the ODE takes a deterministic step, while the SDE takes a random step. At $t=0.5$, the random variable $X_t$ will have unique values determined by the intersection of the dotted black line with the realisations of the SDE. On the right, we plot the probability distribution $\P(X_t)$ at $t=0.5$, which is a Gaussian distribution for this specific choice of parameters.}
     \label{fig:sde_prob}
 \end{figure}
 
-The stochastic calculus framework is built on measure-theoretic probability, which we describe in this section. We build upon the notation and definitions introduced in \textcite{oksendal2013stochastic}, which we refer the reader to for a more thorough treatment. Instead, we aim to provide a concise summary of the most relevant concepts, along with an intuitive understanding of the concepts.
+The stochastic calculus framework is built on measure-theoretic probability, which we describe in this section. We build upon the notation and definitions introduced in \textcite{oksendal2013stochastic}, which we refer the reader to for a more thorough treatment. Instead, we aim to provide a concise summary of the most relevant concepts, along with an intuitive understanding.
 
-At its core, measure-theoretic probability theory is concerned with the notion of assigning a ``measure'' to subsets of a space. This notion gets more complicated in higher dimensions (or infinite dimensions), or when we consider arbitrary collections of sets, and so we aim to be as concrete as possible. Therefore, let us put a few definitions to these abstract notions.
+At its core, measure-theoretic probability theory is concerned with the notion of assigning a \emph{measure} to subsets of a space. This notion gets more complicated in higher dimensions (or infinite dimensions), or when we consider arbitrary collections of sets, and so we aim to be as concrete as possible. Therefore, let us put a few definitions to these abstract notions.
 
 \label{ntn:sample_space}\label{ntn:sigma-algebra}
-\textbf{Probability Measure and Probability Space.} We consider the \textit{sample space} $\Omega$, which is the set of all possible outcomes $\omega$ of an experiment. When an experiment is performed, the outcome is some element of $\Omega$ based on a law of probability $\mathbb{P}$. We then consider an \textit{event} $A$ to be a subset of $\Omega$, which is a collection of some of the possible outcomes. It is useful to restrict any theoretical considerations we have to the \textit{$\sigma$-algebra} $\mathcal{F}$, which is a collection that contains $\Omega$ along with all subsets of $\Omega$ that are closed under countable unions, intersections, and complements. In general, the $\sigma$-algebra is a subset of the power set $\mathcal{P}(\Omega)$, as there are often cases when the power set can contain pathological sets that are not measurable. We define a \textit{probability measure} as the map $\P: \mathcal{F} \to [0,1]$ that satisfies the following properties:
+\textbf{Probability Measure and Probability Space.} We consider the \textit{sample space} $\Omega$, which is the set of all possible outcomes $\omega$ of an experiment. When an experiment is performed, the outcome is some element of $\Omega$ based on a law of probability $\mathbb{P}$. We then consider an \textit{event} $A$ to be a subset of $\Omega$, which is a collection of some of the possible outcomes. It is useful to restrict any theoretical considerations we have to the \textit{$\sigma$-algebra} $\mathcal{F}$, which is a collection that contains $\Omega$ along with all subsets of $\Omega$ that are closed under countable unions, intersections, and complements. In general, the $\sigma$-algebra is a subset of the power set $\mathcal{P}(\Omega)$\label{ntn:power_set}, as there are often cases when the power set can contain pathological sets that are not measurable. We define a \textit{probability measure} as the map $\P: \mathcal{F} \to [0,1]$ that satisfies the following properties:
+\begin{subequations}
 \begin{align}
     \text{(P0)} \quad & \P(\emptyset) = 0 \\
     \text{(P1)} \quad & \P(\Omega) = 1 \\
     \text{(P2)} \quad & \P\left(\bigcup_{i=1}^{\infty} A_i\right) = \sum_{i=1}^{\infty} \P(A_i) \quad \text{for all } A_i \in \mathcal{F}.
 \end{align}
+\end{subequations}
 \label{ntn:prob}
 \label{ntn:probability-measure}
 The triple $(\Omega, \mathcal{F}, \P)$ is called a \textit{probability space}. Further, we say that an event $A \in \mathcal{F}$ happens \textit{almost surely (a.s.)} if $\P(A) = 1$\footnote{Note that this is not the same as saying that $A = \Omega$, as there may be elements in $\Omega$ that are not in $A$, but this set of elements has measure zero.}.
@@ -44,13 +46,13 @@ The triple $(\Omega, \mathcal{F}, \P)$ is called a \textit{probability space}. F
 \label{ntn:borel-sigma-algebra}\label{ntn:lebesgue-measure}
 \textbf{Borel $\sigma$-algebra and Lebesgue Measure.} In the special case when we consider $\Omega$ to be the real space $\mathbb{R}^n$ (which is one example of a topological space), we further restrict our attention to the Borel $\sigma$-algebra $\mathcal{B}(\mathbb{R}^n)$, which is the smallest $\sigma$-algebra that contains all open sets of $\mathbb{R}^n$. Correspondingly, we can define the "canonical" measure on $\mathcal{B}(\mathbb{R}^n)$, known as the Lebesgue measure $\lambda$, which assigns a measure to each Borel set.
 
-\textbf{Random Variables.} Probability spaces give us a way to assign probabilities to collections of interesting subsets of $\Omega$. However, we don't often work with the sets themselves, which can be hard to visualise or enumerate, but functions that map these sets (or events) to the real line. We define a $\mathcal{F}$-\textit{measurable function} $X: \Omega \to \mathbb{R}^n$ to be a function that satisfies $X^{-1}(B) \in \mathcal{F}$ for all $B \in \mathcal{B}(\mathbb{R}^n)$. We also call such functions \textit{random variables}\footnote{A somewhat unfortunate choice of terminology, as random variables are not variables at all, but rather functions that map the sample space to the real line.}.
+\textbf{Random Variables.} Probability spaces give us a way to assign probabilities to collections of interesting subsets of $\Omega$. However, we don't often work with the sets themselves, which can be hard to visualise or enumerate, but functions that map these sets (or events) to the $n$-dimensional real space. We define an $\mathcal{F}$-\textit{measurable function} $X: \Omega \to \mathbb{R}^n$ to be a function that satisfies $X^{-1}(B) \in \mathcal{F}$ for all $B \in \mathcal{B}(\mathbb{R}^n)$. We also call such functions \textit{random variables}\footnote{A somewhat unfortunate choice of terminology, as random variables are not variables at all, but rather functions that map the sample space to the real line.}.
 
-\textbf{Change of Measure and the Radon-Nikodym Theorem.} On a given measurable space $(\Omega, \mathcal{F})$, if we consider two measures $\mu$ and $\nu$ such that they are \textit{absolutely continuous} with respect to each other (i.e. $\nu \ll \mu$), we can express $\nu$ in terms of $\mu$ using a change of measure. Intuitively, we could think of this as a process of assigning a ``weight'' to each element of $\Omega$ such that when we take the weighted sum of elements over a measurable subset $A \in \mathcal{F}$ with measure $\mu(A)$, we get the measure of $A$ under $\nu$. That is, there exists a function $f: \Omega \to \mathbb{R}$ such that $\nu(A) = \int_A f d\mu$. This function $f$ is known as the \textit{Radon-Nikodym derivative} of $\nu$ with respect to $\mu$, and is denoted by $\frac{d\nu}{d\mu}$.
+\textbf{Change of Measure and the Radon-Nikodym Theorem.} On a given measurable space $(\Omega, \mathcal{F})$, if we consider two measures $\mu$ and $\nu$ such that they are \textit{absolutely continuous} with respect to each other (i.e. $\nu \ll \mu$), we can express $\nu$ in terms of $\mu$ using a change of measure. Intuitively, we could think of this as a process of assigning a ``weight'' to each element of $\Omega$ such that when we take the weighted sum of elements over a measurable subset $A \in \mathcal{F}$ with measure $\mu(A)$, we get the measure of $A$ under $\nu$. That is, there exists a function $f: \Omega \to \mathbb{R}^n$ such that $\nu(A) = \int_A f d\mu$. This function $f$ is known as the \textit{Radon-Nikodym derivative} of $\nu$ with respect to $\mu$, and is denoted by $\frac{\d\nu}{\d\mu}$.\label{ntn:radon-nikodym-derivative}
 
-\textbf{Pushforward Measure.} Considering two measurable spaces $(\Omega_1, \mathcal{F}_1)$ and $(\Omega_2, \mathcal{F}_2)$, if we have a measurable function $f: \Omega_1 \to \Omega_2$ and a measure $\mu$ on $\Omega_1$, we can define a new measure $\nu$ on $\Omega_2$ by $\nu(A) = \mu(f^{-1}(A)), \forall A \in \mathcal{F}_2$. This measure $\nu$ is known as the \textit{pushforward measure} of $\mu$ by $f$, and is denoted by $f_\ast \mu$. We can think of this as a process of ``pushing'' the measure $\mu$ through the function $f$ to define a new measure on $\Omega_2$.
+\textbf{Pushforward Measure.} Considering two measurable spaces $(\Omega_1, \mathcal{F}_1)$ and $(\Omega_2, \mathcal{F}_2)$, if we have a measurable function $f: \Omega_1 \to \Omega_2$ and a measure $\mu$ on $\Omega_1$, we can define a new measure $\nu$ on $\Omega_2$ by $\nu(A) = \mu(f^{-1}(A)), \forall A \in \mathcal{F}_2$. This measure $\nu$ is known as the \textit{pushforward measure} of $\mu$ by $f$, and is denoted by $f_\ast \mu$\label{ntn:pushforward_measure}. We can think of this as a process of ``pushing'' the measure $\mu$ through the function $f$ to define a new measure on $\Omega_2$.
 
-\textbf{Probability Distributions and Probability Density Functions.} Since random variables are functions that map the space $(\Omega, \mathcal{F}, \P)$ to the real line $(\mathbb{R}^n, \mathcal{B}(\mathbb{R}^n))$, there exists a pushforward measure of $\P$ through $X$, which we write as $X_\ast \P$. This pushforward measure is termed the \textit{probability distribution} of $X$, and is denoted by $\P_X$. Since $\P_X$ is a measure defined on $\mathbb{R}^n$, we can further define the Radon-Nikodym derivative of $\P_X$ with respect to the Lebesgue measure $\lambda$ on $\mathbb{R}^n$, which is known as the \textit{probability density function} of $X$, and is denoted by $f_X$.
+\textbf{Probability Distributions and Probability Density Functions.} Since random variables are functions that map the space $(\Omega, \mathcal{F}, \P)$ to the $n$-dimensional real space $(\mathbb{R}^n, \mathcal{B}(\mathbb{R}^n))$, there exists a pushforward measure of $\P$ through $X$, which we write as $X_\ast \P$. This pushforward measure is termed the \textit{probability distribution} of $X$, and is denoted by $\P_X$\label{ntn:prob_distbn_sp}. Since $\P_X$ is a measure defined on $\mathbb{R}^n$, we can further define the Radon-Nikodym derivative of $\P_X$ with respect to the Lebesgue measure $\lambda$ on $\mathbb{R}^n$, which is known as the \textit{probability density function} of $X$, and is denoted by $f_X$\label{ntn:prob_density_function}.
 
 \label{ntn:stochastic-process}
 \begin{definition}[Stochastic Process]
@@ -58,38 +60,45 @@ The triple $(\Omega, \mathcal{F}, \P)$ is called a \textit{probability space}. F
     A \textit{stochastic process} $\{X_t\}_{t \in T}$ is a parametric collection of random variables indexed by a parameter $t \in T$, which we call the \textit{index set}. 
 \end{definition}
 
-While we can define stochastic processes on arbitrary index sets, we are particularly interested in the case when $T$ is the time index $t \in [0, \infty)$. Later on, when we discuss Gaussian processes, we will see that the index set can also be a continuous domain, such as the real line. 
+While we can define stochastic processes on arbitrary index sets, we are particularly interested in the case when $T$ is the time index $t \in [0, \infty)$. Later on, when we discuss Gaussian processes, we will see that the index set can also be a continuous domain, such as the $n$-dimensional real space.
 
 \begin{definition}[Filtration and Filtered Probability Space]
     A filtration of the probability space $(\Omega, \mathcal{F}, \mathbb{P})$ is a sequence of sigma algebras $\left\{\mathcal{F}_t\right\}_{t \in \mathcal{T}}$ satisfying $\mathcal{F}_s \subseteq \mathcal{F}_t \subseteq \mathcal{F}$ if $s \leq t$.
-    We call a filtered probability space the tuple $\left(\Omega, \mathcal{F},\left\{\mathcal{F}_t\right\}_{t \in \mathcal{T}}, \mathbb{P}\right)$.
+    We call a filtered probability space the tuple $\left(\Omega, \mathcal{F},\left\{\mathcal{F}_t\right\}_{t \in \mathcal{T}}, \mathbb{P}\right)$\label{ntn:filtered_prob_space}\label{ntn:filtration}.
 \end{definition}
 
 Intuitively, a filtration is a way of representing the information available at each time $t$. We can study the properties of the stochastic process $X_t$ at a specific time $t$ by working within the $\sigma$-algebra $\mathcal{F}_t$, which represents the information available up to that time. As time passes, more information becomes available, and so the $\sigma$-algebra $\mathcal{F}_t$ becomes larger as $t$ increases.
 
-\begin{definition}[Adapted and Predictable Processes]
-    Let $\left(\Omega, \mathcal{F},\left\{\mathcal{F}_t\right\}_{t \in \mathcal{T}}, \mathbb{P}\right)$ be a filtered probability space. A stochastic process $\{X_t\}_{t \in \mathcal{T}}$ is $\mathcal{F}_t$-adapted if $X_t$ is $\mathcal{F}_t$-measurable, and is $\mathcal{F}_t$-predictable if $X_t$ is $\mathcal{F}_{t-}$-measurable.
+\begin{definition}[Adapted Processes]
+    Let $\left(\Omega, \mathcal{F},\left\{\mathcal{F}_t\right\}_{t \in \mathcal{T}}, \mathbb{P}\right)$ be a filtered probability space. A stochastic process $\{X_t\}_{t \in \mathcal{T}}$ is $\mathcal{F}_t$-adapted if $X_t$ is $\mathcal{F}_t$-measurable.
 \end{definition}
 
 We can also generate a new filtered probability space given a stochastic process $\{X_t\}_{t \in \mathcal{T}}$, by considering the filtration generated by the process, which is the smallest filtration that makes the process adapted.
 
 \begin{definition}[Filtration Generated by a Process]
-    Let $\{X_t\}_{t \in \mathcal{T}}$ be a stochastic process. The filtration generated by $\left\{X_t\right\}_{t \in \mathcal{T}}$ is defined as $\mathcal{F}_t^X=\sigma\left\{X_0, \ldots, X_t\right\}$, and the process $\left\{X_t\right\}_{t \in \mathcal{T}}$ is $\mathcal{F}_n^X$-adapted by construction.
+    Let $\{X_t\}_{t \in \mathcal{T}}$ be a stochastic process. The filtration generated by $\left\{X_t\right\}_{t \in \mathcal{T}}$ is defined as $\mathcal{F}_t^X=\sigma\left\{X_0, \ldots, X_t\right\}$, and the process $\left\{X_t\right\}_{t \in \mathcal{T}}$ is $\mathcal{F}_n^X$-adapted by construction.\label{ntn:filtration_generated_by_process}
+\end{definition}
+
+We can also define different stochastic processes that are equivalent \emph{stochastically} as:
+\begin{definition}[Modification of a Process]
+    A stochastic process $Y_t$ is a modification of $X_t$ if, for each time $t > 0$, $\mathbb{P}(X_t = Y_t) = 1$. The processes are not equal only on sets of measure 0.
 \end{definition}
 
 Further, we will consider a special family of stochastic processes that have very useful properties, and pop up often in our further discussions: martingales. 
 
 \begin{definition}[Martingale]
     A stochastic process $X_t$ is a martingale with respect to a filtration $\mathcal{F}_t$ if the following properties hold:
+    \begin{subequations}
     \begin{align}
-        \text{(P1)} \quad &X_t \text{ is } \mathcal{F}_t \text{ measurable for all } t \in \mathcal{T} \text{ (it is adapted)} \\
+        \text{(P1)} \quad &X_t \text{ is } \mathcal{F}_t \text{-measurable for all } t \in \mathcal{T} \text{ (it is adapted)} \\
         \text{(P2)} \quad &\mathbb{E}\left[\left|X_t\right|\right]<\infty \text{ for all } t \in \mathcal{T} \text{ (it is integrable)} \label{eq:martingale_p2} \\
-        \text{(P3)} \quad &\mathbb{E}\left[X_t \mid \mathcal{F}_s\right]=X_s \text{a.s. for all } s \leq t. \label{eq:martingale_p3}
+        \text{(P3)} \quad &\mathbb{E}\left[X_t \mid \mathcal{F}_s\right]=X_s \text{ a.s. for all } s \leq t. \label{eq:martingale_p3}
     \end{align}
+    \end{subequations}
 \end{definition}
 
 \begin{lightgraybox}{Remark: An Intuitive View of Martingales}
-    The word (and really the concept) of a martingale originally came from game theory and gambling, where a martingale referred to a betting strategy where the present is the best approximation of the future, and on average, you would not win or lose money, but stay the same. In the context of stochastic processes, a martingale is a stochastic process that is a "fair" process, in the sense that it neither grows nor decays on average. This is quite easily seen through \Cref{eq:martingale_p3}, where the expected value of the process at time $t$, given only information up to time $s$, is exactly the value of the process at time $s$.
+    The word and concept of a martingale originally came from game theory and gambling, where a martingale referred to a betting strategy where the present is the best approximation of the future, and on average, you would not win or lose money, but stay the same. In the context of stochastic processes, a martingale is a stochastic process that is a \emph{fair} process, in the sense that it neither grows nor decays on average. This is quite easily seen through \Cref{eq:martingale_p3}, where the expected value of the process at time $t$, given only information up to time $s$, is exactly the value of the process at time $s$.
 \end{lightgraybox}
 
 Another useful property of a martingale for us to remember for later is that it is a stochastic process where the optimal regressor of a future value conditioned on the past is the past value itself. We first define the optimal predictor of mean-squared error
@@ -105,23 +114,28 @@ Another useful property of a martingale for us to remember for later is that it 
 
 Applying the optimal predictor of a mean-squared error theorem to the martingale, gives us the following corollary
 \begin{corollary}[Martingale as Optimal Predictor]
+    Let $X_t$ be a martingale. Then the optimal predictor $f$ of the value of $X_t$ at a future time $t + \Delta t$:
     \[
-    f^*=\argmin_{f-\text {measurable}} \mathbb{E}[ \|f(X_t)-X_{t+\Delta t}\|^2], \quad f^*(X_t)=\mathbb{E}[X_{t+\Delta t} \mid X_t]=X_t
-    .
+    f^*=\argmin_{f-\text {measurable}} \mathbb{E}[ \|f(X_t)-X_{t+\Delta t}\|^2],
     \]
+    is given by $f^*(X_t)=\mathbb{E}[X_{t+\Delta t} \mid X_t]=X_t$, i.e. the value at $t$ itself.
 \end{corollary}
 
 \section{A Discrete-Time Intuition for SDEs}
 
-Now that we have introduced the necessary mathematical framework, let us revisit the SDE in Equation~\eqref{eq:sde_intuitive_2}. The main challenge in this differential equation is the inability to concretely parameterise the noise term. To address this, let us consider a discrete-time approximation of this equation with a simple choice of $\mu = 0$ and $\sigma = 1$. If we discretise the time interval $[0, 1]$ into $N$ intervals of size $\Delta t = \frac{1}{N}$, we can approximate the solution to the SDE at time $t=1$ as
+Now that we have introduced the necessary mathematical framework, let us revisit the SDE in Equation~\eqref{eq:sde_intuitive_2}. The main challenge in this differential equation is the inability to concretely parameterise the noise term. To address this, let us consider a discrete-time approximation of this equation with a simple choice of $\mu = 0$ and $\sigma = 1$, giving us a simpler equation in terms of the noise:
+\[
+\frac{\d X_t}{\d t} = \text{ ``noise''}. \label{eq:noise_sde}
+\]
+If we discretise the time interval $[0, 1]$ into $N$ intervals of size $\Delta t = \frac{1}{N}$, we can approximate the solution to the SDE at time $t=1$ as
 \begin{equation}
     X_{1} = X_0 + \sum_{i=1}^{N} Z_i,
 \end{equation}
-where $Z_i$ refers to the noise term at each time step. We need to decide a few properties of the noise term $Z_i$. First, we assume that the noise terms are independent and identically distributed (i.i.d.). Second, we need to decide the distribution of the noise terms. However, anytime we are faced with a sum over i.i.d. random variables, we can rely on the Central Limit Theorem to tell us that the distribution of the sum will be Gaussian. If we make some reasonable assumptions about the distribution of $Z_i$, i.e. specify the first and second moments as $\E[Z_i] = \nu N^{-1}$ and $\mathbb{V}[Z_i] = \zeta^2 N^{-1}$, we have
+where $Z_i$ refers to the noise term at each time step. We need to decide a few properties of the noise term $Z_i$. First, we assume that the noise terms are independent and identically distributed (i.i.d.). Second, we need to decide the distribution of the noise terms. When $\delta t \rightarrow 0$, we are faced with the sum of infinite variables with finite variance, and we can use the Central Limit Theorem to approximate the sum as a Gaussian. If we make some reasonable assumptions about the distribution of $Z_i$, i.e. specify the first and second moments as $\E[Z_i] = \nu N^{-1}$ and $\mathbb{V}[Z_i] = \zeta^2 N^{-1}$, we have
 \begin{equation}
     X_{1} - X_0 \approx \mathcal{N}\left(\nu, \zeta^2\right).
 \end{equation}
-We extend this result to a general time $t$ by dividing each unit interval into $N$ subintervals, giving us the difference between any $X_t$ and $X_s$ (for $s \leq t$) as
+We extend this result to general timepoints $s$ and $t$, $s < t$, by assuming there are $(t-s)$ unit intervals between them. Dividing each of these into $N$ subintervals, we get for $X_t$ and $X_s$:
 \begin{equation}
     X_t - X_s \sim \mathcal{N}\left(\nu (t-s), \zeta^2 (t-s)\right). \label{eq:discrete_diff}
 \end{equation}
@@ -140,8 +154,7 @@ Our discrete-time approximation of the SDE shows us that the noise term has thes
     \label{thm:kolmogorov_continuity_criterion}
     If $\Xt$ is a real-valued process such that for all $T>0$ there exist constants $\alpha, \beta, \gamma>0$ with
     \[
-    \mathbb{E}\left[\left|X_{t+h}-X_t\right|^\alpha\right] \leq \gamma h^{1+\beta}
-    .
+    \mathbb{E}\left[\left|X_{t+h}-X_t\right|^\alpha\right] \leq \gamma h^{1+\beta},
     \]
     for every $t$ and $0 \leq h \leq T$, then there exists a modification of $X_t$ which has almost-surely continuous paths.
 \end{theorem}
@@ -150,7 +163,7 @@ Our discrete-time approximation of the SDE shows us that the noise term has thes
 \end{proof}
 
 Using \Cref{thm:kolmogorov_continuity_criterion}, we can now extend our discrete-time approximation of the noise term in \Cref{def:discrete_time_noise_process} to the continuous-time limit.
-\begin{proposition}[Continuous Modification of Noise]
+\begin{proposition}[Continuous Modification of Discrete-Noise Process]
     \label{prop:continuous_modification_of_noise}
     There exists a modification of the stochastic process $\Xt$ defined in \Cref{def:discrete_time_noise_process} that has almost-surely continuous paths.
 \end{proposition}
@@ -165,42 +178,63 @@ Using \Cref{thm:kolmogorov_continuity_criterion}, we can now extend our discrete
     \]
     Therefore, for $\alpha=4$, $\beta=1$ and $\gamma=\nu^4 T^2+\nu^3 \xi^2 T+3 \xi^4$, we satisfy \Cref{thm:kolmogorov_continuity_criterion}, and so there exists a modification of the stochastic process $\Xt$ that has almost-surely continuous paths.
 \end{proof}
-
-Using \Cref{prop:continuous_modification_of_noise}, we can now extend our discrete-time approximation of the noise term in \Cref{def:discrete_time_noise_process} to the continuous-time limit. This modification is known as the Wiener process, or Brownian motion, and is denoted by $W_t$.
-
-\begin{definition}[Brownian Motion]
-    A real-valued stochastic process $\left\{W_t\right\}_{t \geq 0}$ is a (standard) Brownian motion starting at $x \in \mathbb{R}$ if:
+This modification is known as the Wiener process, or Brownian motion, and is denoted by $W_t$.\label{ntn:brownian_motion}
+\begin{definition}[Brownian Motion or Wiener Process]
+    A real-valued stochastic process $\left\{W_t\right\}_{t \geq 0}$ is a (standard) Brownian motion starting at $x \in \mathbb{R}^n$ if:
+    \begin{subequations}
     \begin{align}
     (P0) \quad & W_0=x \\
     (P1) \quad & W_t-W_s \sim N(0, t-s) \\
-    (P2) \quad & \text{if } 0=t_0 \leq t_1 \leq t_2 \leq \cdots \leq t_n \text{ then } \\
+    (P2) \quad & \text{if } 0=t_0 \leq t_1 \leq t_2 \leq \cdots \leq t_n \text{ then } \nonumber \\
     & W_{t_1}-W_{t_0}, W_{t_2}-W_{t_1}, \ldots, W_{t_n}-W_{t_{n-1}} \text{ are independent,} \\
     (P3) \quad & t \mapsto W_t \text{ is continuous, almost surely.}
     \end{align}
+    \end{subequations}
 \end{definition}
 
-Further, as we were doing with stochastic processes before, we can consider a filtered probability space $(\Omega, \mathcal{F}, \{\mathcal{F}_t\}_{t \in [0, \infty)}, \mathbb{P})$ where $W_t$ is adapted to the filtration $\{\mathcal{F}_t\}_{t \in [0, \infty)}$. We have the following nice property of Brownian Motion:
+Further, as we were doing with stochastic processes before, we can consider a filtered probability space $(\Omega, \mathcal{F}, \{\mathcal{F}_t\}_{t \in [0, \infty)}, \mathbb{P})$ where $W_t$ is adapted to the filtration $\{\mathcal{F}_t\}_{t \in [0, \infty)}$. 
 
-\begin{lemma}{Adapted Wiener Process is a Martingale}
-    The $\mathcal{F}_t$-adapted Wiener process $W_t$ is a martingale with respect to the filtration $\{\mathcal{F}_t\}_{t \in [0, \infty)}$.
-\end{lemma}
-\begin{proof}
-    In order to prove this, we must show that $\mathbb{E}\left(W_t \mid \mathcal{F}_s\right)=W_s$ for any $t>s$. But as $W_s$ is $\mathcal{F}_s$-measurable (by adaptedness) this is equivalent to $\mathbb{E}\left(W_t-W_s \mid \mathcal{F}_s\right)=0$, and this is clearly true by the definition of the Wiener process (as $W_t-W_s$ has zero mean and is independent of $\mathcal{F}_s$ ).
-\end{proof}
+% We have the following nice property of Brownian Motion:
 
-Intuitively, we can see that Brownian Motion is the continuous limit of variables that are represented as sums of i.i.d. normal random variables. Given our original assumptions about the i.i.d.ness of $Z_k$, we can see that in the continuous limit of $\delta t \rightarrow 0$, we have
+% \begin{lemma}[Adapted Wiener Process is a Martingale]
+%     The $\mathcal{F}_t$-adapted Wiener process $W_t$ is a martingale with respect to the filtration $\{\mathcal{F}_t\}_{t \in [0, \infty)}$.
+% \end{lemma}
+% \begin{proof}
+%     In order to prove this, we must show that $\mathbb{E}\left(W_t \mid \mathcal{F}_s\right)=W_s$ for any $t>s$. But as $W_s$ is $\mathcal{F}_s$-measurable (by adaptedness) this is equivalent to $\mathbb{E}\left(W_t-W_s \mid \mathcal{F}_s\right)=0$, and this is clearly true by the definition of the Wiener process (as $W_t-W_s$ has zero mean and is independent of $\mathcal{F}_s$ ).
+% \end{proof}
+Finally, we mention a really important property of stochastic processes: \emph{quadratic variation}, and define the quadratic variation of Brownian motion. First, we define some quantities:\label{ntn:partitions}
+\begin{definition}[Partitions]
+    A partition $\Pi=\left\{t_0, t_1, \cdots, t_n\right\}$ of the positive $n$-dimensional real space $\mathbb{R}^{n,+}$is defined where $0=t_0<t_1<\cdots<t_n$ and $t_n \rightarrow \infty$ when $n \rightarrow \infty$.
+\end{definition}
+\begin{definition}[Total Variation and Quadratic Variation of Processes]
+    The total variation of a stochastic process along the partition $\Pi$ is defined as\label{ntn:total_variation}
+    \[
+    V_t^{\Pi}(X):=\sum_{i=0}^{n-1}\left|X_{t_{i+1}}-X_{t_i}\right|, \quad \text { where } t_n=t
+    \]
+    Similarly, the quadratic variation of a stochastic process along the partition $\Pi$ is defined as\label{ntn:quadratic_variation}
+    \[
+    \langle X \rangle_t^{\Pi} :=\sum_{i=0}^{n-1}\left(X_{t_{i+1}}-X_{t_i}\right)^2, \quad \text { where } t_n=t
+    \]
+\end{definition}    
+Finally, we state a well known identity:
+\begin{definition}[Finite Quadratic Variation of Brownian Motion]
+The quadratic variation of Brownian motion is finite, and regardless of the choice of partition $\Pi$, we have:
 \[
-\sum_{s_i \leq t} Z_{s_i} \rightarrow \int_{s \leq t} Z_s \mathrm{~d} s \approx W_t
-. 
+    \langle W \rangle_t^{\Pi} \rightarrow \langle W \rangle_t = t
 \]
-Therefore, the noise would ideally be defined as some notion of the "derivative" of Brownian Motion $\mathrm{d} W_t$, giving us the SDE from \Cref{eq:sde_intuitive_2} as
+\end{definition}
+
+
+Now, let us turn towards our initial equation in \Cref{eq:noise_sde}. From this discrete intuition to theoretically-sound continuous construction, we can see that Brownian Motion is the continuous-time process that satisfies equation, giving us:
 \[
-\frac{d X_t}{d t}=\mu\left(X_t\right)+\sigma\left(X_t\right) \times \mathrm{d} W_t
+\frac{\d W_t}{\d t} = \text{ ``noise''}.
+\]
+Therefore, the noise is defined as some notion of the "derivative" of Brownian Motion, that is, $\mathrm{d} W_t$, giving us the SDE from \Cref{eq:sde_intuitive_2} as
+\[
+\frac{d X_t}{d t}=\mu\left(X_t\right)+\sigma\left(X_t\right) \mathrm{d} W_t
 . \label{eq:sde_with_dW}
 \]
-Unfortunately, we hit a roadblock when we try to define the noise as $\mathrm{d} W_t$. The Wiener process is not differentiable in the traditional sense, and so we need to define a new notion of the derivative of the Wiener process. This is where Itô calculus comes in.
-
-\mynote{Maybe cover unbounded variation of B.M, and $(dW)^2 = dt$}
+Unfortunately, we hit a second roadblock when we try to define the noise as $\mathrm{d} W_t$. The Wiener process is not differentiable in the traditional sense of Riemannian calculus, and we need to define a new notion of the derivative of the Wiener process. This is where Itô calculus comes in.
 
 \section{Itô Calculus}
 
@@ -208,7 +242,7 @@ Let us rewrite \Cref{eq:sde_with_dW} as an integral equation, giving us
 \[
     X_t=X_0+\int_0^t \mu\left(X_s\right) \mathrm{d} s+\int_0^t \sigma\left(X_s\right) \mathrm{d} W_s \label{eq:integral_form_of_sde}
 \]
-The first term on the right-hand side is a Riemann-Stieltjes integral, and can be defined using standard rules of integration. The second term, however, is undefined in the traditional sense, since the integrand itself is a "noisy process" and has unbound total variation. As a simple example, consider discretising the integral of Brownian Motion itself over the interval $[0, t]$, giving us
+The first integral on the right-hand side is a standard Riemann-Stieltjes integral \citep{stieltjes1894recherches}, and can be defined using standard rules of integration. The second integral, however, is undefined in the traditional sense, since the integrand itself is a "noisy process" and has unbound total variation. As a simple example, consider discretising the integral of Brownian Motion itself over the interval $[0, t]$, giving us
 \[
     \int_0^t W_s \mathrm{~d} W_s \approx \sum_{k=0}^{N-1} W_{t_k^{\star}}\left[W_{t_{k+1}}-W_{t_k}\right], \quad t_k^{\star} \in\left[t_k, t_{k+1}\right]
     .
@@ -226,78 +260,84 @@ Instead, if we ``peak'' into the future and consider $t_k^{\star} = t_{k+1}$, we
     &=\frac{1}{2} W_t^2-\frac{1}{2} W_0^2+\frac{t}{2}
     .
 \]
-This mismatch raises a big issue with how we might be able to define stochastic integrals, as it is no longer the case that the partitioned sums should converge to a single value regardless of the choice of $t_k^{\star}$. In fact, different choices to $t_k^{\star}$ result in the corresponding processes satisfying different fundamental properties as well. the first choice of $t_k^{\star}=t_k$ results in the integral being an \textit{Itô integral}, and the second choice of $t_k^{\star}=t_{k+1}$ results in a \textit{Stratanovich integral}.
+This mismatch raises a big issue with how we might be able to define stochastic integrals, as it is no longer the case that the partitioned sums should converge to a single value regardless of the choice of $t_k^{\star}$. In fact, different choices to $t_k^{\star}$ result in the corresponding processes satisfying different fundamental properties as well. The first choice of $t_k^{\star}=t_k$ results in the integral being an \textit{Itô integral}, and the second choice of $t_k^{\star}=t_{k+1}$ results in a \textit{Stratanovich integral}. By making the former choice, we equip the Itô integral with a number of desirable properties, making it the common choice for stochastic calculus. However, there are situations where the Stratanovich integral is also used, albeit to a much lesser degree.
 
-\subsection{Properties of Itô Integrals}
+% \subsection{Properties of Itô Integrals}
 
-The choice of $t_k^{\star}=t_k$ equips the Itô integral with a number of desirable properties, which we discuss in this section. The most important 
+% The choice of $t_k^{\star}=t_k$ equips the Itô integral with a number of desirable properties, which we discuss in this section. The most important 
 
 \subsection{Construction of Itô Integrals}
 
-We have defined the Itô integral for Brownian motion, having decided which point in an interval to pick (i.e. the leftmost). In order to extend the definition of the Itô integral to more general stochastic processes, we can follow the following steps:
-\begin{enumerate}
-    \item Defining the Itô integral for simple step-wise processes
-    \item Proving the Itô isometry for simple processes
-    \item Constructing a sequence of simple processes that converge to a general stochastic process in a mean-square sense
-    \item Defining the Itô integral as the limit of the sequence of simple processes
-\end{enumerate}
-
-For the sake of brevity, we refer to \textcite[Pg. 21, Section 3.1]{oksendal2013stochastic} for this construction, choosing here to state the important properties and definitions, namely the Itô isometry and the Itô integral. First, we define the family of processes that we will consider, namely processes that are bounded and adapted.
-
-\begin{definition}[Class of Bounded and Adapted Processes]
-    \label{def:class_of_bounded_and_adapted_processes}
-    Let $\mathcal{V}=\mathcal{V}(S, T)$ be the class of functions
-    \[
-        f(t, \omega):[0, \infty) \times \Omega \rightarrow \mathbf{R}
-    \]
-    such that
-    (i) $(t, \omega) \rightarrow f(t, \omega)$ is $\mathcal{B} \times \mathcal{F}$-measurable, where $\mathcal{B}$ denotes the Borel $\sigma$-algebra on $[0, \infty)$.
-    (ii) $f(t, \omega)$ is $\mathcal{F}_t$-adapted.
-    (iii) $E\left[\int_S^T f(t, \omega)^2 d t\right]<\infty$.
-\end{definition}
-
-\begin{definition}[Itô Integral]
-    Let $V_t$ be a bounded and adapted process as per \Cref{def:class_of_bounded_and_adapted_processes}. Then there exists a sequence of simple processes $\left(V_t^n\right)_{n=1}^{\infty}$ such that
-    \[
-        \lim _{n \rightarrow \infty} \mathbb{E}\left[\int_0^T\left(V_u-V_u^n\right)^2 \mathrm{~d} u\right]=0
-    \]
-    The Itô integral then exists (in $\mathcal{L}^2(\mathbb{P})$) and is defined as
-    \[
-        I:=\lim _{n \rightarrow \infty} \int_0^T V_u^n \mathrm{~d} W_u,
-    \]
-    which is independent of the choice of the sequence $\left(V_t^n\right)_{n=1}^{\infty}$.
-\end{definition}
-Finally, we state the Itô isometry, which is a key property of the Itô integral.
-
+We have defined the Itô integral for Brownian motion, having decided which point in an interval to pick (i.e. the leftmost). Extending the definition of the Itô integral to more general processes is unfortunately a very involved derivation. For the sake of brevity, we omit this derivation in this thesis, and refer the reader to \textcite[Pg. 21, Section 3.1]{oksendal2013stochastic} for a thorough discussion. For the remainder of this thesis, we will assume that the Itô integral is well-defined for all families of stochastic processes that we will consider, a family we denote with the symbol $\mathcal{V}$ (a common notational choice). 
+\begin{lightgraybox}{Remark: Notation of Itô and Stratanovich integrals}
+We denote Itô integrals of a stochastic process $X_t \in \mathcal{V}$ as:\label{ntn:ito_integral}
+\[
+I_{\text{ito}} := \int_{s}^t X_u \d W_u = \lim_{\Delta t \rightarrow 0} \sum_{t_i = s}^{t} X_{t_i} (W_{t_{i+1}} - W_{t_i}) 
+\]
+and Stratanovich integrals as:\label{ntn:stratanovich_integral}
+\[
+I_{\text{str}} := \int_s^t X_u \circ \d W_u = \lim_{\Delta t \rightarrow 0} \sum_{t_i = s}^t X_{t_{i+1}} (W_{t_{i+1}} - W_{t_i}) 
+\]
+\end{lightgraybox}
+The choice of the Itô integral enables us to derive and use a very powerful identity:
 \begin{definition}[Itô Isometry]
     \[
-        E\left[\left(\int_S^T f(t, \omega) d B_t\right)^2\right]=E\left[\int_S^T f^2(t, \omega) d t\right] \quad \text { for all } f \in \mathcal{V}(S, T).
+        \E\left[\left(\int_s^t f(u) \d W_u\right)^2\right]=\E\left[\int_s^t f^2(u) \d u\right] \quad \text { for all } f \in \mathcal{V}.
     \]
 \end{definition}
 
+% In order to extend the definition of the Itô integral to more general stochastic processes, we can follow the following steps:
+% \begin{enumerate}
+%     \item Defining the Itô integral for simple step-wise processes
+%     \item Proving the Itô isometry for simple processes
+%     \item Constructing a sequence of simple processes that converge to a general stochastic process in a mean-square sense
+%     \item Defining the Itô integral as the limit of the sequence of simple processes
+% \end{enumerate}
+
+% For the sake of brevity, we refer to \textcite[Pg. 21, Section 3.1]{oksendal2013stochastic} for this construction, choosing here to state the important properties and definitions, namely the Itô isometry and the Itô integral. First, we define the family of processes that we will consider, namely processes that are bounded and adapted.
+
+% \begin{definition}[Class of Bounded and Adapted Processes]
+%     \label{def:class_of_bounded_and_adapted_processes}
+%     Let $\mathcal{V}=\mathcal{V}(S, T)$ be the class of functions
+%     \[
+%         f(t, \omega):[0, \infty) \times \Omega \rightarrow \mathbf{R}
+%     \]
+%     such that
+%     (i) $(t, \omega) \rightarrow f(t, \omega)$ is $\mathcal{B} \times \mathcal{F}$-measurable, where $\mathcal{B}$ denotes the Borel $\sigma$-algebra on $[0, \infty)$.
+%     (ii) $f(t, \omega)$ is $\mathcal{F}_t$-adapted.
+%     (iii) $E\left[\int_S^T f(t, \omega)^2 d t\right]<\infty$.
+% \end{definition}
+
+% \begin{definition}[Itô Integral]
+%     Let $V_t$ be a bounded and adapted process as per \Cref{def:class_of_bounded_and_adapted_processes}. Then there exists a sequence of simple processes $\left(V_t^n\right)_{n=1}^{\infty}$ such that
+%     \[
+%         \lim _{n \rightarrow \infty} \mathbb{E}\left[\int_0^T\left(V_u-V_u^n\right)^2 \mathrm{~d} u\right]=0
+%     \]
+%     The Itô integral then exists (in $\mathcal{L}^2(\mathbb{P})$) and is defined as
+%     \[
+%         I:=\lim _{n \rightarrow \infty} \int_0^T V_u^n \mathrm{~d} W_u,
+%     \]
+%     which is independent of the choice of the sequence $\left(V_t^n\right)_{n=1}^{\infty}$.
+% \end{definition}
+% Finally, we state the Itô isometry, which is a key property of the Itô integral.
+
 \subsection{Itô Processes and Itô's Lemma}
-
-Now that we've been able to define the Itô integral $\int V_t \mathrm{~d} W_t$ for more general stochastic processes, we can consider other properties of calculus that are essential for any meaningful analysis, such as the chain rule.
-Given a stochastic process defined as
+We consider other properties of calculus that are essential for any meaningful analysis, such as the chain rule. First, let us consider processes that can be represented as a sum of a Riemann integral and an Itô integral:
 \[
-    X_t=X_0+\int_0^t a_s\left(X_s\right) \mathrm{d} s+\int_0^t V_s \mathrm{~d} W_s
+    X_t=X_0+\int_0^t a_s\left(X_s\right) \mathrm{d} s+\int_0^t V_s \mathrm{~d} W_s, \text{ or } \mathrm{d} X_t=a_t\left(X_t\right) \mathrm{d} t+V_t \mathrm{~d} W_t, \label{eq:ito_process}
 \]
-or as a stochastic differential equation,
-\[
-    \mathrm{d} X_t=a_t\left(X_t\right) \mathrm{d} t+V_t \mathrm{~d} W_t \label{eq:ito_process}
-\]
-$X_t$ here is itself a stochastic process defined as a combination of an Itô integral and an ordinary integral, and we term it an \textit{Itô process}\footnote{The term "Itô process" is used to describe a stochastic process that can be expressed as an Itô integral. Frequently, the term is used interchangeably with "stochastic integral" or "stochastic process".}.
+$X_t$ is termed an \textit{Itô process}\footnote{The term "Itô process" is used to describe a stochastic process that can be expressed as an Itô integral. Frequently, the term is used interchangeably with "stochastic integral" or "stochastic process".}.
 
-Can we calculate what the stochastic process $f\left(X_t\right)$ would look like? Yes, in fact it can be shown that there exists a version of chain rule for stochastic processes, and it is known as Itô's lemma. First, we consider a simpleversion, where we have $X_t=W_t$ and $a_t=0$. Then we have
+Can we calculate what the stochastic process $f\left(X_t\right)$ would look like? Yes! In fact, it can be shown that there exists a version of chain rule for stochastic processes, and it is known as Itô's lemma. First, we consider a simple version, where we have $X_t=W_t$ and $a_t=0$. Then we have
 
 \begin{definition}[Stochastic Chain Rule]
-    Suppose $f \in C^2([0, \infty) \times \mathbb{R})$ (i.e. $f(t, x)$ is twice continuously differentiable in $\left.x\right)$. Then $Y_t:=f\left(W_t\right)$ is an Itô process, and
+    Suppose $f \in C^2([0, \infty) \times \mathbb{R})$ (i.e. $f(t, x)$ is twice continuously differentiable in $\left.x\right)$. Then $Y_t:=f\left(W_t\right)$ is an Itô process, and\label{ntn:continuous_domain}
     \[
         \mathrm{d} Y_t=\frac{1}{2} \frac{\partial^2 f}{\partial x^2}\left(W_t\right) \mathrm{d} t+\frac{\partial f}{\partial x}\left(W_t\right) \mathrm{d} W_t
     \]
 \end{definition}
 
-We can extend this to the general case where $X_t$ is an Itô process given by \Cref{eq:ito_process}, and $f \in C^2([0, \infty) \times \mathbb{R})$. In fact, the proof will follow quite similarly as above, where we need to make sense of convergence in mean and in probability, and apply the same principles. The more popular (and more general) version of Itô's lemma is given below.
+We can extend this to the general case where $X_t$ is an Itô process given by \Cref{eq:ito_process}, and $f \in C^2([0, \infty) \times \mathbb{R})$, and this version of Itô's lemma is given below.
 
 \begin{theorem}[Itô's Lemma]
     Let $X_t$ be an Itô process given by \Cref{eq:ito_process}, and $f \in C^2([0, \infty) \times \mathbb{R})$. Then $Y_t:=f\left(X_t\right)$ is an Itô process, and is defined as
@@ -310,9 +350,11 @@ We can extend this to the general case where $X_t$ is an Itô process given by \
     \]
 \end{theorem}
 
+Let us now consider some other properties of Itô processes, before turning our attention to the joint probability distributions over the individual elements of an Itô process, i.e. over $\{X_t\}_{t \in [0, T]}$.
+
 \section{Path Measures and their Laws of Probability}
 
-We can now write down the solution to the SDE in \Cref{eq:integral_form_of_sde} as
+Consider the SDE in \Cref{eq:integral_form_of_sde}, in terms of the Wiener process $W_t$ as:
 \[
     \d X_t = \mu\left(X_t\right) \d t + \sigma\left(X_t\right) \d W_t,
 \]
@@ -320,60 +362,59 @@ where it can be readily seen that the solution is an Itô process. If we were to
 \[
     \mathbb{P}\left(X_{t_0} \in A_0, X_{t_1} \in A_1, \ldots, X_{t_n} \in A_n\right),
 \]
-where $A_i \subset \mathbb{R}$ is a Borel set. This is known as the law of the process. In the continuous limit, where we have a (potentially) infinite number of random variables indexed by functions belonging to $\mathcal{T} = C([0, T], \R^n)$, we define the corresponding probability measures as \textit{path measures}.
+where $A_i \subset \mathbb{R}^n$ is a Borel set defined on the $i$-th filtration of the process $X_t$. This is known as the law of the process. In the continuous limit, where we have a (potentially) infinite number of random variables indexed by functions belonging to $\mathcal{T} = C([0, T], \R^n)$, we define the corresponding probability measures as \textit{path measures}.
 
 \begin{definition}[Path Measures]
-    Let $\mathcal{T} = C([0, T], \R^n)$ be the space of continuous functions from $[0, T]$ to $\R^n$, and $\mathcal{B}(\mathcal{T})$ be the Borel $\sigma$-algebra of $\mathcal{T}$. Then a path measure is a probability measure on the space $(\mathcal{T}, \mathcal{B}(\mathcal{T}))$.
+    Let $\mathcal{T} = C([0, T], \R^n)$ be the \label{ntn:continuous_fn_space}space of continuous functions from $[0, T]$ to $\R^n$, and $\mathcal{B}(\mathcal{T})$ be the Borel $\sigma$-algebra of $\mathcal{T}$. Then a path measure is a probability measure on the space $(\mathcal{T}, \mathcal{B}(\mathcal{T}))$.
 \end{definition}
 
 Therefore, for solutions of SDEs of the form in \Cref{eq:integral_form_of_sde}, we can define the \textit{law of the process} as a path measure, notated as $\mathbb{P} = \operatorname{Law}(\Xt)$.
 
 \begin{definition}[Path Measure of an Itô Process]
     \label{def:path_measure_of_ito_process}
-    Let $\Xt$ be an Itô process defined as the solution to the SDE in \Cref{eq:integral_form_of_sde}, with drift coefficient $\mu$ and diffusion coefficient $\sigma$. Further, let $\pi_0$ be the marginal distribution of the RV at $t=0$. Then the path measure of $\Xt$ is denoted as $\mathbb{P}^{\mu, \pi_0} = \operatorname{Law}(\Xt)$.
+    Let $\Xt$ be an Itô process defined as the solution to the SDE in \Cref{eq:integral_form_of_sde}, with drift coefficient $\mu$ and diffusion coefficient $\sigma$. Further, let $\pi_0$ be the marginal distribution of the RV at $t=0$. Then the path measure of $\Xt$ is denoted as $\mathbb{P}^{\mu, \pi_0} = \operatorname{Law}(\Xt)$.\label{ntn:path_measure_of_ito_process}
 \end{definition}
 
 In this section, we discuss certain properties of path measures that could be considered ``laws of probability'' for operations on paths of an Itô process. These properties are often continuous-time analogues of the standard laws of probability, and will be very useful in the upcoming chapters. 
 
-\subsection{Disintegration Theorem: ``Pathwise'' Product Rule}
+% \subsection{Disintegration Theorem: ``Pathwise'' Product Rule}
 
-In traditional probability, the product rule for the joint distribution of random variables $X$ and $Y$ is written quite simply as $p(x, y) = p(x \mid y) p(y)$. For path measures defined on the space of paths of an Itô process, it is possible to write a similar rule, known as the \textit{disintegration theorem}. First, let us define some notation.
+% In traditional probability, the product rule for the joint distribution of random variables $X$ and $Y$ is written quite simply as $p(x, y) = p(x \mid y) p(y)$. For path measures defined on the space of paths of an Itô process, it is possible to write a similar rule, known as the \textit{disintegration theorem}. First, let us define some notation.
 
 
-\begin{definition}[Product Spaces and Canonical Projection Operator]
-    \label{def:product_spaces_and_canonical_projection_operator}
-    Let $(\Omega_x, \mathcal{F}_x)$ and $(\Omega_y, \mathcal{F}_y)$ be two measurable spaces. In the product space $\Omega_x \times \Omega_y$, we define a measurable rectangle the set of the form $A_x \times A_y$, where $A_x \in \mathcal{F}_x$ and $A_y \in \mathcal{F}_y$. Then, the $\sigma$-algebra of $\Omega_x \times \Omega_y$ is defined as the $\sigma$-algebra generated by all measurable rectangles, resulting in the product space $(\Omega_x \times \Omega_y, \mathcal{F}_x \otimes \mathcal{F}_y)$. The canonical projection operators are measurable functions defined as
-    \[
-        \pi_x:& \ \Omega \to \Omega_x, \quad \pi_x(\omega_x, \omega_y) = \omega_x, \quad \forall \  \omega_x \in \Omega_x, \omega_y \in \Omega_y \\
-        \pi_y:& \ \Omega \to \Omega_y, \quad \pi_y(\omega_x, \omega_y) = \omega_y, \quad \forall \  \omega_x \in \Omega_x, \omega_y \in \Omega_y
-        .
-    \]
-\end{definition}
+% \begin{definition}[Product Spaces and Canonical Projection Operator]
+%     \label{def:product_spaces_and_canonical_projection_operator}
+%     Let $(\Omega_x, \mathcal{F}_x)$ and $(\Omega_y, \mathcal{F}_y)$ be two measurable spaces. In the product space $\Omega_x \times \Omega_y$, we define a measurable rectangle the set of the form $A_x \times A_y$, where $A_x \in \mathcal{F}_x$ and $A_y \in \mathcal{F}_y$. Then, the $\sigma$-algebra of $\Omega_x \times \Omega_y$ is defined as the $\sigma$-algebra generated by all measurable rectangles, resulting in the product space $(\Omega_x \times \Omega_y, \mathcal{F}_x \otimes \mathcal{F}_y)$. The canonical projection operators are measurable functions defined as
+%     \[
+%         \pi_x:& \ \Omega \to \Omega_x, \quad \pi_x(\omega_x, \omega_y) = \omega_x, \quad \forall \  \omega_x \in \Omega_x, \omega_y \in \Omega_y \\
+%         \pi_y:& \ \Omega \to \Omega_y, \quad \pi_y(\omega_x, \omega_y) = \omega_y, \quad \forall \  \omega_x \in \Omega_x, \omega_y \in \Omega_y
+%         .
+%     \]
+% \end{definition}
 
-We can now state the disintegration theorem as follows:
+% We can now state the disintegration theorem as follows:
 
-\begin{theorem}[Disintegration Theorem]
-    Let $(\Omega, \mathcal{B}(\Omega), \P)$ be a product space where $\Omega = \Omega_x \times \Omega_y$, and a canonical projection operator $\pi_x$ and $\pi_y$ be defined as in \Cref{def:product_spaces_and_canonical_projection_operator}. Then, there exists a probability measure $\P_{y \mid x}(\cdot \mid x)$ on $(\Omega_x, \mathcal{F}_x)$ such that
-    \[
-        \int_{\Omega_x \times \Omega_y} f(x, y) \d \P(x, y) = \int_{\Omega_x} \int_{\Omega_y} f(x, y) \d \P_{y \mid x} (y \mid x) \d \P_x (\pi_x^{-1}(x)),
-    \]
-    where we denote $\P_x = \P(\pi_x^{-1}(x))$ as the marginal probability measure and $\P_{y \mid x}$ as the conditional probability measure. 
-\end{theorem}
+% \begin{theorem}[Disintegration Theorem]
+%     Let $(\Omega, \mathcal{B}(\Omega), \P)$ be a product space where $\Omega = \Omega_x \times \Omega_y$, and a canonical projection operator $\pi_x$ and $\pi_y$ be defined as in \Cref{def:product_spaces_and_canonical_projection_operator}. Then, there exists a probability measure $\P_{y \mid x}(\cdot \mid x)$ on $(\Omega_x, \mathcal{F}_x)$ such that
+%     \[
+%         \int_{\Omega_x \times \Omega_y} f(x, y) \d \P(x, y) = \int_{\Omega_x} \int_{\Omega_y} f(x, y) \d \P_{y \mid x} (y \mid x) \d \P_x (\pi_x^{-1}(x)),
+%     \]
+%     where we denote $\P_x = \P(\pi_x^{-1}(x))$ as the marginal probability measure and $\P_{y \mid x}$ as the conditional probability measure. 
+% \end{theorem}
 
 \subsection{Girsanov's Theorem: ``Pathwise'' Change of Measure}
 
 \begin{figure}[!t]
     \centering
     \includegraphics[width=\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter3/Figs/Vector/sde_girsanov.pdf"}
-    \caption{An example of a change of measure using Girsanov's theorem. On the left, we plot the solution to an SDE $\d X_t = a_t X_t \d t + \sigma_t \d W_t$, with $a_t = 1$ and $\sigma_t = 0.5$ along with the Brownian motion $\d W_t$ defined on the probability space $(\Omega, \mathcal{F}, \mathbb{P})$. On the right, we plot the same SDE under a change of measure, where we have a new Brownian motion $\d \hat{W}_t$ defined on the probability space $(\Omega, \mathcal{F}, \mathbb{Q})$. Under this new measure, the process $\d \hat{W}_t = \d W_t + \frac{a_t}{\sigma_t} \d t$ is a standard Brownian motion, and the process $X_t$ can be written as $\d X_t = \sigma_t \d \hat{W}_t$. The original Brownian motion now has a negative drift.}
+    \caption[An example of a change of measure using Girsanov's theorem]{An example of a change of measure using Girsanov's theorem. On the left, we plot the solution to an SDE $\d X_t = a_t X_t \d t + \sigma_t \d W_t$, with $a_t = 1$ and $\sigma_t = 0.5$ along with the Brownian motion $\d W_t$ defined on the probability space $(\Omega, \mathcal{F}, \mathbb{P})$. On the right, we plot the same SDE under a change of measure, where we have a new Brownian motion $\d \hat{W}_t$ defined on the probability space $(\Omega, \mathcal{F}, \mathbb{Q})$. Under this new measure, the process $\d \hat{W}_t = \d W_t + \frac{a_t}{\sigma_t} \d t$ is a standard Brownian motion, and the process $X_t$ can be written as $\d X_t = \sigma_t \d \hat{W}_t$. The original Brownian motion now has a negative drift.}
     \label{fig:sde_girsanov}
 \end{figure}
-
-We have discussed the Radon-Nikodym derivative previously, as the ratio of two probability measures, and a function that allows us to express one probability measure in terms of another (usually the Lebesgue measure). Unfortunately, for path measures that are laws of SDEs, there doesn't exist a simple expression for the Radon-Nikodym derivative that maps between the path measure to the Lebesgue measure. However, we are still able to represent the density of two path measures corresponding to two Itô processes, which allows us to perform a ``pathwise'' change of measure. As we will soon see, the ability to write down the density ratio between two path measures allows us to calculate expectations of functions of paths of an Itô process with respect to the law of another, much simpler, Itô process, which is a very useful property for importance sampling, and for representing solutions to SDEs in terms of simpler processes.
+We have discussed the Radon-Nikodym derivative previously, as the ratio of two probability measures, and a function that allows us to express one probability measure in terms of another (usually the Lebesgue measure). Unfortunately, for path measures that are laws of SDEs, there doesn't exist a simple expression for the Radon-Nikodym derivative that maps between the path measure to the Lebesgue measure. However, we are still able to represent the \emph{density ratio} of two path measures corresponding to two Itô processes, which allows us to perform a \emph{pathwise} change of measure. With this \emph{pathwise} change of measure, we can calculate expectations of functions of paths of an Itô process with respect to the law of another, \emph{simpler}, Itô process. This is a very useful property for importance sampling, and for representing solutions to SDEs in terms of simpler processes.
 
 Here, we introduce Girsanov's theorem, a groundbreaking result in the theory of stochastic processes, which allows us to represent the density of two path measures corresponding to two Itô processes, which allows us to perform a ``pathwise'' change of measure. Girsanov's theorem is originally stated in a somewhat different form, which we discuss for completeness, before stating useful corollaries that are more suited for our discussion. Intuitively, Girsanov's Theorem states that if we change the drift coefficient of an Itô process, the law of the process does not change dramatically, and the law of the new process is absolutely continuous with respect to the law of the original process, and can be computed explicitly in terms of their Radon-Nikodym derivative. 
 
-We first state the original theorem, which is a bit more general than what we will need, and then state a corollary that is more suited for our discussion.
+We first state the original theorem, which is stated in a more general form that might be a bit hard to understand at first, and then state a corollary that is more suited for our discussion.
 
 \begin{theorem}[Girsanov's Theorem]
     \label{thm:girsanovs}
@@ -389,11 +430,11 @@ We first state the original theorem, which is a bit more general than what we wi
     \[
         \E\left[\exp \left(\frac{1}{2} \int_0^T u(s, X_s)^2 \d s\right)\right]<\infty. \label{eq:novikov_condition}
     \]
-    Then, under the probability measure $\mathbb{Q}$ defined by the Radon-Nikodym derivative
+    We define $\mathbb{Q}$ through its Radon-Nikodym derivative w.r.t. $\mathbb{P}$ as\label{ntn:radon-nikodym-derivative-pathwise}
     \[
-        \frac{\d \mathbb{Q}}{\d \mathbb{P}} = \exp \left(\int_0^T u(s, X_s) \d W_s - \frac{1}{2} \int_0^T u(s, X_s)^2 \d s \right),
+        \frac{\d \mathbb{Q}}{\d \mathbb{P}} = \exp \left(\int_0^T u(s, X_s) \d W_s - \frac{1}{2} \int_0^T u(s, X_s)^2 \d s \right).
     \]
-    the process 
+    Then,the process 
     \[
         \hat{W}_t = W_t + \int_0^t u(s, X_s) \d s
     \]
@@ -408,7 +449,7 @@ We first state the original theorem, which is a bit more general than what we wi
 
 As a concrete example of applying \Cref{thm:girsanovs}, we can see how an Itô process can be written as a Brownian motion under a change of measure.
 
-\begin{example}[Itô Process as Brownian Motion]
+\begin{corollary}[Change of Measure from Itô Process to Brownian Motion]
     Let $X_t$ be an Itô process defined on $(\Omega, \mathcal{F}, \mathbb{P})$ as the solution to the SDE 
     \[
         \d X_t = a_t(X_t) \d t + \sigma_t \d W_t, \quad X_0 = x.
@@ -426,7 +467,7 @@ As a concrete example of applying \Cref{thm:girsanovs}, we can see how an Itô p
     \[
         \d X_t = \sigma_t \d \hat{W}_t, \quad X_0 = x.
     \]
-\end{example}
+\end{corollary}
 
 We can further state a more general version of Girsanov's theorem between general Itô processes that are solutions to SDEs as follows:
 
@@ -461,7 +502,7 @@ With the ability to write down the density ratio between two path measures, we a
 \begin{figure}[!t]
     \centering
     \includegraphics[width=\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter3/Figs/Vector/sde_doobs.pdf"}
-    \caption{An example of an unconditioned SDE (left) and an SDE conditioned on a boundary condition using Doob's $h$-transform(right). On the left, we plot the solution to an SDE $\d X_t = \mu_0 X_t \d t + \sigma_0 \d W_t$, with $\mu_0 = 1$ and $\sigma_0 = 0.5$. On the right, we plot the solution to the same SDE, but conditioned on the boundary condition $X_T = 5$. The conditioned SDE is given by $\d X_t = \left(\mu_0 X_t + \sigma_0^2 \nabla_{X_t} \ln p_{T \mid t}(X_T = 1 \mid X_t)\right) \d t + \sigma_0 \d W_t$.}
+    \caption[An example of an unconditioned SDE and an SDE conditioned on a boundary condition using Doob's $h$-transform]{An example of an unconditioned SDE (left) and an SDE conditioned on a boundary condition using Doob's $h$-transform(right). On the left, we plot the solution to an SDE $\d X_t = \mu_0 X_t \d t + \sigma_0 \d W_t$, with $\mu_0 = 1$ and $\sigma_0 = 0.5$. On the right, we plot the solution to the same SDE, but conditioned on the boundary condition $X_T = 5$. The conditioned SDE is given by $\d X_t = \left(\mu_0 X_t + \sigma_0^2 \nabla_{X_t} \ln p_{T \mid t}(X_T = 1 \mid X_t)\right) \d t + \sigma_0 \d W_t$.}
     \label{fig:sde_doobs}
 \end{figure}
 
@@ -477,7 +518,7 @@ Another useful property of Itô processes is the ability to condition an Itô pr
     \[
         \d X_t = \left(a_t(X_t) + \sigma_t^2 \nabla_{X_t} \ln p_{T \mid t} \left(X_T \in B \mid X_t\right)\right) \d t + \sigma_t \d W_t, \quad X_0 = x,
     \]
-    where the term $h(X_t, t) \triangleq p_{T \mid t} \left(X_T \in B \mid X_t\right)$ is defined as the $h$-transform, and we have $\P(X_T \in B) = 1$.
+    where the term $h(X_t, t) \triangleq p_{T \mid t} \left(X_T \in B \mid X_t\right)$ is defined as the $h$-transform, and we have $\P(X_T \in B) = 1$.\label{ntn:h_transform}
 \end{definition}
 
 \begin{proof}
@@ -496,11 +537,17 @@ We have discussed some very useful properties of path measures, and techniques t
     \label{fig:sde_reversal}
 \end{figure}
 
-As we alluded to in the previous chapter, generative modelling algorithms such as score-matching and DDPMs simultaneously design the ``forward'' process $q_{\theta}(z \mid x)$ that starts from an unknown data distribution $\hat{\pi}$ and iteratively noises it until a tractable noise distribution $\pi_T$, and the ``backward'' process $p_{\phi}(x \mid z)$ that starts from the noise distribution $\pi_T$ and iteratively removes noise from it until the data distribution $\hat{\pi}$. An alluring property of SDEs is that we can choose a specific form of the ``forward'' process $q_{\theta}$ as a simple SDE, and due to the time-reversal property of SDEs, we are able to write down the ``backward'' process $p_{\phi}$ in closed form. Anderson and Nelson showed that it is possible to write down a ``backward'' Itô process that is the time-reversal of the forward process, so that the marginal distributions of the forward and backward processes are the same at the same time. 
+As established in \Cref{chapter:sampling}, generative modelling algorithms such as score-matching and DDPMs simultaneously design the ``forward'' process $q_{\theta}(z \mid x)$ that starts from an unknown data distribution $\hat{\pi}$ and iteratively noises it until a tractable noise distribution $\pi_T$, and the ``backward'' process $p_{\phi}(x \mid z)$ that starts from the noise distribution $\pi_T$ and iteratively removes noise from it until the data distribution $\hat{\pi}$. A powerful aspect of SDE theory is the concept of time-reversal: given a forward SDE, under certain conditions, a corresponding backward SDE can be derived whose marginal distributions $p_t(x)$ match those of the forward process at each time $t$. This allows for a principled construction of the generative (backward) process from the noising (forward) process, a result pioneered by Anderson \parencite{anderson1982reverse} and Nelson \parencite{nelson2020dynamical}.
 
-There are two distinct approaches on how to define the time-reversal SDE, both of which have subtle differences that can impact the theoretical properties of SDEs that we can work with. The first approach, which we title as ``forward-time'', defines the time-reversal SDE on the same filtration as the original forward process, with the same ``forward-time'' Brownian motion as the stochastic term. This approach allows us to use our discussed tools such as Girsanov's theorem, and continue to use the definition of the Itô integral with respect to the forward-time Brownian motion. 
+% There are two distinct approaches on how to define the time-reversal SDE, both of which have subtle differences that can impact the theoretical properties of SDEs that we can work with. The first approach, which we title as ``forward-time'', defines the time-reversal SDE on the same filtration as the original forward process, with the same ``forward-time'' Brownian motion as the stochastic term. This approach allows us to use our discussed tools such as Girsanov's theorem, and continue to use the definition of the Itô integral with respect to the forward-time Brownian motion. 
 
-The second approach, which we title as ``reverse-time''; defines the time-reversal in a manner that might be more intuitive to consider from a theoretical perspective, but is more difficult to work with from a practical perspective due to the lack of current tooling. In this approach, we first define a ``reverse-time'' Brownian motion, which is a Brownian motion that integrates backwards in time, starting from the end-point of the original forward process. We then define the time-reversal SDE on a different filtration, which is the filtration of the reverse-time Brownian motion. 
+% The second approach, which we title as ``reverse-time''; defines the time-reversal in a manner that might be more intuitive to consider from a theoretical perspective, but is more difficult to work with from a practical perspective due to the lack of current tooling. In this approach, we first define a ``reverse-time'' Brownian motion, which is a Brownian motion that integrates backwards in time, starting from the end-point of the original forward process. We then define the time-reversal SDE on a different filtration, which is the filtration of the reverse-time Brownian motion. 
+
+However, the concept of a \emph{time-reversed SDE} can be formalized in two distinct ways, each with crucial implications for defining divergences between their path measures (see \Cref{fig:sde_reversal} for an illustration).
+The first, often termed the \emph{forward-time} reversal (e.g., following Anderson \parencite{anderson1982reverse}), defines a new process $Z_t = X_{T-t}$ that evolves forward in physical time $t \in [0,T]$ and is adapted to the \emph{same filtration} $\mathcal{F}_t$ as the original forward process $X_t$. This preserves the applicability of standard Itô calculus tools like Girsanov's theorem for processes adapted to $\mathcal{F}_t$.
+The second, the \emph{reverse-time} reversal (e.g., following Nelson \parencite{nelson2020dynamical}), considers the original process $Y_t = X_t$ but evolves it backward in physical time, driven by a \emph{reverse-time Brownian motion} $\overleftarrow{W}_t$ \label{ntn:reverse_time_brownian_motion} and adapted to a \emph{reverse-time filtration} $\mathcal{G}_t$\label{ntn:reverse_time_filtration}. This convention aligns more intuitively with the notion of truly \emph{running time backward} along the \emph{same physical trajectories}.
+
+Let us define these in more detail.
 
 \begin{definition}[Time-reversal of SDEs with forward time]
     \label{def:anderson-reversal}
@@ -510,15 +557,22 @@ The second approach, which we title as ``reverse-time''; defines the time-revers
     \]
     we introduce a re-indexed stochastic process $Z_t := X_{T-t}, t \in [0, T]$ adapted to the same ``forward-time'' filtration $\mathcal{F}_t$. Then, $Z_t$ is the solution to the following SDE
     \[
-        \d Z_t = \left[ -a_{T-t}(Z_t) + \sigma_{T-t}^{\top} \sigma_{T-t} \nabla_{Z_t} \ln P_{T-t}(Z_t) \right] \d t + \sigma_{T-t}(Z_t) \d W_t, \quad Z_0 \sim \pi_T
+        \d Z_t = \left[ -a_{T-t}(Z_t) + \sigma_{T-t}^2 \nabla_{Z_t} \ln P_{T-t}(Z_t) \right] \d t + \sigma_{T-t}(Z_t) \d W_t, \quad Z_0 \sim \pi_T
     \]
 \end{definition}
 
-There are some important properties of this time-reversal to note:
+Key properties of this forward-time reversal $Z_t$ are:
 \begin{itemize}
-    \item By definition, $Z_t$ is adapted to the same ``forward-time'' filtration $\mathcal{F}_t$ as the original process $X_t$. This means that we solve $Z_t$ in the forward-time sense, with a Brownian motion $W_t$ that is adapted to the same filtration $\mathcal{F}_t$.
-    \item However, due to the re-indexing of the random variable $Z_t$, the joint law of the stochastic process \textit{is not the same} as the joint law of the original process $X_t$. This is an important property to note, as the ``forward-time'' time-reversal matches the marginal distributions of $X_t$ and $Z_t$, but not the joint law.
+    \item \textbf{Shared Filtration:} $Z_t$ is adapted to the same forward-time filtration $\mathcal{F}_t$ as $X_t$ and is driven by the same Brownian motion $W_t$. This is practically convenient as standard Itô calculus and numerical solvers apply directly.
+    \item \textbf{Marginal Consistency:} The marginal distribution of $Z_t$ at time $t$ matches that of $X_{T-t}$ from the original process, i.e., $\text{Law}(Z_t) = \text{Law}(X_{T-t})$. So, $Z_T = X_0 \sim \pi_0$.
+    \item \textbf{Different Path Law:} Crucially, while marginals match appropriately, the joint law (or path measure) of the process $\{Z_t\}_{t \in [0,T]}$ is \textbf{different} from that of $\{X_t\}_{t \in [0,T]}$. The process $Z_t$ describes new trajectories that start at $X_T$ and end near $X_0$ but are not the time-reversed physical paths of $X_t$. \emph{This difference in path laws is a fundamental obstacle to directly defining a meaningful likelihood ratio or KL divergence between the path measure of $X_t$ and $Z_t$ if our goal is to compare the ``true'' forward noising process with its generative reversal along the same physical evolution.}
 \end{itemize}
+
+% There are some important properties of this time-reversal to note:
+% \begin{itemize}
+%     \item By definition, $Z_t$ is adapted to the same ``forward-time'' filtration $\mathcal{F}_t$ as the original process $X_t$. This means that we solve $Z_t$ in the forward-time sense, with a Brownian motion $W_t$ that is adapted to the same filtration $\mathcal{F}_t$.
+%     \item However, due to the re-indexing of the random variable $Z_t$, the joint law of the stochastic process \textit{is not the same} as the joint law of the original process $X_t$. This is an important property to note, as the ``forward-time'' time-reversal matches the marginal distributions of $X_t$ and $Z_t$, but not the joint law.
+% \end{itemize}
 
 % \paragraph{Why Andersen’s form is attractive \& where it can bite you.}
 % The benefit of Definition~\ref{def:anderson-reversal} is purely \emph{practical}:
@@ -559,37 +613,51 @@ There are some important properties of this time-reversal to note:
     \[
         \d X_t = a_t(X_t) \d t + \sigma_t(X_t) \d W_t, \quad X_0 \sim \hat{\pi},
     \]
-    with corresponding path measure $\overrightarrow{\mathbb{P}}^{\pi, a}$, we then define the \textit{same} random variable $Y_t := X_t, t \in [0, T]$ defined backwards in time, and adapted to the ``reverse-time'' filtration $\mathcal{G}_t=\sigma\left\{X_s, W_s: T \geq s \geq t\right\}$. Then, $Y_t$ is the solution to the following SDE solved backwards in time from $t=T$ to $t=0$
+    with corresponding path measure $\overrightarrow{\mathbb{P}}^{\pi, a}$\label{ntn:forward_time_path_measure}, we then define the \textit{same} random variable $Y_t := X_t, t \in [0, T]$ defined backwards in time, and adapted to the ``reverse-time'' filtration $\mathcal{G}_t=\sigma\left\{X_s, W_s: T \geq s \geq t\right\}$. Then, $Y_t$ is the solution to the following SDE solved backwards in time from $t=T$ to $t=0$
     \[
-        \d Y_t = \left[ a_{t}(Y_t) - \sigma_{t}^{\top} \sigma_{t} \nabla_{Y_t} \ln P_{t}(Y_t) \right] \d t + \sigma_{t}(Y_t) \d \overleftarrow{W}_t, \quad Y_T \sim \pi_T,
+        \d Y_t = \left[ a_{t}(Y_t) - \sigma_{t}^2 \nabla_{Y_t} \ln P_{t}(Y_t) \right] \d t + \sigma_{t}(Y_t) \d \overleftarrow{W}_t, \quad Y_T \sim \pi_T,
     \]
-    with corresponding path measure $\overleftarrow{\mathbb{P}}^{\pi_T, b}$, where $b_t = a_t - \sigma_t^2 \nabla \ln P_t(Y_t)$. Furthermore, $\overleftarrow{W}_t$ is a Brownian motion that is adapted to the ``reverse-time'' filtration $\mathcal{G}_t$.
+    with corresponding path measure $\overleftarrow{\mathbb{P}}^{\pi_T, b}$\label{ntn:reverse_time_path_measure}, where $b_t = a_t - \sigma_t^2 \nabla \ln P_t(Y_t)$. Furthermore, $\overleftarrow{W}_t$ is a Brownian motion that is adapted to the ``reverse-time'' filtration $\mathcal{G}_t$.
 \end{definition}
 
-Some important properties of the ``reverse-time'' time-reversal to note:
+Key properties of this reverse-time reversal $Y_t$ are:
 \begin{itemize}
-    \item By definition, $Y_t$ is adapted to the ``reverse-time'' filtration $\mathcal{G}_t$, and not the ``forward-time'' filtration $\mathcal{F}_t$. This means that we solve $Y_t$ in the reverse-time sense, with a Brownian motion $\overleftarrow{W}_t$ that is adapted to the ``reverse-time'' filtration $\mathcal{G}_t$.
-    \item Here, however, the joint law of the stochastic process is the same as the joint law of the original process $X_t$. This is an important property to note, as the ``reverse-time'' time-reversal matches the joint law of $X_t$ and $Y_t$, i.e. $\operatorname{Law}\left(\left\{X_t\right\}_{0 \leq t \leq T}\right)=\operatorname{Law}\left(\left\{Y_t\right\}_{0 \leq t \leq T}\right)$.
+    \item \textbf{Different Filtration \& Brownian Motion:} $Y_t$ is adapted to a reverse-time filtration $\mathcal{G}_t$ and driven by a reverse-time Brownian motion $\overleftarrow{W}_t$. This fundamentally differs from the forward process's setup.
+    \item \textbf{Identical Path Law:} Crucially, the joint law (or path measure) of $\{Y_t\}_{t \in [0,T]}$ is \textbf{identical} to that of the original forward process $\{X_t\}_{t \in [0,T]}$, i.e., $\text{Law}(\{Y_t\}) = \text{Law}(\{X_t\})$. This means $Y_t$ traces the \emph{same physical trajectories} as $X_t$, just described backward in time.
+    \item \textbf{The Girsanov Dilemma:} Standard Girsanov's theorem cannot be directly applied to compute a Radon-Nikodym derivative between the path measure of $X_t$ (driven by $W_t$, adapted to $\mathcal{F}_t$) and the path measure of a \emph{different} SDE we might want to compare it to (e.g., a learned generative SDE) if that learned SDE is also defined with respect to $\overleftarrow{W}_t$ and $\mathcal{G}_t$, or if we try to compare a forward path measure $\mathbb{P}_{\text{fwd}}$ with a reverse path measure $\mathbb{P}_{\text{bwd}}$ defined on these distinct filtrations. \emph{This filtration mismatch is the central reason why defining a density ratio or KL divergence between a forward SDE path and its reverse SDE path (or a learned approximation thereof) is non-trivial with standard Itô calculus.}
 \end{itemize}
 
-\begin{lightgraybox}{Theoretical Properties of Time-Reversals}
-    Depending on the choice of time-reversal, there are certain mathematical properties from stochastic calculus that are preserved, and certain properties that are not preserved. 
+% Some important properties of the ``reverse-time'' time-reversal to note:
+% \begin{itemize}
+%     \item By definition, $Y_t$ is adapted to the ``reverse-time'' filtration $\mathcal{G}_t$, and not the ``forward-time'' filtration $\mathcal{F}_t$. This means that we solve $Y_t$ in the reverse-time sense, with a Brownian motion $\overleftarrow{W}_t$ that is adapted to the ``reverse-time'' filtration $\mathcal{G}_t$.
+%     \item Here, however, the joint law of the stochastic process is the same as the joint law of the original process $X_t$. This is an important property to note, as the ``reverse-time'' time-reversal matches the joint law of $X_t$ and $Y_t$, i.e. $\operatorname{Law}\left(\left\{X_t\right\}_{0 \leq t \leq T}\right)=\operatorname{Law}\left(\left\{Y_t\right\}_{0 \leq t \leq T}\right)$.
+% \end{itemize}
+\begin{lightgraybox}{Remark: Implications for Path Measure Comparisons}
+    The choice of time-reversal convention profoundly impacts our ability to compare path measures using standard tools:
     \begin{itemize}
-        \item Girsanov's theorem: While we didn't discuss the proof of Girsanov's theorem in this chapter, an important property that is used in the proof is that the processes need to be adapted to the same filtration. Therefore, the ``forward-time'' time-reversal allows us to use Girsanov's theorem between the forward and backward processes.
-        \item Mixing an Itô integral that is forward-adapted (to $\mathcal{F}_t$) with an Itô integral that is reverse-adapted (to $\mathcal{G}_t$) breaks Burkholder–Davis–Gundy inequalities and Itô isometry. Hence expectations and 
-        $L^2$ bounds that are routine in the forward‑only world become really difficult to work with in the ``reverse-time'' world.
-        \item However, in our framework for generative modelling and sampling, we are really interested in learning our parametrised maps $p_{\phi}$ and $q_{\theta}$ under the framework of probability divergences that we want to write between two path measures $\P$ and $\Q$, corresponding to the forward and backward processes respectively. In this situtation, the ``reverse-time'' time-reversal allows us to write the KL divergence between the forward and backward processes easily, as we will readily minimise the KL divergence between the forward and ``reverse-time'' backward processes when we use the ``reverse-time'' time-reversal, since their joint law is the same.
+        \item \textbf{Forward-Time Reversal ($Z_t$)}: Girsanov's theorem can be used to find the Radon-Nikodym derivative between the path measure of $X_t$ and another process $X'_t$ if both are adapted to the same forward filtration $\mathcal{F}_t$. However, since $\text{Law}(\{Z_t\}) \neq \text{Law}(\{X_t\})$, calculating divergences between them is impossible, due to a mismatch of support.
+        \item \textbf{Reverse-Time Reversal ($Y_t$)}: While $\text{Law}(\{Y_t\}) = \text{Law}(\{X_t\})$, the processes $X_t$ and $Y_t$ are defined with respect to different filtrations ($\mathcal{F}_t$ vs. $\mathcal{G}_t$) and different Brownian motions ($W_t$ vs. $\overleftarrow{W}_t$). Standard Itô calculus, including Girsanov's theorem, is not equipped to handle integrals and probability measure changes across these fundamentally different stochastic bases. Mixing forward-adapted Itô integrals with reverse-adapted ones breaks essential properties like Itô isometry and martingale representation theorems.
+        \item \textbf{The Need for a New Perspective}: To meaningfully define and compute a density ratio (or KL divergence) between the path measure of a forward SDE (e.g., data noising) and the path measure of its true reverse (e.g., data generation), we need a calculus that can operate without explicit reliance on a shared, time-ordered filtration. This motivates the introduction of Föllmer's pathwise Itô calculus.
     \end{itemize}
 \end{lightgraybox}
+
+
+% \begin{lightgraybox}{Theoretical Properties of Time-Reversals}
+%     Depending on the choice of time-reversal, there are certain mathematical properties from stochastic calculus that are preserved, and certain properties that are not preserved. 
+%     \begin{itemize}
+%         \item Girsanov's theorem: While we didn't discuss the proof of Girsanov's theorem in this chapter, an important property that is used in the proof is that the processes need to be adapted to the same filtration. Therefore, the ``forward-time'' time-reversal allows us to use Girsanov's theorem between the forward and backward processes.
+%         \item Mixing an Itô integral that is forward-adapted (to $\mathcal{F}_t$) with an Itô integral that is reverse-adapted (to $\mathcal{G}_t$) breaks Burkholder–Davis–Gundy inequalities and Itô isometry. Hence expectations and 
+%         $L^2$ bounds that are routine in the forward‑only world become really difficult to work with in the ``reverse-time'' world.
+%         \item However, in our framework for generative modelling and sampling, we are really interested in learning our parametrised maps $p_{\phi}$ and $q_{\theta}$ under the framework of probability divergences that we want to write between two path measures $\P$ and $\Q$, corresponding to the forward and backward processes respectively. In this situtation, the ``reverse-time'' time-reversal allows us to write the KL divergence between the forward and backward processes easily, as we will readily minimise the KL divergence between the forward and ``reverse-time'' backward processes when we use the ``reverse-time'' time-reversal, since their joint law is the same.
+%     \end{itemize}
+% \end{lightgraybox}
 
 \section{Reverse-Time SDEs and F{\"o}llmer's Itô Calculus}
 \label{sec:folmer_ito_calculus}
 
-We have seen that the ``reverse-time'' SDE framework provides the same joint law for the forward and reverse SDEs, which would enable us to define probability divergences between the forward and reverse SDEs. However, since the forward and reverse SDEs exist on different filtrations going in different directions, we cannot rely on our existing machinery of Ito integrals and Girsanov's theorem, bringing us to a standstill. 
+In this section, we turn to F{\"o}llmer's Itô calculus \parencite{follmer2006calcul}. This alternative formulation of stochastic integration and differentiation is constructed \emph{pathwise}, meaning it applies to individual continuous functions (paths) exhibiting continuous quadratic variation, without explicit dependence on a pre-defined probabilistic filtration. This pathwise nature is precisely what allows us to compare forward and backward stochastic evolutions along the \emph{same trajectory}, a crucial step for defining a meaningful density ratio or divergence between their respective path measures. While F{\"o}llmer's calculus has its own nuances, its ability to bypass filtration-based limitations makes it an indispensable tool for our goal of developing a Girsanov-like theorem for forward versus reverse SDEs, as we will develop in \Cref{chapter:cmcd}.
 
-In this section, we introduce an alternative framework, F{\"o}llmer's Itô calculus, that allows us to derive a version of Itô's formula for SDEs without relying on the existence of filtrations. While there are some subtleties to this framework, and the results might be not as general as the existing framework, for our purposes, it suffices to use this framework to define a novel Radon-Nikodym derivative between the forward and reverse processes, which we will use to define a novel Girsanov's theorem in the next chapter.
-
-\begin{definition}[Ito's formula without probability]
+\begin{definition}[It{\^o}'s formula without probability]
     \label{def:ito-formula-without-probability}
     (\textcite[Theorem 6.6, Pg. 122]{eberle2011introduction}, \textcite{follmer2006calcul}) Suppose that $X: [0, T) \to \mathbb{R}^d$ is a continuous function with continuous quadratic variation $\langle X \rangle_t$ w.r.t a partition $(\pi_n)$. Then, for any $f \in C^2([0, t) \times \mathbb{R}^d)$, and for any $t \in [0, T)$, the Itô integral
     \[
@@ -643,26 +711,7 @@ Finally, we make note of a very useful identity in F{\"o}llmer's framework, whic
     \]
 \end{corollary}
 \begin{proof}
-    From \Cref{eq:diff-reverse-ito-integral}, we have that
-    \[
-        \int_0^T a_t(X_t) \d \overleftarrow{X}_t = \int_0^T a_t(X_t) \d X_t - \sigma_t^2 \int_0^T \nabla \cdot a_t(X_t) \d t
-    \]
-    Applying Itô's formula (component wise) we have
-    \[
-    \mathrm{d}\left[a_t\left(X_t\right)\right]_i = &\left(\partial_t\left[a_t\left(X_t\right)\right]_i+\nabla\left[a_t\left(X_t\right)\right]_i^{\top} a_t\left(X_t\right)+\frac{\sigma_t^2}{2} \operatorname{tr}\left(H\left(\left[a_t\left(X_t\right)\right]_i\right)\right)\right) \mathrm{d} t \\ &+ \sigma_t \nabla\left[a_t\left(X_t\right)\right]_i^{\top} \mathrm{d} W_t .
-    \]
-    Now, using that the co-variation between two Itô processes is the integrated product of their volatility coefficients    
-    \[
-    \left\langle\left[a_t\left(X_t\right)\right]_i,[X]_i\right\rangle_t & =\left\langle\int_0^T \sigma_t \nabla\left[a_t\left(X_t\right)\right]_i^{\top} \mathrm{d} W_t,[X]_i\right\rangle_t \\
-    & =\sum_j \int_0^T \sigma_t^2 \partial_{\left[X_t\right]_j}\left[a_t\left(X_t\right)\right]_i \mathrm{~d}\left\langle[W]_i,[W]_j\right\rangle_t \\
-    & =\int_0^T \sigma_t^2 \partial_{\left[X_{t] i}\right.}\left[a_t\left(X_t\right)\right]_i \mathrm{~d} t
-    \]
-
-    where in the first equality we have used $\left\langle\mathrm{d} t,[\mathrm{~d} \overrightarrow{W}]_j\right\rangle_t=0$ and in the final equality we have used d $\left\langle[\overline{{W}}]_i,[\overline{{W}}]_j\right\rangle_t=\delta_{i j}$ t. Combining the coefficients we have
-
-    $$
-    \left\langle a_t\left(X_t\right), X\right\rangle_t=\int_0^T \sigma_t^2 \nabla \cdot a_t\left(X_t\right) \mathrm{d} t .
-    $$
+    See \textcite[Theorem 6.21, Pg. 136]{eberle2011introduction}.
     % NOTE: Simplify a bit, remove component-wise stuff.s
 \end{proof}
 

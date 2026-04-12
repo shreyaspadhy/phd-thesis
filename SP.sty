@@ -499,22 +499,78 @@
   headformat=\NAME~\NUMBER\NOTE
 ]{namedtheorem}
 
+\RequirePackage{tcolorbox}
+
+\declaretheoremstyle[
+    spaceabove=\topsep,
+    spacebelow=\topsep,
+    headfont=\normalfont\bfseries,
+    notefont=\bfseries,
+    notebraces={(}{)},
+    bodyfont=\normalfont\itshape,
+    postheadspace=0.5em,
+    headpunct={.},
+    headformat=\NAME~\NUMBER\NOTE,
+  mdframed={
+    backgroundcolor=gray!10,
+    linewidth=0pt,
+    roundcorner=1000pt,
+    leftmargin=0.5cm,
+    rightmargin=0.5cm,
+    innerleftmargin=0.5cm,
+    innerrightmargin=0.5cm,
+    innertopmargin=0.2cm,
+    innerbottommargin=0.2cm,
+    skipabove=12pt,
+    skipbelow=12pt,
+  }
+]{coloredtheorem}
+
 \declaretheorem[style=\ifSP@notes namedtheorem\else namedtheorem\fi,numberwithin=\ifSP@notes\@ifclassloaded{book}{chapter}\relax\else\relax\fi]{theorem}
 % \declaretheorem[style=namedtheorem,numberwithin=\ifSP@notes\@ifclassloaded{book}{chapter}\relax\else\relax\fi]{nametheorem}
 % \declaretheorem[style=\ifSP@notes marginnotethm\else namedtheorem\fi,numberlike=theorem]{algorithm}
 \declaretheorem[style=namedtheorem,numberlike=theorem]{assumption}
+\declaretheorem[style=coloredtheorem,name=Assumption,sibling=assumption]{selfassumption}
 \declaretheorem[style=namedtheorem,numberlike=theorem]{axiom}
+\declaretheorem[style=coloredtheorem,name=Axiom,sibling=axiom]{selfaxiom}
 \declaretheorem[style=\ifSP@notes marginnotethm\else namedtheorem\fi,numberlike=theorem]{conjecture}
+\declaretheorem[style=coloredtheorem,name=Conjecture,sibling=conjecture]{selfconjecture}
 \declaretheorem[style=namedtheorem,numberlike=theorem]{corollary}
+\declaretheorem[style=coloredtheorem,name=Corollary,sibling=corollary]{selfcorollary}
 \declaretheorem[style=\ifSP@notes marginnotethm\else namedtheorem\fi,numberlike=theorem]{counterexample}
+\declaretheorem[style=coloredtheorem,name=Counterexample,sibling=counterexample]{selfcounterexample}
 \declaretheorem[style=namedtheorem,numberlike=theorem]{definition}
+\declaretheorem[style=coloredtheorem,name=Definition,sibling=definition]{selfdefinition}
 \declaretheorem[style=namedtheorem,numberlike=theorem]{example}
+\declaretheorem[style=coloredtheorem,name=Example,sibling=example]{selfexample}
 \declaretheorem[style=\ifSP@notes marginnotethm\else namedtheorem\fi,numberlike=theorem]{exercise}
+\declaretheorem[style=coloredtheorem,name=Exercise,sibling=exercise]{selfexercise}
 \declaretheorem[style=namedtheorem,numberlike=theorem]{lemma}
+\declaretheorem[style=coloredtheorem,name=Lemma,sibling=lemma]{selflemma}
 \declaretheorem[style=namedtheorem,numberlike=theorem]{proposition}
+\declaretheorem[style=coloredtheorem,name=Proposition,sibling=proposition]{selfproposition}
 \declaretheorem[style=namedtheorem,numberlike=theorem]{remark}
+\declaretheorem[style=coloredtheorem,name=Remark,sibling=remark]{selfremark}
 \declaretheorem[style=\ifSP@notes marginnotethm\else namedtheorem\fi,numberlike=theorem]{result}
+\declaretheorem[style=coloredtheorem,name=Result,sibling=result]{selfresult}
 \declaretheorem[style=namedtheorem,numberlike=theorem]{framework}
+\declaretheorem[style=coloredtheorem,name=Framework,sibling=framework]{selfframework}
+\declaretheorem[style=coloredtheorem,name=Theorem,sibling=theorem]{selftheorem}
+
+\Crefname{selfassumption}{Assumption}{Assumptions}%
+\Crefname{selfaxiom}{Axiom}{Axioms}%
+\Crefname{selfconjecture}{Conjecture}{Conjectures}%
+\Crefname{selfcorollary}{Corollary}{Corollaries}%
+\Crefname{selfcounterexample}{Counterexample}{Counterexamples}%
+\Crefname{selfdefinition}{Definition}{Definitions}%
+\Crefname{selfexample}{Example}{Examples}%
+\Crefname{selfexercise}{Exercise}{Exercises}%
+\Crefname{selflemma}{Lemma}{Lemmas}%
+\Crefname{selfproposition}{Proposition}{Propositions}%
+\Crefname{selfremark}{Remark}{Remarks}%
+\Crefname{selfresult}{Result}{Results}%
+\Crefname{selfframework}{Framework}{Frameworks}%
+\Crefname{selftheorem}{Theorem}{Theorems}%
 
 % Proof sketch environment
 \newtheoremstyle{proofsketchstyle}

@@ -1,0 +1,30 @@
+\begin{figure}[tbh]
+\centering
+\hspace*{-1.3cm}
+\begin{minipage}[b]{0.4\textwidth}
+\includegraphics[width=0.98\textwidth, trim=0 0 150 0, clip]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/Figs/Vector/imagenet_em_log.pdf}
+\vspace{-0.3cm}
+\caption{Prior precision optimisation trajectories for ResNet-50 on Imagenet.}
+\label{fig:imagenet_pred}
+\end{minipage}
+\hspace*{0.1cm}
+\begin{minipage}[b]{0.42\textwidth}
+\adjustbox{max width=1.26\textwidth}{
+\centering
+\begin{tabular}{cccccccc}
+ & \multirow{2}{*}{$\kappa$} & \multirow{2}{*}{MAP} & \multicolumn{1}{c}{Ensemble} & \multicolumn{2}{c}{KFAC} & \multicolumn{2}{c}{Sampling} \\
+                          &   &         &          5 NNs              & init  & 5EM   & 6EM   & $\alpha{=}11.4$  \\ \hline
+marginal LL               & 1 & -0.936  & -$\mathbf{0.815}$ & -1.449  & -1.493  & -0.924  & -0.917             \\ \hline
+\multirow{4}{*}{joint LL} & 2 & -9.347  & -6.700                 & -6.289  & -6.286  & -7.814  & -$\mathbf{5.611}$  \\
+                          & 3 & -18.733 & -13.268                & -12.112 & -12.246 & -15.065 & -$\mathbf{10.675}$ \\
+                          & 4 & -28.093 & -20.029                & -19.872 & -20.493 & -22.416 & -$\mathbf{16.154}$ \\
+                          & 5 & -37.416 & -26.938                & -29.839 & -31.221 & -29.787 & -$\mathbf{21.981}$ \\ \hline
+\end{tabular}
+}
+\vspace{0.45cm}
+\vspace{-0.3cm}
+\captionof{table}[Experimental results for sampling Laplace on Imagenet]{Comparison of methods' marginal and joint predictive performance for ResNet-50 on Imagenet.}
+\label{tab:imagenet_joint}
+\end{minipage}
+\vspace{-0.4cm}
+\end{figure}

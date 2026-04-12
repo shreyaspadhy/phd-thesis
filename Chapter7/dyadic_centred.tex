@@ -1,0 +1,30 @@
+\begin{figure}[tbh]
+\centering
+\hspace*{-1.3cm}
+\begin{minipage}[b]{0.4\textwidth}
+\includegraphics[width=0.98\textwidth]{"/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter7/Figs/Vector/cifar100_pred.pdf"}
+\vspace{-0.3cm}
+\caption{Performance under distribution shift for ResNet-18 on CIFAR100.}
+\label{fig:cifar_pred}
+\end{minipage}
+\hspace*{0.1cm}
+\begin{minipage}[b]{0.4\textwidth}
+\adjustbox{max width=1.26\textwidth}{
+\centering
+\begin{tabular}{@{}cccccc@{}}
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{$\kappa$} & MAP & Ensemble (5) & KFAC & Sampling \\
+\cline{2-6}
+\multicolumn{1}{c}{{marginal LL}} & $1$ & \multicolumn{1}{c}{-$1.40\pm0.00$} & \multicolumn{1}{c}{-$\mathbf{0.90\pm0.00}$} & \multicolumn{1}{c}{-$1.12\pm0.01$} & -$1.07\pm0.01$ \\ \midrule
+\multicolumn{1}{c}{\multirow{4}{*}{{joint LL}}} & $2$ & \multicolumn{1}{c}{-$13.97\pm0.01$} & \multicolumn{1}{c}{-$6.86\pm0.01$} & \multicolumn{1}{c}{-$\mathbf{4.92\pm0.04}$} & -$5.14\pm0.04$ \\
+\multicolumn{1}{c}{} & $3$ & \multicolumn{1}{c}{-$27.89\pm0.03$} & \multicolumn{1}{c}{-$14.17\pm0.03$} & \multicolumn{1}{c}{-$10.83\pm0.12$} & -$\mathbf{10.77\pm0.09}$ \\
+\multicolumn{1}{c}{} & $ 4$ & \multicolumn{1}{c}{-$41.83\pm0.03$} & \multicolumn{1}{c}{-$22.29\pm0.04$} & \multicolumn{1}{c}{-$19.02\pm0.22$} & -$\mathbf{18.04\pm0.18}$ \\
+\multicolumn{1}{c}{} & $5$ & \multicolumn{1}{c}{-$55.89\pm0.02$} & \multicolumn{1}{c}{-$31.07\pm0.09$} & \multicolumn{1}{c}{-$29.40\pm0.40$} & -$\mathbf{26.75\pm0.26}$ \\ \bottomrule
+\end{tabular}
+}
+\vspace{0.45cm}
+\vspace{-0.3cm}
+\captionof{table}[Experimental results for sampling Laplace on CIFAR100]{Comparison of methods' marginal and joint prediction performance for ResNet-18 on CIFAR100.}
+\label{tab:cifar_joint}
+\end{minipage}
+\vspace{-0.4cm}
+\end{figure}

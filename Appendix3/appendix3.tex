@@ -39,8 +39,6 @@
     Where it is very important to notice that the backward SDE starts at the terminal distribution of the conditional forward SDE $\ora{\P}^{p(x_0 \mid y),f_t}_T$ and \textit{not} $\pi_T = \ora{\P}^{\pi, f_t}_T$. For a VP-SDE, this happens to approximately be $\mathcal{N}(0,I)$ in both cases (i.e. $\ora{\P}^{p(x_0 \mid y),f_t}_T \approx  \ora{\P}^{\pi,f_t}_T \approx \mathcal{N}(0,I)$) however more generally it is not and one needs to be careful.
     
     Note that this remark highlights that the score used in DPS \citep{chung2022diffusion} (i.e. $\nabla_x \ln  p_{t|y}(x |y)$) is in fact the score of an OU process starting at $p(x_0|y)$. For example, notice that the cancellation going from \Cref{eq:post1} to \Cref{eq:post2} was only possible since the \textit{prior} in our target posterior is the initial distribution for the forward SDE (in their case an OU-process) with marginal $p_t$. These considerations are subtle yet important and omitted in prior works. Whilst this is akin to the relationship motivated in DPS as $\nabla_x \ln p_{t|y}(x|y) = \nabla_x \ln p_t(x) + \nabla_x \ln p_t(y|x) $, DPS fails to convey that this is in fact the score of a VP-SDE with the posterior $p(x_0|y)$ as its initial distribution.
-    
-    % Also notice that whilst similar simply stating $\nabla_x \ln  p_{t|y}(x |y) = \nabla_x \ln  p_{t}(x ) + \nabla_x \ln  p_{y|t}(y |x)$ is insufficient to prove 
     \end{proof}
 
 \subsection{Proof of \Cref{prop:amortised_conditional_score_matching}}
@@ -63,7 +61,7 @@ Then:
 where we use that $\ora{p}_{t|0}(H_t = x | x_0, Y = y) = \ora{p}_{t|0}(H_t = x| x_0)$ as $H_t$ is independent from $Y$ given $X_0$.
 \end{proof}
 
-\subsection{Proof of \Cref{theorem:representation_h}, 2)}
+\subsection{Proof of \Cref{theorem:representation_h}, (2)}
 \label{app:proof_representation_h_2}
 
 \begin{proof}
@@ -83,7 +81,7 @@ where we use that $\ora{p}_{t|0}(H_t = x | x_0, Y = y) = \ora{p}_{t|0}(H_t = x| 
     \end{align*}
     \end{proof}
 
-\subsection{Proof of \Cref{prop:app_stochastic_control}}
+\subsection{Proof of \Cref{theorem:representation_h}, (3)}
 \label{app:proof_stochastic_control}
 % NOTE: Fix the fwd/bwd here if time permits.
 \begin{proof}
@@ -125,6 +123,426 @@ where we use that $\ora{p}_{t|0}(H_t = x | x_0, Y = y) = \ora{p}_{t|0}(H_t = x| 
     and thus the SDE in Eqn.~\ref{eq:reverse_sde_theorem} with $h^*_t$ hits the target posterior $p(y|x_0)$ at time $0$ as it is the minimiser of half-bridge posed in Eqn. \eqref{eq:half}.
 \end{proof}
 
+\subsection{Proof of \Cref{def:discrete_stoch_control}}
+\label{app:proof_stochastic_control_discrete}
+\begin{proof}
+    Let us consider the pre-trained score SDE with an added tuning network:
+    \begin{align} \label{eq:vpsderev2}
+    &\bH_T \sim \gN(0,I)\nonumber\\
+        \dd \bH_t &= -\beta_t (\bH_t+ 2s_{\theta}(\bH_t) + 2h_{\phi}(\bH_t)) \,\dd t + \sqrt{2\beta_t }\;{\dd \rv{W} }_t,
+    \end{align}
+    now using an exponential-like discretisation \citep{de2022convergence}:
+    \begin{align} \label{eq:vpsderev2disc}
+    &\bH_{t_K} \sim \gN(0,I)\nonumber\\
+       \bH_{t_{k-1}} &= \left(\sqrt{1- \alpha_{k}}\bH_{t_k}+ 2(1-\sqrt{1- \alpha_{k}})\left(s_{\theta^*}(\bH_{t_k}) + h_{\phi}(\bH_{t_k})\right) \right) + \sqrt{\alpha_{k}}\varepsilon_k,
+    \end{align}
+    where $\alpha_k = 1- \exp\left(\int_{t_{k-1}}^{t_k}\beta_s \dd s\right)$. We denote the distribution of the above discrete time chain as $q_\phi$. Now if we follow the sketch in Proposition 3 of \textcite{vargas2023denoising} the discretised objective then becomes:
+    \begin{align}
+      \argmin_\phi  \E_{\bH \sim q_\phi}\left[2 \sum_{k=1}^K \frac{\lambda_k^2}{\alpha_k}|| h_{\phi}(k, \bH_{t_k})||^{2} -\ln p(\vy|\bH_{0})\right] \label{eq:objdisc}
+    \end{align}
+    where $\lambda_k = 1-\sqrt{1-\alpha_k}$. For a more stable/simple objective following \textcite{vargas2023denoising} we can make the approximation $\lambda_k = 1-\sqrt{1-\alpha_k}\approx \alpha_k / 2$ for small time steps, which results in our objective.    
+\end{proof}
+
+\subsection{Proof of \Cref{def:logvar_deft_loss}}
+\label{app:proof_cmcd_var_loss}
+\begin{proof}
+    The Radon–Nikodym derivative (RND) in \Cref{eq:var_grad_stochastic_control} can be evaluated as (Using the RND from \Cref{prop:fbrnd}):
+    \begin{align}
+    \label{eq:rnd_vargrad}
+    \ln   \frac{\dd  \ola{\mathbb{Q}} }{\dd  \ola{\mathbb{P}}}(\mH^{g_t}_{0:T}) & =  -\frac{1}{2}\int_0^T \sigma_t^{2} \| h_t(\mH_t^{g_t}) \|^2 \dd t  +   \int_0^T \sigma_t^2 (g_t^\top h_t) (\mH_t^{g_t}) \dd t - \ln p(\vy| \vx_0^{g_t} )  \nonumber\\
+    &+  \int_0^T \sigma_t h_t^\top (\mH_t^{g_t}) \dd \rv{W}_t,
+    \end{align}
+    for the reference process $\ola{\mathbb{U}}$.
+\end{proof}
+
+
+\section{Experimental details}
+\label{sec:experimental_details_deft}
+
+\subsection{Image Experiments}
+\label{app:experimental_details_images}
+
+In the image experiment, we use the DDPM~\citep{ho2020denoising} formulation for the diffusion model with $N=1000$ steps, a linear $\beta$-schedule with $\beta_0=10^{-4}$ and $\beta_N=2\cdot10^{-2}$. In all our imaging experiments the $h$-transform was implemented according to the parametrisation in Section~\ref{sec:network_architecture} using an attention U-Net \cite{dhariwal2021diffusion} for $\text{NN}_1^\phi$. The network $\text{NN}_2^\phi$ in the residual pathway was implemented as a small three layer fully connected network with SiLU activation functions, predicting a single scalar value. The final layer in $\text{NN}_1^\phi$ was initialised with zeros. All weights in $\text{NN}_2^\phi$ where initialised with zeros, expect for the bias in the last layer, which was initialised to $0.01$. We found that this initialisation was stable over all imaging tasks, i.e., close to the unconditional model. All tasks on ImageNet were noiseless, i.e., the log-likelihood $p(\vx|\m)$ would be a Delta function. However, for the guidance term $ \nabla_{\hat{\vx}_0} \log p(\m | \hat{\vx}_0)$ we always approximated the log-likelihood using a Gaussian with $\sigma_y = 1.0$.
+
+\paragraph{Computed Tomography}
+The 2016 American Association of Physicists in Medicine (AAPM) grand challenge dataset~\cite{mccollough2017low} contains CT scans of $10$ patients. We only make use of the abdomen scans. We use the scans of $9$ patients to train both the unconditional model and the $h$-transform. The remaining patient, i.e., id L035 with $87$ slices, is used for testing only. We used a bilinear interpolation to resize the images to $256\times256$px. The unconditional model follows the same architecture as in \textcite{chung2022improving} with about $374$M parameters. The model was trained for $300$ epochs using the Adam optimiser \cite{kingma2014adam}. We used exponential moving average on the weights as in \textcite{song2020improved} with a parameter of $0.999$.
+
+The LoDoPab-CT dataset \citep{leuschner2021lodopab} is a collection of human chest CT scans. We resize the images to $256\times 256$px using a bilinear interpolation. The training set contains $35820$ images and was used to train the unconditional diffusion model. The validation set contains $3522$ images and was used to train the $h$-transform model and for a hyperparameter search for DPS and RED-diff. Finally, we take $178$ images (every $20$th) from the test set to compute the final results. The unconditional model is an attention U-Net \cite{dhariwal2021diffusion} with about $133$M parameters. The unconditional model was trained for $75$ epochs, corresponding to about $671625$ gradient steps using the Adam optimiser \cite{kingma2014adam}. We used exponential moving average on the weights as in \textcite{song2020improved} with a parameter of $0.999$.  
+
+For both datasets we used the same parametrisation for the $h$-transform, with an attention U-Net \cite{dhariwal2021diffusion} and a residual path as in Section~\ref{sec:network_architecture}. The $h$-transform has about $23$M parameters. Thus, the $h$-transform is about $6\%$ and $17\%$ the size of the unconditional model for AAPM and LoDoPab-CT, respectively. For LoDoPab-CT, the $h$-transform was trained on a set of $3522$ images, while for AAPM we trained the $h$-transform on the same dataset as the unconditional model. The forward operator $A$ is linear and we added Gaussian noise with standard deviation $\sigma_y = 1.0$. Thus, the gradient of the log likelihood reduces to 
+\begin{align*}
+    \nabla_{\hat{\vx}_0} \log p(\m | \hat{\vx}_0) = - \frac{1}{2 \sigma_y^2} A^*(A \hat{\vx}_0 - \m), 
+\end{align*}
+where $A^*$ denotes the backprojection. Here, instead of the backprojection, we made use of the filtered backprojection, which is a common technique for computed tomography \cite{hauptmann2020multi}.
+
+\paragraph{Inpainting}
+We made use of the pre-trained ImageNet dataset. For this task, we also amortised over the different sampling masks. We implemented the $h$-transform using an attention U-Net \cite{dhariwal2021diffusion} as the base network $\text{NN}_1$ with an initial convolution with $13$ channels, i.e., the noisy image $\vx_t$, the denoised estimate $\hat{\vx}_0$, the observation $\m$ (where the missing pixels filled with zeros), the mask $M$ and the cheap guidance term $\nabla_{\hat{\vx}_0} \log p(\m | \hat{\vx}_0)$. The pre-trained unconditional score model has 550M parameters, and we use a fine-tuning network with 23M parameters ($4.2\%$ of the size). The fine-tuning network was trained for 
+200 epochs using a batch size of 16, and the Adam optimiser with a learning rate of $5e^{-4}$ and annealing. 
+\paragraph{Super-resolution}
+We made use of the pre-trained ImageNet dataset. We implemented the $h$-transform using an attention U-Net \cite{dhariwal2021diffusion} as the base network $\text{NN}_1$ with an initial convolution with $9$ channels, i.e., the noisy image $\vx_t$, the denoised estimate $\hat{\vx}_0$, the observation $\m$ bilinear upsampled to the original size and the cheap guidance term $\nabla_{\hat{\vx}_0} \log p(\m | \hat{\vx}_0)$.  The pre-trained unconditional score model has 550M parameters, and we use a fine-tuning network with 23M parameters ($4.2\%$ of the size). The fine-tuning network was trained for 
+200 epochs using a batch size of 16, and the Adam optimiser with a learning rate of $5e^{-4}$ and annealing. 
+
+\paragraph{HDR}
+For HDR the forward operator is given by $\Pm(\vx) = \text{clip}(2x; -1, 1)$ for the RGB image scaled to $[-1, 1]$. This leads to a reduction of high intensity values. We approximated the cheap guidance term 
+\begin{align*}
+    \nabla_{\hat{\vx}_0} \log p(\m | \hat{\vx}_0) \approx 0.5 (\Pm(\hat{\vx}_0) - \m),
+\end{align*}
+and found this to achieve good results. The pre-trained unconditional score model has 550M parameters, and we use a fine-tuning network with 23M parameters ($4.2\%$ of the size). The fine-tuning network was trained for 
+200 epochs using a batch size of 16, and the Adam optimiser with a learning rate of $5e^{-4}$ and annealing. 
+
+\paragraph{Phase retrieval}
+The $h$-transform was again implemented as an attention U-Net \cite{dhariwal2021diffusion} as the base network $\text{NN}_1$.
+The observations in phase retrieval corresponds to the magnitude values of the Fourier transform. In our initial experiments, we feed these observation directly into the model. However, this model failed to create convincing reconstruction. Instead we used two rough reconstruction. For the first initial reconstruction, we used the phase of the unconditional Tweedie estimate $\hat{\vx}_0$ and the magnitude of the observation to construct an image. For the second initial reconstruction, we ran $350$ steps of an ER algorithm \cite{fienup1982phase} with a random initialisation. Further, we used the cheap guidance term $\nabla_{\hat{\vx}_0} \| \m - \Pm(\hat{\vx}_0) \|_2^2$, calculated using torch autograd. The $h$-transform had about $23$M parameter, i.e., $4\%$ of the size of the unconditional model.
+
+\paragraph{Non-linear Deblurring}
+For non-linear deblurring we found that there was little improvement when using the cheap guidance term $\nabla_{\hat{\vx}_0} \| \m - \Pm(\hat{\vx}_0) \|_2^2$, calculated using torch autograd. As the forward operator is defined by a trained neural network this additional autograd term adds to the computational expense. We found that the DEFT provided results of a similar quality, with a reduced computational burden, by using $\Pm(\Pm(\hat{\vx}_0) - \m)$ as a rough approximation. The pre-trained unconditional score model has 550M parameters, and we use a fine-tuning network with 23M parameters ($4.2\%$ of the size). The fine-tuning network was trained for 
+200 epochs using a batch size of 16, and the Adam optimiser with a learning rate of $5e^{-4}$ and annealing. 
+
+\subsection{Protein Motif Scaffolding}
+\label{app:protein_motif_scaffolding_details}
+
+\paragraph{Diffusion process}
+We use a discrete-time DDPM~\citep{ho2020denoising} formulation for the diffusion model with $N=1000$ steps and cosine $\beta$-schedule \citep{dhariwal2021diffusion}.
+
+\paragraph{Noise model}
+The denoising model $\varepsilon_\theta$ is adapted from the Genie diffusion model \citep{lin2023generating}. In Genie, the denoiser architecture consists of an SE(3)-invariant encoder and an SE(3)-equivariant decoder. While the network uses Frenet-Serret frames as intermediate representations, the diffusion process itself is defined in Euclidean space over the $C_\alpha$ coordinates. Similar to AlphaFold2, the denoiser network consists of a single representation track that is initialised via a single feature network and a pair representation track that is initialised via a pair feature network. These two representations are further transformed via a pair transform network and are used in the decoder for noise prediction via~IPA~\cite{jumper2021highly}.
+
+To evaluate unconditional sampling-based methods, we used a pre-trained version of the unconditional Genie model.
+
+To evaluate the {\scshape Amortised} approach (\Cref{prop:amortised_conditional_score_matching}), we perform a minor modification to the unconditional Genie model as described in \cite{didi2023framework}: we add an additional conditional pair feature network that takes the motif frames as input with the ground truth coordinates for the motif and 0 as values for all other coordinates that are not part of the motif. The output of this motif-conditional pair feature network is concatenated with the output of the unconditional pair feature network to form an intermediate dimension of twice the channel size compared to the unconditional model before being linearly projected down to the channel size of the unconditional model. From then onward the output is processed by the remaining Genie components as in the unconditional model. The implementation is therefore similar to the image case, where the motif features are presented as additional input and the model learns to use these for reconstructing the motif.
+This minor alteration of the Genie architecture means that the amortised network has $4.162$M parameters while the unconditional Genie networks have $4.087$M parameters ($\sim$ 1.8\% fewer). In 80\% of the training steps for the amortised model, we pass a condition to the network. The other 20\% contains an empty mask consisting of only 0's.
+
+For the DEFT implementation, we follow a similar way of feeding in the additional inputs via conditional pair feature networks, but as part of the downsized h-transform model as described in the main text.
+%For the reconstruction guidance method (\cref{algo:reco_guidance_motif}), we use a time-dependent guidance term of $\gamma_t=\alpha_t (1-\alpha_t)$. %$\citep{finzi2023user}.
+
+
+
+\paragraph{Metrics}
+We measure the performance of the methods across two axes: designability and success rate. 
+%using metrics measuring the designability of the samples and metrics measuring the motif scaffolding success.
+To assess whether a particular protein scaffold is \emph{designable}, we run the same pipeline as \textcite{lin2023generating}, consisting of an inverse folding generated $C_\alpha$ backbones with ProteinMPNN and then re-folding the designed sequences via ESMFold. The considered metrics and their corresponding thresholds are the following:
+
+\begin{itemize}
+
+    \item scTM > 0.5: This refers to the TM-score between the structure that's been designed and the predicted structure based on self-consistency as previously described. The scTM-score ranges from 0 to 1. Higher scores indicate a higher likelihood that the input structure can be designed. 
+    %Often, a threshold of 0.5 is selected, and the percentage of samples exceeding this threshold is reported.
+
+    \item scRMSD < 2 \AA~: The scRMSD metric is akin to the scTM metric. However, it uses the RMSD (Root Mean Square Deviation) to measure the difference between the designed and predicted structures, instead of the TM-score. This metric is more stringent than scTM as RMSD, being a local metric, is more sensitive to minor structural variances.
+
+    \item pLDDT > 70 and pAE < 5: Both scTM and scRMSD metrics depend on a structure prediction method like AlphaFold2 or ESMFold to be reliable. Hence, additional confidence metrics such as pLDDT and pAE are employed to ascertain the reliability of the self-consistency metrics.
+\end{itemize}
+
+In addition, we want to judge whether the motif scaffolding was successful or not. Therefore, similar to previous work by \textcite{watson2023novo}, we calculate the motifRMSD between the predicted design structure and the original input motif and judge samples with < 1 \AA~motifRMSD as a successful motif scaffold.
+
+We follow previous work and call a sample a "success" if scRMSD < 2 \AA~ and motifRMSD < 1 \AA~. Similar to previous work we call a task "solved" if among 100 samples for this task at least 1 sample is a success.
+
+\section{Additional Experiments}
+
+\subsection{Additional Image Experiments}
+
+\paragraph{Ablation: Size of fine-tuning dataset}
+As DEFT requires a dataset for fine-tuning, we ablate the number of training samples. We trained DEFT on a subset of 10, 100 and 200 ImageNet images for Inpainting. We see improvements of all metrics, when training on a larger dataset. The results are presented in Table~\ref{tab:inpainting_number_of_samples}. For the KID, we outperform RED-diff (KID: 0.86) even when trained on only 200 images. However, even with 10 images, we perform quite competitively, showcasing that our method is very sample-efficient when it comes to learning a conditional transform.
+%\vspace{-0.5cm}
+
+\begin{table}[th]
+\centering
+\caption{Varying the size of the fine-tuning dataset for DEFT for Inpainting on ImageNet.}
+\resizebox{0.6\textwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+ \multicolumn{5}{c}{\textbf{DEFT on ImageNet for Inpainting}} \\ 
+\small Number of images & \small 10 & \small 100 & \small 200 & \small 1000 \\ \midrule
+PSNR $(\uparrow)$ & $20.87$ & $20.99$ & $22.11$ & $22.18$  \\
+SSIM $(\uparrow)$ & $0.83$ & $0.84$& $0.847$ & $0.85$  \\
+KID $(\downarrow)$  & $1.85$ & $0.978$ & $0.401$ & $0.29$  \\
+LPIPS $(\downarrow)$  & $0.123$ & $0.112$ & $0.096$ & $0.09$   \\
+top-1 $(\uparrow)$  & $68.8$ & $69.6$ & $70.6$ & $71.7$  \\
+  \bottomrule 
+\end{tabular}%
+}%
+% \vspace{-0.5cm}
+\label{tab:inpainting_number_of_samples}
+\end{table}
+
+\begin{figure}[t]
+    \centering
+     
+    \begin{subfigure}[t]{.195\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/inp_diverse_mask_overlay.png}
+      \caption*{GT}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}[t]{.195\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/inp_diverse_2.png}
+      \caption*{Sample \#1}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}[t]{.195\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/inp_diverse_3.png}
+      \caption*{Sample \#2}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}[t]{.195\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/inp_diverse_4.png}
+      \captionsetup{justification=centering}
+      \caption*{Sample \#3}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}[t]{.195\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/inp_diverse_5.png}
+      \captionsetup{justification=centering}
+      \caption*{Sample \#4}
+    \end{subfigure}%
+    \caption[Diversity of samples for inpainting]{Diversity of samples for inpainting. On the left, we show the inpainting mask as a overlay over the ground truth.
+    } \label{fig:inp_diversity}
+    \end{figure}
+
+    \begin{figure}
+        \centering
+        \begin{subfigure}[t]{.165\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/sr_y_1.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.165\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/sr_dps_1.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.165\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/sr_pigdm_1.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.165\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/sr_ddrm_1.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.165\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/sr_reddiff_1.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.165\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/sr_deft_1.png}
+        \end{subfigure}%
+        
+        \begin{subfigure}[t]{.165\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/sr_y_2.png}
+          \caption*{$y$}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.165\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/sr_dps_2.png}
+          \caption*{DPS}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.165\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/sr_pigdm_2.png}
+          \caption*{$\Pi$GDM}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.165\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/sr_ddrm_2.png}
+          \caption*{DDRM}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.165\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/sr_reddiff_2.png}
+          \caption*{RED-diff}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.165\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/sr_deft_2.png}
+          \captionsetup{justification=centering}
+          \caption*{DEFT}
+        \end{subfigure}%
+        \caption{Results for 4x super-resolution.} \label{fig:sr_results}
+        \end{figure}
+
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[t]{.249\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/hdr_gt_1.png}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}[t]{.249\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/hdr_y_1.png}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}[t]{.249\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/hdr_reddiff_1.png}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}[t]{.249\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/hdr_deft_1.png}
+    \end{subfigure}%
+     
+    \begin{subfigure}[t]{.249\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/hdr_gt_2.png}
+      \caption*{Ground truth}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}[t]{.249\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/hdr_y_2.png}
+      \caption*{Measurements}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}[t]{.249\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/hdr_reddiff_2.png}
+      \caption*{RED-diff}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}[t]{.249\textwidth}
+      \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/hdr_deft_2.png}
+      \captionsetup{justification=centering}
+      \caption*{DEFT}
+    \end{subfigure}%
+    \caption[Results for non-linear HDR]{Results for non-linear HDR. Similar to \cite{mardani2023variational}, we found that DPS does not converge to a good solution, returning often black or images not consistent with the ground truth. Given that the forward operator $\Pm(\vx) = \text{clip}(2 \vx | -1, 1)$ has a zero gradient for  $|\vx| \ge 0.5$ the guidance term is often not informative.} \label{fig:hdr}
+    \end{figure}
+
+    \begin{figure}
+        \centering
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00001114_ori.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00001114_sample1.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00001114_sample2.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00001114_sample3.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00001114_sample4.png}
+        \end{subfigure}%
+        
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00000651_ori.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00000651_sample1.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00000651_sample2.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00000651_sample3.png}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00000651_sample4.png}
+        \end{subfigure}%
+        
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00001031_ori.png}
+          \caption*{Ground Truth}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00001031_sample1.png}
+          \caption*{Sample \#1}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00001031_sample2.png}
+          \caption*{Sample \#2}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00001031_sample3.png}
+          \caption*{Sample \#3}
+        \end{subfigure}%
+        \hfill
+        \begin{subfigure}[t]{.199\textwidth}
+          \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/ILSVRC2012_val_00001031_sample4.png}
+          \captionsetup{justification=centering}
+          \caption*{Sample \#4}
+        \end{subfigure}%
+        \caption[Example reconstructions for phase retrieval]{Example reconstructions for phase retrieval. Phase retrieval has many local minima, which fully satisfy the data consistency constraints (e.g., complex conjugate, global phase sign). We often see flipped (and perturbed) images as our reconstruction. In some instances, even only one colour channel is flipped. This leads to a strong diversity of samples.} \label{fig:phase_retrieval}
+        \end{figure}
+    
+\subsection{Additional Protein Motif Scaffolding Experiments}
+
+\begin{figure}
+\centering
+\begin{subfigure}[t]{.333\textwidth}
+\includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_1YCR.pdf}
+\end{subfigure}%
+\hfill
+\begin{subfigure}[t]{.333\textwidth}
+\includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_3IXT.pdf}
+\end{subfigure}%
+\hfill
+\begin{subfigure}[t]{.333\textwidth}
+\includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_4ZYP.pdf}
+\end{subfigure}%
+
+\begin{subfigure}[t]{.333\textwidth}
+\includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_5TPN.pdf}
+\end{subfigure}%
+\hfill
+\begin{subfigure}[t]{.333\textwidth}
+\includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_5TRV_med.pdf}
+\end{subfigure}%
+\hfill
+\begin{subfigure}[t]{.333\textwidth}
+\includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_5TRV_short.pdf}
+\end{subfigure}%
+
+\begin{subfigure}[t]{.333\textwidth}
+\includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_6E6R_med.pdf}
+\end{subfigure}%
+\hfill
+\begin{subfigure}[t]{.333\textwidth}
+\includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_6E6R_short.pdf}
+\end{subfigure}%
+\hfill
+\begin{subfigure}[t]{.333\textwidth}
+\includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_6EXZ_med.pdf}
+\end{subfigure}%
+
+\begin{subfigure}[t]{.333\textwidth}
+\includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_6EXZ_short.pdf}
+%\caption*{Ground truth}
+\end{subfigure}%
+\hfill
+\begin{subfigure}[t]{.333\textwidth}
+\includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_7MRX_60.pdf}
+%\caption*{Measurements}
+\end{subfigure}%
+\hfill
+\begin{subfigure}[t]{.333\textwidth}
+\includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_7MRX_85.pdf}
+%\caption*{RED-diff}
+\end{subfigure}%
+\caption[Protein results for DEFT (9\% model)]{Full results for DEFT (9\% model). For each task, we show the full scatter plot of scRMSD and motifRMSD for all $100$ samples. The colour indicates the pLDDT confidence score of the re-folded structure with ESMFold. Samples with pLDDT $\geq$ 0.7 are outlined.} \label{fig:deft_9}
+\end{figure}
+\begin{figure}
+\centering
+\begin{subfigure}[t]{.333\textwidth}
+    \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/amortized_vfkic2b4_1YCR.pdf}
+    \caption*{Amortised}
+\end{subfigure}%
+\hfill
+\begin{subfigure}[t]{.333\textwidth}
+    \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/DPS_1YCR.pdf}
+    \caption*{DPS}
+\end{subfigure}%
+\hfill
+\begin{subfigure}[t]{.333\textwidth}
+    \includegraphics[width=\linewidth]{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Appendix3/Figures/Raster/apricot-water-800ep_1YCR.pdf}
+    \caption*{DEFT $9\%$}
+\end{subfigure}%
+
+\caption[Comparison of the amortised model, DPS and DEFT (9\%) on the task 1YCR]{Comparison of the amortised model, DPS and DEFT (9\%) on the task 1YCR. We see the general trend for DPS that for low guidance scales the samples have high designability but do not adhere to the motif constraint, while for higher guidance scales they adhere to the motif constraint but have low designability.} \label{fig:protein_compare}
+\end{figure}
 
 \section{Additional Related Work}
 \label{sec:related_work}
@@ -138,7 +556,7 @@ A common distinction to all the works we will discuss in this section is that th
     
     \item The score network in I2SB is a function only of $X_t$ and not $Y=\mathcal{A}(X_0) +\eta$. This means that in I2SB, the network is parametrised as $\epsilon^{\theta}_t(X_t)$, whilst in our setting we parametrise as $\epsilon^{\theta}_t(X_t, \mathcal{A}(X_0) +\eta, \mathcal{A})$. In the case of completion tasks like motif-scaffolding or image out-painting, our paramerisation looks something like $\epsilon^{\theta}_t(X_t, X_0^{\mathrm{mask}}, \mathrm{mask})$. This makes the task much easier for the network as we effectively provide it with a binary variable indicating which parts of the image are conditioned and which are not. In I2SB,  the network must learn this on its own. Furthermore, as we show in \cref{prop:amortised_conditional_score_matching}, adding this to the network parametrisation is essential to allow recovering the true conditional score.
     
-    \item The training procedure in I2SB uses the diffusion bridge $p(x_t| x_0, y)$ to add noise to both the source and target distributions, whilst our forward process is given by the transition density of an OU process $p(x_t| x_0)$ and is identical to standard DDPM/VP-SDE \citep{ho2020denoising,song2021Scorebased} noise adding procedures.
+    \item The training procedure in I2SB uses the diffusion bridge $p(x_t| x_0, y)$ to add noise to both the source and target distributions, whilst our forward process is given by the transition density of an OU process $p(x_t| x_0)$ and is identical to standard DDPM/VP-SDE \citep{ho2020denoising,song2020score} noise adding procedures.
 
     \item Finally and most importantly I2SB does full fine-tuning firstly initialising with a pretrained score and training all parameters of this large pretrained network to learn an unconditional network, this requires longer training times and significantly larger networks as they must be at least the same size as the unconditional score network. 
 \end{itemize}

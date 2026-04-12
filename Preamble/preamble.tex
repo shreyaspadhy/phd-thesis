@@ -232,9 +232,19 @@
 \usepackage{microtype}
 \usepackage{lettrine}
 \usepackage{standalone}
+% % Adjust section spacing
+% \usepackage{titlesec}
+% \titlespacing{\section}{0pt}{3ex plus 1ex minus .2ex}{2ex plus .2ex}
+% \titlespacing{\subsection}{0pt}{2.75ex plus 1ex minus .2ex}{1.25ex plus .2ex}
+% \titlespacing{\subsubsection}{0pt}{2.75ex plus 1ex minus .2ex}{1.25ex plus .2ex}
 
-\renewcommand{\floatpagefraction}{.9}    % require fuller float pages
-\renewcommand{\topfraction}{.9}          % fraction of page allowed for floats at top
+% % Reduce chapter heading space
+% \titleformat{\chapter}[display]
+%   {\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+% \titlespacing*{\chapter}{0pt}{-50pt}{40pt}
+
+% \renewcommand{\floatpagefraction}{.9}    % require fuller float pages
+% \renewcommand{\topfraction}{.9}          % fraction of page allowed for floats at top
 
 \RequirePackage{lmodern}
 \usepackage[commands,enumerate,environments,notes]{SP}
@@ -319,6 +329,7 @@
 \newcommand{\Dsc}{\mathcal{D}}
 \newcommand{\Dscstar}{\mathcal{D}^*}
 \newcommand{\btheta}{\theta}
+\newcommand{\spaced}[1]{\quad\text{#1}\quad}
 
 % Macros for conditional distributions
 \newcommand{\picond}{\pi_{\text{cond}}}
@@ -356,3 +367,50 @@
 % \titleformat{\subsection}[runin]{\bfseries}{\thesubsection.}{1ex}{#1.}
 % \titlespacing{\section}{\z@}{*3.5}{*2}
 % \titlespacing{\subsection}{\z@}{*3.5}{*1}
+
+\renewcommand{\P}{\mathbb{P}}
+% \DeclareSymbolFont{bbold}{U}{bbold}{m}{n}
+% \DeclareSymbolFontAlphabet{\mathbbold}{bbold}
+% \newcommand{\1}[1]{\mathbbold{1}[#1]}
+% \newcommand{\Tr}{\mathrm{Tr}}
+
+\newcommand{\unif}[1]{\mathrm{Uniform}(#1)}
+
+\newcommand{\cX}{\mathcal{X}}
+\newcommand{\cH}{\mathcal{H}}
+\newcommand{\cO}{\mathcal{O}}
+\newcommand{\cN}{\mathcal{N}}
+\newcommand{\cB}{\mathcal{B}}
+\newcommand{\cR}{\mathcal{R}}
+\newcommand{\cG}{\mathcal{G}}
+
+\newcommand{\Zj}{z_{j}}
+\newcommand{\ZJ}{z_{J}}
+
+\newcommand{\rmY}{\mathrm{Y}}
+
+\newcommand{\Tr}{\operatorname{Tr}}
+
+\newcommand{\DKL}{\mathcal{D}_{\text{KL}}}
+
+\newcommand{\spn}{\textrm{span}}
+
+% \renewcommand{\phi}{\varphi}
+
+\newcommand*{\tran}{^{\mkern-1.5mu\mathsf{T}}}
+
+\newcommand{\normgr}[1]{\left\|#1\right\|}
+% \newcommand{\v}[1]{#1}
+
+
+\DeclareUnicodeCharacter{0301}{GGHHBBGGHH}
+
+\newlength{\myexpandedtextwidth}
+\AtBeginDocument{%
+  \setlength{\myexpandedtextwidth}{\dimexpr\textwidth+\marginparwidth+\marginparsep\relax}%
+}
+% \renewcommand{\epsilon}{\varepsilon}
+
+% \newfloatcommand{capbtabbox}{table}[][\FBwidth]
+% \newcommand{\eps}{\varepsilon}
+\usepackage{units}

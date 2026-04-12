@@ -1,0 +1,19 @@
+\begin{algorithmic}[1]
+    \Require Kernel matrix $K$ with rows $K_1,\dots,K_n\in \R^n$, targets $b \in \R^n$, 
+    likelihood variance $\lambda > 0$, \\
+    number of steps $T \in \N^+$, 
+    batch size $B \in \{1, \dotsc, n\}$, 
+    step size $\beta > 0$, \\
+    momentum parameter $\rho \in [0,1)$, 
+    averaging parameter $r \in (0,1]$
+    \State $v_0 = 0$; $\alpha_0 = 0$; $\overline \alpha_0 = 0$ \Comment{all in $\R^n$}
+    \For{$t \in \{1, \dotsc, T\}$}
+        \State Sample $\mathcal{I}_t = (i^t_1, \dotsc, i^t_B) \sim \unif{\{1,\dotsc, n\}}$ independently \Comment{random coordinates}
+        \State $g_t = \frac{n}{B} \sum_{i \in \mathcal{I}_t} (\smash{( K_i + \lambda e_i)\tran (\alpha_{t-1} + \rho v_{t-1})} - b_i)e_i$ \Comment{gradient estimate}
+        % \State $g_t = \frac{n}{B} \sum_{i \in I_t} (( K_i + \lambda e_i)\tran (\alpha_{t-1} + \rho v_{t-1}) - b_i)e_i$ \Comment{gradient estimate}
+        \State $v_t = \rho v_{t-1} - \beta g_t$ \Comment{velocity update}
+        \State $\alpha_t = \alpha_{t-1} + v_t$ \Comment{parameter update}
+        \State $\overline\alpha_{t} = r\alpha_t + (1-r)\overline\alpha_{t-1}$ \Comment{iterate averaging}
+    \EndFor
+    \State \Return $\overline\alpha_T$
+\end{algorithmic}

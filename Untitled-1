@@ -1,0 +1,17 @@
+import h5py
+
+# Load the h5 file
+with h5py.File("input.h5", "r") as f:
+    # Read the model_config
+    model_config = f["model_config"][()]
+
+    # Handle both string and bytes objects
+    if isinstance(model_config, bytes):
+        model_config_utf8 = model_config.decode("utf-8")
+    else:
+        model_config_utf8 = model_config
+
+    # Create new h5 file
+    with h5py.File("output.h5", "w") as f_out:
+        # Save the utf-8 encoded string
+        f_out.create_dataset("model_config", data=model_config_utf8.encode("utf-8"))

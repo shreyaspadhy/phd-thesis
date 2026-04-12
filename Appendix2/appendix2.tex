@@ -6,8 +6,61 @@
 \label{app:cmcd}
 \section{Additional Proofs}
 
-\subsection{Proof of \Cref{prop:annealing uniqueness}}
+\subsection{Proof of \Cref{prop:fbrnd}}
+\label{sec:proof-fbrnd-app}
 
+\begin{proof}
+We begin with the forward Radon-Nikodym derivative 
+\[
+\label{eq:RN_forward}
+\ln\left(\frac{\mathrm{d}\overrightarrow{\mathbb{P}}^{\mu,a}}{\mathrm{d}\overrightarrow{\mathbb{P}}^{\nu,b}}\right)(X) = \ln\left(\frac{\mathrm{d}\mu}{\mathrm{d}\nu}\right)(X_0) + \tfrac{1}{\sigma^2}  \int_0^T (a_t-b_t)(X_t) \cdot {\mathrm{d}}X_t + \tfrac{1}{2 \sigma^2} \int_0^T \left( b_t^2 -a_t^2\right)(X_t) \, \mathrm{d}t,
+\]
+following from Girsanov's theorem in \Cref{eq:girsanov_theorem_for_rnd_between_sdes} (see, for instance, \textcite[Lemma A.1]{nusken2021solving}). To compute the backward Radon-Nikodym derivative, we temporarily introduce the time-reversal operator $\mathcal{R}$, acting as $(\mathcal{R}X)_t := X_{T-t}$ on paths\footnote{Although pathwise definitions should be treated with care (because It\^o integrals are defined only up to a set of measure zero), the arguments can be made rigorous using the F{\"o}llmer-It{\^o} machinery in \Cref{sec:folmer_ito_calculus}.}, and as $(\mathcal{R}a)_t(x) := a_{T-t}(x)$ on vector fields. We then observe that 
+\begin{equation} 
+\nonumber
+\ln\left(\frac{\mathrm{d}\overleftarrow{\mathbb{P}}^{\mu,\mathcal{R}a}}{\mathrm{d}\overleftarrow{\mathbb{P}}^{\nu,\mathcal{R}b}}\right)(\mathcal{R}X) = \ln\left(\frac{\mathrm{d}\overrightarrow{\mathbb{P}}^{\mu,a}}{\mathrm{d}\overrightarrow{\mathbb{P}}^{\nu,b}}\right)(X), 
+\end{equation}
+for instance by comparing the discrete-time processes in \Cref{eq:mc_framework_fwd_ch4} and \Cref{eq:mc_framework_rev_ch4}. Equivalently,
+\begin{equation} 
+\nonumber
+\ln\left(\frac{\mathrm{d}\overleftarrow{\mathbb{P}}^{\mu,a}}{\mathrm{d}\overleftarrow{\mathbb{P}}^{\nu,b}}\right)(X) = \ln\left(\frac{\mathrm{d}\overrightarrow{\mathbb{P}}^{\mu,\mathcal{R}a}}{\mathrm{d}\overrightarrow{\mathbb{P}}^{\nu,\mathcal{R}b}}\right)(\mathcal{R}X), \end{equation}
+since $\mathcal{R}^2$ is the identity.
+Building on \Cref{eq:RN_forward}, the backward Radon-Nikodym derivative therefore reads
+\begin{subequations}
+\label{eq:RN_backward}
+\begin{align}
+\nonumber
+\ln\left(\frac{\mathrm{d}\overleftarrow{\mathbb{P}}^{\mu,a}}{\mathrm{d}\overleftarrow{\mathbb{P}}^{\nu,b}}\right)(X) &  = \ln\left(\frac{\mathrm{d}\mu}{\mathrm{d}\nu}\right)((\mathcal{R}X)_0) + \tfrac{1}{\sigma^2}  \int_0^T ((\mathcal{R} a)_t- (\mathcal{R} b)_t)(\mathcal{R} X_t) \cdot {\mathrm{d}} (\mathcal{R} X)_t 
+\\
+\nonumber
+& + \tfrac{1}{2 \sigma^2} \int_0^T \left( (\mathcal{R} b)_t^2 -(\mathcal{R} a)_t^2\right)((\mathcal{R} X)_t) \, \mathrm{d}t,   \\
+\nonumber
+& \!= \!\ln\left(\!\frac{\mathrm{d}\mu}{\mathrm{d}\nu}\right)(X_T) \!+\! \tfrac{1}{\sigma^2} \! \int_0^T \!(a_t\!-\!b_t)(X_t) \cdot \mathrm{d}\overleftarrow{X}_t + \tfrac{1}{2 \sigma^2} \int_0^T \left( b_t^2 -a_t^2\right)(X_t) \, \mathrm{d}t,
+\tag{\ref{eq:RN_backward}}
+\end{align}    
+\end{subequations}
+where the integrals have been transformed using the substitution $t \mapsto T - t$. The result in \Cref{eq:RN_backward} now follows by writing
+\begin{equation}
+\nonumber
+\ln\left(\frac{\mathrm{d}\overrightarrow{\mathbb{P}}^{\mu,a}}{\mathrm{d}\overleftarrow{\mathbb{P}}^{\nu,b}}\right)(X)  = \ln\left(\frac{\mathrm{d}\overrightarrow{\mathbb{P}}^{\mu,a}}{\mathrm{d}\overrightarrow{\mathbb{P}}^{\Gamma_0,\gamma^+}}\right)(X)  + \ln\left(\frac{\mathrm{d}\overleftarrow{\mathbb{P}}^{\Gamma_T,\gamma^-}}{\mathrm{d}\overleftarrow{\mathbb{P}}^{\nu,b}}\right)(X), 
+\end{equation}
+using the assumption $\overrightarrow{\P}^{\Gamma_0,\gamma^+} = \overleftarrow{\P}^{\Gamma_T,\gamma^-}$, and inserting \Cref{eq:RN_forward} as well as \Cref{eq:RN_backward}.
+\end{proof}
+
+\subsection{Proof of \Cref{prop:score_matching_from_framework}}
+\label{sec:proof-ism-from-framework}
+\begin{proof}
+    Let us choose $\gamma_t^{-}=a_t$, and choosing $\sigma=1$ (for simplicity). We start by noticing that the contributions in \Cref{eq:fbrnd_boundary} and \Cref{eq:fbrnd_fwd} do not depend on $s_{\theta, t}$, and can therefore be absorbed in the constant in \Cref{eq:ism_loss_equivalence}. Notice that the precise forms of $\Gamma_0, \Gamma_T$ and $\gamma^{+}$ are left unspecified or unknown, but this does not affect the argument. We find
+    \[
+    D_{\mathrm{KL}}\left(\overrightarrow{\mathbb{P}}^{\mu, a} \| \overleftarrow{\mathbb{P}}^{\nu, a-s_\theta}\right) & \!=\!\mathbb{E}_{X \sim \overrightarrow{\mathbb{P}}^{\mu, a}}\left[\!\int_0^T \!s_{\theta, t}\left(X_t\right) \cdot\left(\mathrm{d} \overleftarrow{X}_t-\frac{1}{2}\left(2 a_t-s_{\theta, t}\right)\left(X_t\right) \mathrm{d} t\right)\right]\!+\!\text { const. } \\
+    & =\mathbb{E}\left[\int_0^T s_{\theta, t}\left(X_t\right) \cdot\left(\sigma \mathrm{d} \overleftarrow{W}_t+\frac{1}{2} s_{\theta, t}\left(X_t\right) \mathrm{d} t\right)\right]+\text { const. } \\
+    & =\mathbb{E}\left[\frac{1}{2} \int_0^T s_{\theta, t}^2\left(X_t\right) \mathrm{d} t+\int_0^T\left(\nabla \cdot s_{\theta, t}\right)\left(X_t\right) \mathrm{d} t\right]+\text { const. }
+    \]
+    where in the first line we use \Cref{prop:fbrnd} together with $b_t = a_t-s_{\theta, t}$ and $\gamma_t^{-}=a_t$, and to proceed to the second line we substitute $\mathrm{d}\overleftarrow{X}_t$ using the SDE in \Cref{eq:backward_diffusion_process}. The last equality follows from the conversion formula between forward and backward It\^o integrals, see \Cref{cor:relating-forward-and-reverse-ito-integrals-through-divergence}, and the fact that forward integrals with respect to Brownian motion have zero (forward) expectation, see \Cref{eq:forward-sde-martingale}.
+\end{proof}
+
+\subsection{Proof of \Cref{prop:annealing uniqueness}}
+\label{app:proof_uniqueness_cmcd}
 Before proceeding to the proof of \Cref{prop:annealing uniqueness}, we state the following assumption on the curve of distributions $(\pi_t)_{t \in [0,T]}$:
 
 \begin{assumption}
@@ -59,8 +112,76 @@ which when considered in terms of the unnormalised flow $\hat{\pi}_t = Z_t \pi_t
 In particular, we note that the Markov chain proposed in \textcite{arbel2021annealed} converges to our proposed parameterisation in equation (\ref{eq:controlled annealing}) (see equation (12) in \textcite{arbel2021annealed}).
 \end{remark}
 
-\subsection{Proof of \Cref{eq:cmcd_kl_loss_continuous}}
+\subsection{Proof of \Cref{prop:zero_variance_normalising_constant}}
+\label{app:proof_zero_variance_normalising_constant}
 
+To give a broader perspective, we give the following slight generalisation of a well-known result from statistical physics: 
+\begin{selfproposition}[Controlled Crooks' Fluctuation Theorem and Jarzynski's Equality]
+    \label{prop:controlled_crooks_fluctuation_theorem}
+    Following \textcite{jarzynski1997nonequilibrium,chen2019stochastic}, define \emph{work} and \emph{free energy} as:
+    \[
+        \mathcal{W}_T(X_{0:T}):=-\int_0^T \sigma^2 \partial_t \ln \hat{\pi}_t\left(X_t\right) \mathrm{d} t
+    \]
+    and
+    \[
+        \mathcal{F}_t:=-\sigma^2 \ln Z_t:=\sigma^2 \ln \left(\hat{\pi}_t / \pi_t\right)
+    \]
+    respectively. Then, we have the controlled Crooks' identity:
+    \[
+        \frac{\d \bwdPcmcd{\hpi_T}}{\d \fwdPcmcd{\pi_0}} (X_{0:T}) = \exp \left(-\frac{1}{\sigma^2}\left(\mathcal{F}_T-\mathcal{F}_0\right)+\frac{1}{\sigma^2} \mathcal{W}_T(X_{0:T})+\mathcal{C}_T^\phi(X_{0:T})\right),
+    \]
+    where we have:
+    \[
+        \mathcal{C}_T^\phi(X_{0:T}):=-\int_0^T \nabla \phi_t\left(X_t\right) \cdot \nabla \ln \pi_t\left(X_t\right) \mathrm{d} t-\int_0^T \Delta \phi_t\left(X_t\right) \mathrm{d} t .
+    \]
+    By taking expectations and $\phi = 0$, we recover Jarzynski's equality:
+    \[
+        \mathbb{E}_{\overrightarrow{\mathbb{P}}^{\pi_0, \sigma^2 \nabla \ln \pi}}\left[\exp \left(-\frac{1}{\sigma^2} \mathcal{W}_T\right)\right]=Z_T / Z_0
+    \]
+\end{selfproposition}
+\begin{proof}
+    Following the calculations in Appendix \ref{app:proof_cmcd_kl_loss_continuous} and using the forward-backward F{\"o}llmer-It{\^o} conversion formula from \Cref{eq:forward-reverse-ito-conversion} and \Cref{eq:reverse-forward-ito-conversion}, we have:
+    \[
+    &\ln \left( \frac{\d \bwdPcmcd{\hpi_T}}{\d \fwdPcmcd{\pi_0}}\right) (X_{0:T}) = \ln \mu(X_0) - \ln \nu (Y_T) \nonumber\\
+    &+ \int_0^T \nabla \ln \pi_t\left(X_t\right) \circ \mathrm{d} X_t-\frac{1}{\sigma^2} \int_0^T \nabla \phi_t\left(X_t\right) \cdot \sigma^2 \nabla \ln \pi_t\left(X_t\right) \mathrm{d} t -\int_0^T \Delta \phi\left(X_t\right) \mathrm{d} t \nonumber
+    \]
+    Then via It{\^o}'s lemma applied to the unnormalised annealed log target $\ln \hat{\pi}_t = \ln \pi_t - \ln Z_t$, we have:
+    \[
+        \ln \hat{\pi}_T\left(X_T\right)\!-\!\ln \hat{\pi}_0\left(X_0\right)\!-\!\int_0^T \partial_t \ln \hat{\pi}_t\left(X_t\right) \mathrm{d} t\!=\!\int_0^T \nabla \ln \hat{\pi}_t\left(X_t\right) \circ \mathrm{d} X_t\!=\!\int_0^T \nabla \ln \pi_t\left(X_t\right) \circ \mathrm{d} X_t, \nonumber
+    \]
+    thus we arrive at
+    \[
+        &\ln \left( \frac{\d \bwdPcmcd{\hpi_T}}{\d \fwdPcmcd{\pi_0}}\right) (X_{0:T}) = \ln \mu(X_0) - \ln \nu (X_T) + \ln \hat{\pi}_T(X_T) - \ln \hat{\pi}_0(X_0) \nonumber\\
+        &-\int_0^T \partial_t \ln \hat{\pi}_t\left(X_t\right) \mathrm{d} t-\frac{1}{\sigma^2} \int_0^T \nabla \phi_t\left(X_t\right) \cdot \sigma^2 \nabla \ln \pi_t\left(X_t\right) \mathrm{d} t-\int_0^T \Delta \phi_t\left(X_t\right) \mathrm{d} t, \nonumber
+    \]
+    for arbitrary initial and final densities $\mu$ and $\nu$. Crooks' generalised fluctuation theorem \citep{crooks1999entropy} now follows from taking $\phi = 0$ and the controlled version in \Cref{prop:controlled_crooks_fluctuation_theorem} follows from $\mu = \pi_0$ and $\nu = \pi_T$. Finally, notice that:
+    \[
+    1 &= \mathbb{E}_{\overrightarrow{\mathbb{P}}^{\pi_0, \sigma^2 \nabla \ln \pi}} \left[ \left( \frac{\d \bwdPcmcd{\hpi_T}}{\d \fwdPcmcd{\pi_0}}\right)^{-1}\right] \nonumber \\
+    &=\!\mathbb{E}_{\overrightarrow{\mathbb{P}}^{\pi_0, \sigma^2 \nabla \ln \pi}} \left[\!\exp \left(\!-\!\ln \mu\left(X_0\right)\!+\!\ln \nu\left(X_T\right)\!-\!\ln \hat{\pi}_T\left(X_T\right)\!+\!\ln \hat{\pi}_0\left(X_0\right)\!+\!\int_0^T \partial_t \ln \hat{\pi}_t\left(X_t\right)\! \mathrm{d} t\right) \!\right] \nonumber
+    \]
+    which implies the Jarzynski equality when considering the boundaries $\mu = \pi_0$ and $\nu = \pi_T$.
+\end{proof}
+
+\subsection{Proof of \Cref{prop:fbrnd_euler}}
+\label{app:proof_fbrnd_euler}
+
+\begin{proof}
+    The first part follows by direct computation in \Cref{eq:fbrnd}. From here on, we will use the notation $f_{t_i} = f_{t_i}(X_{t_i})$ for brevity. Following \Cref{rem:conversion} we have that
+    \begin{subequations}
+    \begin{align*}
+    \ln \left(\frac{\d\ora{\P}^{\mu,a}}{\d\ola{\P}^{\nu,b}}\right)(X)  & \approx\ln\mu(X_0) - \ln \nu(X_T) \\
+    &+ \tfrac{1}{\sigma^2}\sum_{i=0}^{K-1} a_{t_i} \cdot  (X_{t_{i+1}} - X_{t_{i}}) - \tfrac{1}{2\sigma^2}\sum_{i=0}^{K-1} || a_{t_i}||^2 \, (t_{i+1} - t_{i})
+    \\
+    &
+    -  \tfrac{1}{\sigma^2}\sum_{i=0}^{K-1} b_{t_{i+1}}  \cdot  (X_{t_{i+1}} - X_{t_{i}})  +\tfrac{1}{2\sigma^2}\sum_{i=0}^{K-1} ||b_{t_{i+1}}|||^2 \, (t_{i+1} - t_{i}). 
+    \end{align*}
+    \end{subequations}
+    Adding and subtracting $||X_{t_{i+1}} - X_{t_{i}}||^2 / (\sigma^2(t_{i+1} - t_{i}))$ allows us to complete the square in each sum, resulting in \Cref{eq:fbrnd_euler_discrete}. Similarly, we recover \Cref{eq:fbrnd_euler_discrete_2} by plugging in the log of the Gaussian densities.
+    \end{proof}
+
+
+\subsection{Proof of \Cref{eq:cmcd_kl_loss_continuous}}
+\label{app:proof_cmcd_kl_loss_continuous}
 The proof uses \Cref{prop:fbrnd}, choosing $\Gamma_0 = \Gamma_T$ to be the Lebesgue measure, with $\gamma^+ = \gamma^- = 0$ (but notice that $\sigma$ in \Cref{eq:fbrnd} needs to be replaced by $\sigma \sqrt{2}$ due to the scaling in \Cref{eq:controlled annealing}). We compute
 \begin{align}
 \nonumber
@@ -90,59 +211,6 @@ The proof uses \Cref{prop:fbrnd}, choosing $\Gamma_0 = \Gamma_T$ to be the Lebes
 \E \left[ \sigma^2  \int_0^T |\nabla \ln \pi_t(X_t)|^2  \d t  + \tfrac{1}{\sigma \sqrt{2}}  \int_0^T  \left(\sigma^2 \nabla \ln \pi_t - \nabla \phi_t \right)(X_t) \cdot {\d} \ola{W}_t \right], 
 \end{align}
 where in the last equality we have inserted the dynamics from \Cref{eq:controlled annealing} and used the martingale property from \Cref{eq:forward-sde-martingale}.
-
-\subsection{Proof of \Cref{eq:cmcd_var_loss}}
-
-In this section, we first verify the expression for $\mathcal{L}^{\mathrm{CMCD}}_{\mathrm{Var}}$ in \Cref{eq:cmcd_var_loss}, using \Cref{prop:fbrnd}, and choosing $\Gamma_0 = \Gamma_T$ to be the Lebesgue measure, $\gamma^+ = \gamma^- = 0$. We recall that although the Lebesgue measure in not normalisable, the arguments can be made rigorous using the techniques in \textcite[Appendix A]{leonard2013survey}.
-
-%\begin{subequations}
-%\begin{align}
-The Radon-Nikodym derivative (RND) along \Cref{eq:controlled annealing} reads
-\begin{subequations}
-\begin{align}
-&\left(\ln \frac{\d \ora{\P}^{\pi_0,\sigma^2 \nabla \ln \pi + \nabla \phi}}{\d \ola{\P}^{\pi_T, - \sigma^2 \nabla \ln \pi + \nabla \phi}} \right)(X)  = (\ln \pi_0) (X_0) - (\ln \pi_T) (X_T) 
-\nonumber
-\\
-& +\!\tfrac{1}{2 \sigma^2} \!\!\int_0^T \!\!\!\!\!(\sigma^2 \nabla \!\ln \pi_t \!+\! \nabla \phi_t)(X_t) \!\! \left(\!(\!\sigma^2 \nabla \!\ln \pi_t \!+\! \nabla \phi_t)(X_t) \, \d t \!+\! \sqrt{2 }\sigma  \d W_t\! -\! \tfrac{1}{2} (\sigma^2 \nabla\! \ln \pi_t \! + \!\nabla \phi_t)(X_t) \, \d t \!\right)
-\nonumber
-\\
-&-\!\tfrac{1}{2 \sigma^2} \!\!\!\int_0^T \!\!\!\!\!\!(\!-\sigma^2 \nabla\! \ln \pi_t\! +\! \nabla \phi_t)(X_t) \!\!\left(\!\! (\!\sigma^2 \nabla \!\ln \pi_t\! + \!\nabla \phi_t)(X_t) \, \d t \!+\! \sqrt{2 } \sigma \d \ola{W}_t \!-\! \tfrac{1}{2} \!(\!\nabla \phi_t \!-\!\sigma^2 \nabla \ln \pi_t  )(X_t) \, \d t\! \right)
-\nonumber
-\\
-& = (\ln \pi_0) (X_0) - (\ln \pi_T) (X_T) \nonumber
-+ \sigma^2 \int_0^T | \nabla \ln \pi_t(X_t)|^2 \, \d t
-\\
-& \quad\quad\quad+ {\tfrac{\sigma}{\sqrt{2}}} \left(\int_0^T \nabla \ln \pi_t(X_t) \cdot \d W_t + \int_0^T \nabla \ln \pi_t(X_t) \cdot \d \ola{W}_t \right)\nonumber\\
-&\quad\quad\quad+ \tfrac{1}{\sigma \sqrt{2 }} \left(\int_0^T \nabla \phi(X_t) \cdot \d W_t - \int_0^T \nabla \phi(X_t) \cdot \d \ola{W}_t \right).\nonumber
-\end{align}
-\end{subequations}
-Using \Cref{eq:sum-reverse-ito-integral}, we obtain
-\begin{equation*}
-{\tfrac{\sigma}{\sqrt{2} }}\left(\int_0^T \nabla \ln \pi_t(X_t) \cdot \d W_t + \int_0^T \nabla \ln \pi_t(X_t) \cdot \d \ola{W}_t \right) = \sqrt{2}\sigma \int_0^T \nabla \ln \pi_t(X_t) \circ \d W_t. 
-\end{equation*}
-Furthermore, from \Cref{cor:relating-forward-and-reverse-ito-integrals-through-divergence} we see that 
-\begin{equation}
-\label{eq:Laplace approx}
-\tfrac{1}{\sigma \sqrt{2 }} \left(\int_0^T \nabla \phi(X_t) \cdot \d W_t - \int_0^T \nabla \phi(X_t) \cdot \d \ola{W}_t \right) = -\int_0^T \Delta \phi_t(X_t) \, \d t,
-\end{equation}
-from which the claim follows.
-
-\begin{remark}[Estimating $\mathcal{L}^{\mathrm{CMCD}}_{\mathrm{Var}}$ without second derivatives]
-\label{rem:kick out Laplace}
-Using \Cref{eq:Laplace approx}, we can equivalently write the RND as 
-\begin{subequations}
-\begin{align}
-\nonumber
-& \left(\ln \frac{\d \ora{\P}^{\pi_0,\sigma^2 \nabla \ln \pi + \nabla \phi}}{\d \ola{\P}^{\pi_T, - \sigma^2 \nabla \ln \pi + \nabla \phi}} \right)(X)  =
-\ln \pi_T(X_T) - \ln \pi_0(X_0) 
-\\
-& - \tfrac{1}{\sigma \sqrt{2 }} \left(\int_0^T \nabla \phi(X_t) \cdot \d W_t - \int_0^T \nabla \phi(X_t) \cdot \d \ola{W}_t \right) \nonumber
-\\
-&-\!\! \sigma \sqrt{2 } \!\int_0^T\!\!\! \!\!\nabla \ln \pi_t(X_t)\! \circ\! \d W_t\! - \sigma^2\! \!\int_0^T\!\!\! |\nabla \ln \pi_t(X_t)|^2 \, \d t,\!\! \nonumber
-\end{align}
-\end{subequations}
-so that $\mathcal{L}^{\mathrm{CMCD}}_{\mathrm{Var}}$ can be estimated without the need to evaluate $\Delta \phi$. Note that the identity in \Cref{eq:Laplace approx} is similar to a finite difference approximation of $\Delta \phi$  along the process $X_t$. 
-\end{remark}
 
 \section{Underdamped Langevin Dynamics Generalisation}
 
@@ -245,7 +313,7 @@ then we can use the above discrete time RND to approximate the KL divergence bet
 \end{align}
 Where the expectation is taken with respect to the discrete-time process in \Cref{alg:Fldvi}.
 
-\section{Additional Experiments}
+\section{Experimental Setup and Additional Experiments}
 
 In this section, we will cover further details pertaining to our experimental setup.
 
@@ -319,12 +387,12 @@ The goal is to do inference over the variables $\tau, a_0, a_1, a_2, a_{12}$ and
 \begin{figure}
     \centering
     \includegraphics{/Users/shreyaspadhy/Documents/Obsidian Vault/phd-thesis/Chapter4/Figs/Vector/MCD_net.pdf}
-    \caption{Architecture from \textcite{geffner2023langevin} used across experiments for our CMCD drift network. Softplus activations are used.}
+    \caption[Architecture from \textcite{geffner2023langevin} used across experiments for CMCD drift network]{Architecture from \textcite{geffner2023langevin} used across experiments for our CMCD drift network. Softplus activations are used.}
     \label{fig:cmcd_net}
 \end{figure}
 
 \begin{table}[htb!]
-\caption{\textbf{Network Sizes for comparison.} Note that CMCD has less parameters for the despite the Funnel target despite the larger drift due to the PIS and DDS networks having an additional grad network.}
+\caption[Network Sizes for comparison]{\textbf{Network Sizes for comparison.} Note that CMCD has less parameters for the despite the Funnel target despite the larger drift due to the PIS and DDS networks having an additional grad network.}
 \label{table:dds_hp}
 \begin{center}
 \begin{small}
@@ -378,7 +446,7 @@ We maintained a similar setup to SMC, with a few adjustments: using 500 particle
 We utilized the same flows as for AFT. In this case, $K$ denotes the number of flows to stack. The flows were trained over a total of 2000 iterations with a batch size of 500. For some targets
 
 \begin{table}[htb!]
-\caption{\textbf{Tuned MCMC Step Sizes.}}
+\caption[Tuned MCMC Step Sizes]{\textbf{Tuned MCMC Step Sizes.}}
 \label{table:mdn_hp}
 \begin{center}
 \begin{small}
@@ -408,7 +476,7 @@ We utilized the same flows as for AFT. In this case, $K$ denotes the number of f
 \end{table}
 
 \begin{table}[htb!]
-\caption{\textbf{SMC Results.} $ \text{ELBO}$ and $\ln Z$ values for a different number of steps $K$ and experiments.}
+\caption[SMC Results with CMCD]{\textbf{SMC Results.} $ \text{ELBO}$ and $\ln Z$ values for a different number of steps $K$ and experiments.}
 \label{table:mdn_hp_2}
 \begin{center}
 \begin{small}
@@ -555,7 +623,7 @@ We utilized the same flows as for AFT. In this case, $K$ denotes the number of f
 We further run both flow models (AFT and NFVI) on all possible target distributions (subject to OOM errors). Results can be found in \Cref{tab:allres}.
 
 \begin{table}[!ht]
-\caption{\textbf{$\ln Z$ comparison.} $\ln Z$ values for a different number of steps $K$, experiments and methods. Not all methods could be evaluated on every $K$/experiment combination due to numerical instabilities or out-of-memory (OOM) problems.}\label{tab:dnf}
+\caption[$\ln Z$ comparison for CMCD and NF-style methods]{\textbf{$\ln Z$ comparison.} $\ln Z$ values for a different number of steps $K$, experiments and methods. Not all methods could be evaluated on every $K$/experiment combination due to numerical instabilities or out-of-memory (OOM) problems.}\label{tab:dnf}
     \centering
     \resizebox{\textwidth}{!}{%
     \begin{tabular}{l|l|cccccc}
@@ -588,7 +656,7 @@ We further run both flow models (AFT and NFVI) on all possible target distributi
 \end{table}
 
 \begin{table}[!ht]
-\caption{\textbf{ELBO comparison.} ELBO values for a different number of steps $K$, experiments and methods. Not all methods could be evaluated on every $K$/experiment combination due to numerical instabilities or out-of-memory (OOM) problems.}\label{tab:allres}
+\caption[ELBO comparison for CMCD and NF-style methods]{\textbf{ELBO comparison.} ELBO values for a different number of steps $K$, experiments and methods. Not all methods could be evaluated on every $K$/experiment combination due to numerical instabilities or out-of-memory (OOM) problems.}\label{tab:allres}
     \centering
     \resizebox{\textwidth}{!}{%
     \begin{tabular}{l|l|cccccc}
@@ -723,28 +791,28 @@ Mode     & ULA                         & MCD                                   &
 Sampling & $\mathcal{O}(K \cdot (d+ G(d)))$ & $\mathcal{O}(K \cdot (d+G(d)))$           & $\mathcal{O}(K \cdot ( d + G(d) + N(d)) )$ & $\mathcal{O}(K \cdot ( N_2 + G(d) + N_1(d)) )$ \\
 ELBO     & $\mathcal{O}(K \cdot (d+G(d)))$ & $\mathcal{O}(K \cdot (d +G(d) + N(d)) )$ & $\mathcal{O}(K \cdot ( d + G(d) + N(d)) )$ & $\mathcal{O}(K \cdot ( N_2 + G(d) + N_1(d)) )$ \\ \bottomrule
 \end{tabular}}
-\caption{Sampling and loss calculation complexity across SDE based methods,  $K$ represents the number of integration steps, $G(d)$ represents the cost of evaluating the score of the target and $N(d)$ for evaluating the drift/score networks both quantities are dimension dependant. PIS and DDS have an additional grad network cost $N_2$ which is dimension independant.}
+\caption[Sampling and loss calculation complexity across SDE based methods]{Sampling and loss calculation complexity across SDE based methods,  $K$ represents the number of integration steps, $G(d)$ represents the cost of evaluating the score of the target and $N(d)$ for evaluating the drift/score networks both quantities are dimension dependant. PIS and DDS have an additional grad network cost $N_2$ which is dimension independant.}
 \end{table}
 
-\subsection{Training time comparisons to SMC}
+% \subsection{Training time comparisons to SMC}
 
-In this section, we explore a total time comparison between our approach CMCD and SMC. 
+% In this section, we explore a total time comparison between our approach CMCD and SMC. 
 
-As both methods are quite inherently different it is not immediately obvious how to carry out an insightful comparison. In order to do so we chose the LGCP which is our most numerically intense target and we phrase the following question:
+% As both methods are quite inherently different it is not immediately obvious how to carry out an insightful comparison. In order to do so we chose the LGCP which is our most numerically intense target and we phrase the following question:
 
-\begin{center}
-“For how long do we have to train CMCD to outperform the best-run SMC”
-\end{center}
+% \begin{center}
+% “For how long do we have to train CMCD to outperform the best-run SMC”
+% \end{center}
 
-For this, we look at our \Cref{fig:cmcd_exps} pane c) and we can see that at $K=8$ CMCD already outperforms SMC at $K=256$ with 2000 particles. So we choose these two approaches to compare to.  In \Cref{tab:cmcdsmc} is a brief comparison of total time calculations, note we have included tuning time for SMC which is akin to our training time as without tuning SMCs hyperparameters ELBOs and ln Z estimations were much worse. We can observe that the total runtime for training and sampling CMCD to reach a better $\ln Z$ value does not exceed the time required to tune SMC.
+% For this, we look at our \Cref{fig:cmcd_exps} pane c) and we can see that at $K=8$ CMCD already outperforms SMC at $K=256$ with 2000 particles. So we choose these two approaches to compare to.  In \Cref{tab:cmcdsmc} is a brief comparison of total time calculations, note we have included tuning time for SMC which is akin to our training time as without tuning SMCs hyperparameters ELBOs and ln Z estimations were much worse. We can observe that the total runtime for training and sampling CMCD to reach a better $\ln Z$ value does not exceed the time required to tune SMC.
 
-\begin{table}[!htb]
-\centering
-\begin{tabular}{@{}llll@{}}
-\toprule
-Method & Train + Sample Time (min) & ln Z                & ELBO                  \\ \midrule
-CMCD   & $33.12 \pm 0.12$          & $491.059 \pm 3.553$  & $469.475 \pm  0.2589$ \\ 
-SMC    & $62.62 \pm 0.10$           & $477.162 \pm 4.998$ & $453.395 \pm 4.4300$    \\ \bottomrule
-\end{tabular}
-\caption{Training+ Tuning + Sampling time comparisons for CMCD and SMC at comparable ln Z estimates.} \centering\label{tab:cmcdsmc}
-\end{table}
+% \begin{table}[!htb]
+% \centering
+% \begin{tabular}{@{}llll@{}}
+% \toprule
+% Method & Train + Sample Time (min) & ln Z                & ELBO                  \\ \midrule
+% CMCD   & $33.12 \pm 0.12$          & $491.059 \pm 3.553$  & $469.475 \pm  0.2589$ \\ 
+% SMC    & $62.62 \pm 0.10$           & $477.162 \pm 4.998$ & $453.395 \pm 4.4300$    \\ \bottomrule
+% \end{tabular}
+% \caption{Training+ Tuning + Sampling time comparisons for CMCD and SMC at comparable ln Z estimates.} \centering\label{tab:cmcdsmc}
+% \end{table}

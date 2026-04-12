@@ -1,40 +1,200 @@
 \chapter*{Principal Notation}
 \chaptermark{Principal Notation}
 
-\section*{General}
+\section*{The Sampling Problem}
 
 \newif\ifnodotfill
-\begin{xltabular}{\textwidth}{@{} p{1.625cm} X<{\ifnodotfill\else\unskip\kern-1pc\leaders\hbox{\makebox[1pc][r]{\makebox[0pc]{.}}}\hfill\kern0pc\fi} @{} >{\raggedleft\arraybackslash}p{0.625cm} @{}}
+\begin{xltabular}{\textwidth}{@{} p{2.925cm} X<{\ifnodotfill\else\unskip\kern-1pc\leaders\hbox{\makebox[1pc][r]{\makebox[0pc]{.}}}\hfill\kern0pc\fi} @{} >{\raggedleft\arraybackslash}p{0.625cm} @{}}
+    $\pi$ & Normalised probability distribution & \labelcpageref{ntn:prob_distbn} \\
+    $\hpi$ & Unnormalised probability distribution & \labelcpageref{ntn:prob_distbn_unnormalised} \\
+    $\mu$ & Base distribution & \labelcpageref{ntn:base_distbn} \\
+    $p_{\theta}(x \mid z)$ & Parametrised mapping between $\mu$ and $\pi$ & \labelcpageref{ntn:mapping_x_to_z} \\
+    $\mathcal{D}_{\text{train}}$ & Training dataset for generative modelling& \labelcpageref{ntn:training_dataset} \\
+    $\mathcal{D}_{\text{cond}}$ & Paired dataset for conditional generative modelling& \labelcpageref{ntn:conditional_dataset} \\
+    $\pi_{\text{cond}}$ & Conditional probability distribution & \labelcpageref{ntn:conditional_prob_distbn} \\
+    $Z$ & Normalising constant & \labelcpageref{ntn:normalising_constant} \\
+    $\hat{Z}$ & Importance sampling estimate & \labelcpageref{ntn:importance_weights_estimate} \\
+    $q$ & Importance sampling distribution & \labelcpageref{ntn:importance_dist} \\
+    $w(x)$ & Importance sampling weights & \labelcpageref{ntn:importance_weights} \\
+    $\pi_0, \pi_1, \ldots, \pi_T$ & Annealing distributions & \labelcpageref{ntn:annealing_dists} \\
+    $F_t$, $B_t$ & Forward and backward transition kernels & \labelcpageref{ntn:transition_kernels} \\
+    $x_{0:T}$ & Extended path & \labelcpageref{ntn:extended_path_space} \\
+    $Q(x_{0:T})$ & Extended proposal distribution & \labelcpageref{ntn:ais_extended_proposal} \\
+    $\Gamma(x_{0:T})$ & Extended target distribution & \labelcpageref{ntn:ais_extended_target} \\
+    $p_\theta(x|z)$, $q_\phi(z|x)$ & Parametrised mappings between $\mu$ and $\pi$ & \labelcpageref{ntn:discrete_mappings} \\
+    $s_{\theta, t}$ & Parametrised score function & \labelcpageref{ntn:score_net_discrete} \\
+    $\nabla_x \ln \hat{\pi}$ & Score function & \labelcpageref{ntn:score} \\
+    $\beta_t$ & Noising schedule for DDPM & \labelcpageref{ntn:ddpm_noise} \\
+    $\alpha_t$ & 1 - $\beta_t$ for DDPM & \labelcpageref{ntn:ddpm_alpha} \\
+    $\Bar{\alpha}_t$ & Cumulative DDPM $\alpha$s & \labelcpageref{ntn:ddpm_alpha_bar_ch2} \\
+    $p_{\theta_t}$, $q_{\phi_t}$ & Parametrised intermediate mappings between $\mu$ and $\pi$ & \labelcpageref{ntn:discrete_mappings_intermediate} \\
+    $f_{\theta_t}$, $b_{\phi_t}$ & Parametrised transition kernel fns & \labelcpageref{ntn:param_fns} \\
+    $r(x, y)$ & Reward function & \labelcpageref{ntn:reward_function} \\
+    $p(y \mid x)$ & Likelihood & \labelcpageref{ntn:likelihood} \\
+    $\nabla_x \log p(y|x_t)$ & Time-dependent likelihood (or guidance) & \labelcpageref{ntn:guidance_ch2} \\
+\end{xltabular}
+\section*{Stochastic Calculus}
+
+\newif\ifnodotfill
+\begin{xltabular}{\textwidth}{@{} p{2.925cm} X<{\ifnodotfill\else\unskip\kern-1pc\leaders\hbox{\makebox[1pc][r]{\makebox[0pc]{.}}}\hfill\kern0pc\fi} @{} >{\raggedleft\arraybackslash}p{0.625cm} @{}}
 $\Omega$ & Sample space & \labelcpageref{ntn:sample_space} \\
+$\mathcal{P}(\Omega)$ & Power set & \labelcpageref{ntn:power_set} \\
 $\mathcal{F}$ & $\sigma$-algebra & \labelcpageref{ntn:sigma-algebra} \\
 $\P$ & Probability measure & \labelcpageref{ntn:probability-measure} \\
 $(\Omega, \mathcal{F}, \P)$ & Probability space & \labelcpageref{ntn:prob} \\
 $\mathcal{B}(\R^n)$ & Borel $\sigma$-algebra & \labelcpageref{ntn:borel-sigma-algebra} \\
 $\lambda$ & Lebesgue measure & \labelcpageref{ntn:lebesgue-measure} \\
+$\frac{\d\nu}{\d\mu}$ & Radon-Nikodym derivative & \labelcpageref{ntn:radon-nikodym-derivative} \\
+$f_\ast \mu$ & Pushforward measure & \labelcpageref{ntn:pushforward_measure} \\
+$X_\ast \P$ or $\P_X$ & Probability distribution & \labelcpageref{ntn:prob_distbn_sp} \\
+$\frac{\d P_X}{\d \lambda}$ or $f_X$ & Probability density function & \labelcpageref{ntn:prob_density_function} \\
 $\{X_t\}_{t \in T}$ & Stochastic process & \labelcpageref{ntn:stochastic-process} \\  
 $X_t$ & Stochastic process at time $t$ & \labelcpageref{ntn:stochastic-process} \\
-% $\Cov(\.,\.)$ & Covariance between two real-valued random variables & \labelcpageref{ntn:expectation-cov} \\
-% $y \~ \pi$ & Random variable $y$ with distribution $\pi$ & \labelcpageref{ntn:rv} \\
-% $\c{M}_1(X)$ & Space of probability measures over $X$ & \labelcpageref{ntn:space-of-measures} \\
-% $D_{\f{KL}}(\.||\.)$ & Kullback--Leibler divergence between probability measures & \labelcpageref{ntn:kl-div} \\
-% $W_{p,d}(\.,\.)$ & Wasserstein distance of $p$th order over distance $d$ & \labelcpageref{ntn:wass-dist} \\
-% \global\nodotfilltrue
-% $\N$ & Natural numbers, not including zero \\ 
-% $\Z$ & Integers \\
-% $\R$ & Real numbers \\ 
-% $\C$ & Complex numbers \\
-% $\R^d$ & Euclidean space of dimension $d$ \\ 
-% $\R^X$ & Space of functions from $X$ to $\R$ \\
-% $\v{a}$ & Euclidean vector (bold italic letters) \\ 
-% $\m{A}$ & Matrix (bold upface letters) \\
-% \global\nodotfillfalse
-% $\oplus$ & Direct sum of vector spaces & \labelcpageref{ntn:direct-sum} \\
-% $V^*$ & Dual space of a topological vector space & \labelcpageref{ntn:dual-space} \\
-% $\c{A}^*$ & Adjoint of a bounded linear operator & \labelcpageref{ntn:bounded-operators} \\
-% $\norm{\.}$ & Norm of a vector in a Banach space & \labelcpageref{ntn:banach-hilbert} \\
-% $\innerprod{\.}{\.}$ & Inner product between vectors in a Hilbert space & \labelcpageref{ntn:banach-hilbert} \\
-% $\dualprod{\.}{\.}$ & Duality pairing between topological vector spaces & \labelcpageref{ntn:dual-pair} \\
-% $L(V;W)$ & Banach space of bounded linear operators & \labelcpageref{ntn:bounded-operators} \\
-% $C^0(X;\R)$ & Banach space of real-valued continuous functions & \labelcpageref{ntn:conts-fns} \\
-% $L^p(X;\R)$ & Lebesgue space & \labelcpageref{ntn:leb-space} \\
+$\left\{\mathcal{F}_t\right\}_{t \in \mathcal{T}}$ & Filtration & \labelcpageref{ntn:filtration} \\
+$\left(\Omega, \mathcal{F},\left\{\mathcal{F}_t\right\}_{t \in \mathcal{T}}, \mathbb{P}\right)$ & Filtered probability space & \labelcpageref{ntn:filtered_prob_space} \\
+$\mathcal{F}_t^X$ & Filtration generated by a process & \labelcpageref{ntn:filtration_generated_by_process} \\
+$\{W_t\}_{t \in T}$ & Brownian motion (or Wiener process)& \labelcpageref{ntn:brownian_motion} \\
+$\Pi$ & Partition & \labelcpageref{ntn:partitions} \\
+$V_t^{\Pi}(X)$ & Total variation of a stochastic process along $\Pi$ & \labelcpageref{ntn:total_variation} \\
+$\langle X \rangle_t^{\Pi}$ & Quadratic variation of a stochastic process along $\Pi$ & \labelcpageref{ntn:quadratic_variation} \\
+$\int_0^t X_s \d W_s$ & Itô integral & \labelcpageref{ntn:ito_integral} \\
+$\int_s^t X_u \circ \d W_u$ & Stratanovich integral & \labelcpageref{ntn:stratanovich_integral} \\
+$C^2([0, \infty) \times \mathbb{R})$ & Twice continuously differentiable functions & \labelcpageref{ntn:continuous_domain} \\
+$\mathcal{T}$ & Space of continuous fns from $[0, T]$ to $\R^n$ & \labelcpageref{ntn:continuous_fn_space} \\
+$\mathbb{P}^{\mu, \pi_0}$ & Path measure of an Itô process & \labelcpageref{ntn:path_measure_of_ito_process} \\
+$\frac{\d \mathbb{Q}}{\d \mathbb{P}}$ & Radon-Nikodym derivative b/w path measures & \labelcpageref{ntn:radon-nikodym-derivative-pathwise} \\
+$h(X_t, t)$ & $h$-transform & \labelcpageref{ntn:h_transform} \\
+$\overleftarrow{W}_t$ & Reverse-time Brownian motion & \labelcpageref{ntn:reverse_time_brownian_motion} \\
+$\mathcal{G}_t$ & Reverse-time filtration & \labelcpageref{ntn:reverse_time_filtration} \\
+$\overrightarrow{\mathbb{P}}^{\cdot, \cdot}$ & Forward-time path measure & \labelcpageref{ntn:forward_time_path_measure} \\
+$\overleftarrow{\mathbb{P}}^{\cdot, \cdot}$ & Reverse-time path measure & \labelcpageref{ntn:reverse_time_path_measure} \\
+\end{xltabular}
+
+\section*{Unified Stochastic Calculus Frameworks}
+
+\newif\ifnodotfill
+\begin{xltabular}{\textwidth}{@{} p{2.925cm} X<{\ifnodotfill\else\unskip\kern-1pc\leaders\hbox{\makebox[1pc][r]{\makebox[0pc]{.}}}\hfill\kern0pc\fi} @{} >{\raggedleft\arraybackslash}p{0.625cm} @{}}
+$\mu$, $\nu$ & Terminal distributions & \labelcpageref{ntn:base_distbn_cmcd} \\
+$p_{\theta}(x | z)$, $q_{\phi}(z | x)$ & Parametrised mappings between $\mu$ and $\nu$ & \labelcpageref{ntn:mappings} \\
+$p_{\theta_t}$, $q_{\phi_{t-1}}$ & Parametrised Gaussian transition kernels & \labelcpageref{ntn:gaussian_latents} \\
+$\sigma$ & Standard deviation & \labelcpageref{ntn:std_dev_gaussian_latent} \\
+$\delta$ & Small parameter & \labelcpageref{ntn:small_delta} \\
+$a_{\phi_t}(x_t)$, $b_{\theta_t}(x_t)$ & Vector fields & \labelcpageref{ntn:vector_fields} \\
+$\rho_t^{\mu, f}$ & Marginal of path measure at $t$ & \labelcpageref{ntn:path_measure_time_marginal} \\
+$\rho_{t \mid s}^{\mu, f}(\cdot \mid x)$ & Conditional distribution at $t$ given $X_s = x$ & \labelcpageref{ntn:path_measure_conditional_distribution} \\
+$\frac{\mathrm{d} \overrightarrow{\mathbb{P}}^{\mu, a}}{\mathrm{~d} \overleftarrow{\mathbb{P}}^{\nu, b}}$ & Forward-backward Radon-Nikodym derivative & \labelcpageref{ntn:fbrnd} \\
+$\gamma^{+}, \Gamma_0$ & Drift and starting distbn of forward reference process & \labelcpageref{ntn:fwd_reference} \\
+$\gamma^{-}, \Gamma_T$ & Drift and starting distbn of reverse reference process & \labelcpageref{ntn:bwd_reference} \\
+$s_{\theta, t}$ & Parametrised score function & \labelcpageref{ntn:score_net} \\
+$D_{\operatorname{Var}}^{\mathbb{U}}$ & Log-variance divergence w.r.t reference measure $\mathbb{U}$ & \labelcpageref{ntn:log_variance_divergence} \\
+$\beta_t$ & Annealing parameters & \labelcpageref{ntn:annealing_weights} \\
+$\nabla \phi_t$ & Control term & \labelcpageref{ntn:control_term} \\
+$\phi^{\star}$ & Optimal control term & \labelcpageref{ntn:optimal_control_term} \\
+$\nabla_{x} \ln p(y | x_t)$ & Time-dependent likelihood (or guidance) & \labelcpageref{ntn:guidance} \\
+$\{H_t\}_{t \in [0, T]}$ & Conditioned process & \labelcpageref{ntn:conditioned_process} \\
+$\mathcal{A}$ & Measurement (or forward)operator & \labelcpageref{ntn:measurement_operator} \\
+$\ora{\P}_T^{p(x_0 \mid y),f_t}$ & Terminal distbn of SDE with $p(x_0 \mid y)$ as initial distbn & \labelcpageref{ntn:terminal_of_conditioned_process} \\
+$h(x_t, t, y)$ & Generalised $h$-transform & \labelcpageref{ntn:generalised_htrans} \\
+$\hat{x}_0$ & Posterior mean through Tweedie's formula & \labelcpageref{ntn:tweedies_formula} \\
+$\Gamma_t$ & Guidance scale for reconstruction guidance & \labelcpageref{ntn:guidance_scale} \\
+$s_{\theta, t}(x_t, t, y)$ & Parametrised joint score function & \labelcpageref{ntn:joint_score} \\
+$\gamma$ & Guidance strength & \labelcpageref{ntn:guidance_strength} \\
+$X_0^{[M]}$ & Coordinates that are observed in inpainting & \labelcpageref{ntn:masked_coords} \\
+$X_t^{[\backslash M]}$ & Coordinates that are unobserved in inpainting & \labelcpageref{ntn:unmasked_coords} \\
+$\ola{\Q}$ & Path measure for controlled SDE & \labelcpageref{ntn:path_measure_for_controlled_sde} \\
+$\varepsilon_t^{\theta^*}$ & Pre-trained epsilon matching model & \labelcpageref{ntn:epsilon_network} \\
+$h^\phi_t(H_t, Y)$ & Parameterised $h$-transform model & \labelcpageref{ntn:param_h} \\
+$\Bar{\alpha}_t$ & Cumulative DDPM $\alpha$s & \labelcpageref{ntn:ddpm_alpha_bar} \\
+$\beta_t$ & Noising schedule for VP-SDE & \labelcpageref{ntn:vpsde_noise} \\
+$\alpha_k$ & Discretised $\alpha$ for exponential integration & \labelcpageref{ntn:exp_alpha} \\
+$k$ & Trajectory balance loss parameter & \labelcpageref{ntn:trajectory_balance_loss} \\
+$g_t$ & Stop gradient reference for $h_t$ & \labelcpageref{ntn:stop_grad} \\
+$\mathcal{F}$ & Fourier transform & \labelcpageref{ntn:fourier_transform} \\
+
+\end{xltabular}
+
+\section*{Bayesian Inference with Gaussian Processes}
+
+\newif\ifnodotfill
+\begin{xltabular}{\textwidth}{@{} p{2.925cm} X<{\ifnodotfill\else\unskip\kern-1pc\leaders\hbox{\makebox[1pc][r]{\makebox[0pc]{.}}}\hfill\kern0pc\fi} @{} >{\raggedleft\arraybackslash}p{0.625cm} @{}}
+$\mathcal{X}$ & Index set & \labelcpageref{ntn:index_set} \\
+$\{f(x)\}_{x \in \mathcal{X}}$ & Function as stochastic process & \labelcpageref{ntn:function} \\
+$\pi_{U \rightarrow V}$ & Projection map & \labelcpageref{ntn:projection_map} \\
+$\pi_{\mathcal{X} \rightarrow V}^{-1}(B)$ & Cylinder set & \labelcpageref{ntn:cylinder_set} \\
+$\mathbb{P}$ & Prior probability measure & \labelcpageref{ntn:prior_prob} \\
+$\hat{\mathbb{P}}$ & Posterior probability measure & \labelcpageref{ntn:posterior_prob} \\
+$p(Y | f_X)$ & Likelihood function & \labelcpageref{ntn:likelihood_function} \\
+$p(Y)$ & Marginal likelihood & \labelcpageref{ntn:marginal_likelihood} \\
+$\frac{\d \hat{\mathbb{P}}}{\d \mathbb{P}}(f)$ & Radon-Nikodym derivative & \labelcpageref{ntn:radon-nikodym_derivative} \\
+$\operatorname{GP}(m, k)$ & Gaussian process with mean $m$ and covariance kernel $k$ & \labelcpageref{ntn:gaussian_process} \\
+$K_{XX}$ & Covariance matrix & \labelcpageref{ntn:covariance_matrix} \\
+$\Sigma$ & Noise covariance matrix & \labelcpageref{ntn:noise_covariance} \\
+$\operatorname{GP}(m_{\star}, k_{\star})$ & Posterior GP & \labelcpageref{ntn:posterior_gp} \\
+$\mathbb{Q}$ & Variational distribution & \labelcpageref{ntn:variational_inference_gp} \\
+$Z$ & Inducing points & \labelcpageref{ntn:inducing_points} \\
+$\operatorname{GP}(m^{(Z)}_{\star}, k^{(Z)}_{\star})$ & Variational posterior GP & \labelcpageref{ntn:variational_posterior_gp} \\
+$\alpha_{\star}$ & Linear system solution & \labelcpageref{ntn:alpha_star} \\
+$\mathbb{M}_{\varphi}$ & Model class for GP & \labelcpageref{ntn:gp_model_class} \\
+$H_{\varphi}$ & Covariance matrix for GP & \labelcpageref{ntn:h_varphi} \\
+$f(\cdot)$ & Prior sample & \labelcpageref{ntn:prior_sample} \\
+$(f | y)(\cdot)$ & Posterior sample & \labelcpageref{ntn:posterior_sample} \\
+$\phi$ & Kernel eigen-expansion & \labelcpageref{ntn:eigen_expansion} \\
+$\rho$ & Spectral measure & \labelcpageref{ntn:spectral_measure} \\
+$\Phi$ & Random Fourier Features matrix & \labelcpageref{ntn:random_feature_approximation} \\
+$\phi_{\ell}$ & Random Fourier Features & \labelcpageref{ntn:random_feature} \\
+$h(\cdot; b)$ & Representer function for targets $b$& \labelcpageref{ntn:representer_function} \\
+$\beta$ & Step-size & \labelcpageref{ntn:step_size} \\
+$\kappa$ & Kernel maximum & \labelcpageref{ntn:kernel_maximum} \\
+$L$ & Primal objective & \labelcpageref{ntn:primal_objective} \\
+$\tilde{L}$ & Minibatch primal objective & \labelcpageref{ntn:minbatch_primal_objective} \\
+$L'$ & Dual objective & \labelcpageref{ntn:dual_objective} \\
+$\|\cdot\|^2_{K_{XX}}$ & $K_{XX}$-norm & \labelcpageref{ntn:kxx_norm} \\
+$\|\cdot\|^2_{K_{XX}^2}$ & $K_{XX}^2$-norm & \labelcpageref{ntn:kxx_norm_squared} \\
+$\widetilde{g}$ & Random feature estimate of gradient & \labelcpageref{ntn:random_feature_estimate} \\
+$\widehat{g}$ & Random coordinate estimate of gradient & \labelcpageref{ntn:random_coordinate_estimate} \\
+$\widehat{M}$ & Random coordinate matrix & \labelcpageref{ntn:random_coordinate_matrix} \\
+$\overline{\alpha}$ & Geometric averaging of iterates & \labelcpageref{ntn:geometric_averaging} \\
+$r$ & Geometric averaging parameter & \labelcpageref{ntn:geometric_averaging_parameter} \\
+\end{xltabular}
+
+
+\section*{Bayesian Inference with Linear Models}
+
+\newif\ifnodotfill
+\begin{xltabular}{\textwidth}{@{} p{2.925cm} X<{\ifnodotfill\else\unskip\kern-1pc\leaders\hbox{\makebox[1pc][r]{\makebox[0pc]{.}}}\hfill\kern0pc\fi} @{} >{\raggedleft\arraybackslash}p{0.625cm} @{}}
+$\phi$ & Embedding function & \labelcpageref{ntn:embedding_fn} \\
+$\Phi$ & Embedded design matrix & \labelcpageref{ntn:embedding_matrix} \\
+$\Sigma$ & Block-diagonal noise covariance matrix & \labelcpageref{ntn:block_diagonal_noise} \\
+$\rmY$ & Stacked output vector & \labelcpageref{ntn:stacked_output_vector} \\
+$\theta$ & Model parameters & \labelcpageref{ntn:model_parameters_bnn} \\
+$A$ & Prior precision & \labelcpageref{ntn:prior_precision_bnn} \\
+$\varepsilon$ & Noise vector & \labelcpageref{ntn:noise_vector_bnn} \\
+$\theta_{\star}$ & Posterior mean & \labelcpageref{ntn:posterior_mean} \\
+$A_{\star}$ & Posterior precision & \labelcpageref{ntn:posterior_precision} \\
+$Q$ & Variational distribution & \labelcpageref{ntn:variational_inference} \\
+$Q^{\star}$ & Optimal variational distribution & \labelcpageref{ntn:variational_inference_opt} \\
+$\mathcal{Q}$ & Variational family & \labelcpageref{ntn:variational_family} \\
+$\theta_q, \Sigma_q$ & Variational parameters & \labelcpageref{ntn:variational_parameters} \\
+$\gamma$ & Effective dimension & \labelcpageref{ntn:effective_dimension} \\
+$\theta_0$ & Prior sample & \labelcpageref{ntn:prior_sample_bnn} \\
+$(\theta \mid \rmY)$ & Posterior sample & \labelcpageref{ntn:posterior_sample_bnn} \\
+$\bar{\theta}_{\star}$ & Zero-mean posterior sample & \labelcpageref{ntn:zero_mean_posterior_sample_bnn} \\
+$\hat{\gamma}$ & Kernelised (Prediction Space) effective dimension estimate& \labelcpageref{ntn:stochastic_eff_dim} \\
+$\hat{\gamma}_{\text{WS}}$ & Weight Space effective dimension estimate& \labelcpageref{ntn:ws_eff_dim} \\
+$L'$ & Low-variance objective & \labelcpageref{ntn:low_variance_objective_zero_mean_posterior_samples} \\
+$f(\cdot, \cdot)$ & Neural network function & \labelcpageref{ntn:nn_fn} \\
+$\hat{\theta}_{\text{nn}}$ & Neural network weights & \labelcpageref{ntn:nn_weights} \\
+$\ell(\cdot, \cdot)$ & Likelihood loss function & \labelcpageref{ntn:likelihood_loss_fn} \\
+$\mathcal{R}(\cdot)$ & Regularisation function & \labelcpageref{ntn:regularisation_fn} \\
+$\mathcal{L}(\cdot)$ & Loss function & \labelcpageref{ntn:loss_fn} \\
+$h(\cdot, \cdot)$ & Linearised neural network function & \labelcpageref{ntn:linearised_nn} \\
+$\hat{\theta}_{\text{lin}}$ & Linearised neural network maximum a-posteriori estimate & \labelcpageref{ntn:linear_weights} \\
+$\zeta_i$ & Samples from zero-mean posterior & \labelcpageref{ntn:sampling_is_efficient} \\
+$s$ & g-prior scaling factor & \labelcpageref{ntn:gprior} \\
+$p_i$ & Normalised predictions & \labelcpageref{ntn:normalised_preds} \\
+$\theta'_j$ & Data dependent terms in sample & \labelcpageref{ntn:data_dependent_terms} \\
+$U$ & Radon transform & \labelcpageref{ntn:radon_transform} \\
+$K_{\text{tom}}$ & Kernel matrix for tomography & \labelcpageref{ntn:kernel_tom} \\
+$\kappa$ & Number of joint predictions in dyadic sampling & \labelcpageref{ntn:dyadic_sampling_kappa} \\
+$\tau$ & Dyadic sampling parameter & \labelcpageref{ntn:dyadic_sampling_tau} \\
 \end{xltabular}
