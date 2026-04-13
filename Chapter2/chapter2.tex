@@ -58,7 +58,7 @@ A related problem is that of \textit{partition function estimation}, which is a 
     \label{fig:is_worse_vs_better}
 \end{figure}
 
-Importance Sampling (IS) algorithms \citep{kloek1978bayesian}tackle the problem of estimating expectations under $\pi$ by using a simpler approximating distribution $q$ that is easy to sample from. By a simple manipulation of the expectation, we can write
+Importance Sampling (IS) algorithms \citep{kloek1978bayesian} tackle the problem of estimating expectations under $\pi$ by using a simpler approximating distribution $q$ that is easy to sample from. By a simple manipulation of the expectation, we can write
 \[
     \mathbb{E}_\pi[f] = \frac{1}{Z} \int f(x) \frac{\hpi(x)}{q(x)} q(x) \mathrm{d} x = \frac{1}{Z} \mathbb{E}_q[f(x) \underbrace{\frac{\hpi(x)}{q(x)}}_{w(x)}]. \label{eq:is_weights}
 \]
