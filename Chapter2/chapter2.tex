@@ -20,7 +20,7 @@ The task of sampling in machine learning can be broadly divided into three disti
 
 % In the first situation, we don't have any existing samples from an unnormalised probability distribution, and we are only able to evaluate the unnormalised density $\hpi(x)$ and the gradient of the density $\nabla_x \hpi(x)$The task of \textit{unnormalised density sampling} (\Cref{fig:sampling_paradigm}, I.) focuses on learning to draw samples from this probability distribution (and often-times using these samples to estimate the normalising constant). 
 \label{ntn:generative_modelling}\label{ntn:training_dataset}
-Secondly, \textit{generative modelling} (\Cref{fig:sampling_paradigm}, (II.)) addresses scenarios where we possess a dataset $\mathcal{D}_{\text{train}} = \{x^{(i)}\}_{i=1}^{N_{\text{train}}}$ drawn from $\pi(x)$, but cannot directly evaluate $\pi(x)$ or its gradients. The goal is then to learn a parametrised approximation $p_{\theta}(x \mid z)$ that approximates $\pi(x)$, enabling the generation of new samples by transforming samples from a base distribution $\mu(z)$ (\Cref{fig:sampling_paradigm}, (II.))
+Secondly, \textit{generative modelling} (\Cref{fig:sampling_paradigm}, (II.)) addresses scenarios where we possess a dataset $\mathcal{D}_{\text{train}} = \{x^{(i)}\}_{i=1}^{N_{\text{train}}}$ drawn from $\pi(x)$, but cannot directly evaluate $\pi(x)$ or its gradients. The goal is then to learn a parametrised approximation $p_{\theta}(x \mid z)$ that approximates $\pi(x)$, enabling the generation of new samples by transforming samples from a base distribution $\mu(z)$ (\Cref{fig:sampling_paradigm}, (II.)).
 
 \begin{figure}[!t]
     \centering
@@ -65,8 +65,8 @@ Importance Sampling (IS) algorithms \citep{kloek1978bayesian}tackle the problem 
 Consequently, we can write expectations under $\hpi$ as expectations under $q$,\label{ntn:importance_dist} i.e. $\mathbb{E}_{\hpi}[f] = \mathbb{E}_q[f(x) w(x)]$. From \Cref{eq:partition_function}, we see that $Z$ is simply the expectation of the indicator function under $\hpi$, and so we can estimate $Z$ by drawing samples from $q$ and computing the empirical average of $w(x)$ over these samples, giving us the empirical estimate $\hat{Z}$ as:\label{ntn:importance_weights}\label{ntn:importance_weights_estimate}
 \begin{subequations}
 \begin{align}
-    \hat{Z} &= \frac{1}{N} \sum_{i=1}^{N} w(x^{(i)}), \quad x^{(i)} \sim q \label{eq:partition_function_estimate} \\ 
-    \mathbb{E}_\pi[f] &\approx \frac{1}{\hat{Z}} \frac{1}{N} \sum_{i=1}^{N} f(x^{(i)}) w(x^{(i)}) \label{eq:is_expectation_estimate}
+    \hat{Z} &= \frac{1}{N} \sum_{i=1}^{N} w(x^{(i)}), \quad x^{(i)} \sim q \label{eq:partition_function_estimate}, \\ 
+    \mathbb{E}_\pi[f] &\approx \frac{1}{\hat{Z}} \frac{1}{N} \sum_{i=1}^{N} f(x^{(i)}) w(x^{(i)}) \label{eq:is_expectation_estimate}.
 \end{align}
 \end{subequations}
 Unfortunately, IS approaches run into some issues. Firstly, the choice of $q$ is critical to the performance of the algorithm, and in general, it is difficult to choose a $q$ that has good coverage over the support of $\pi$ and is easy to sample from. Secondly, this approach doesn't provide us with a way to design an approximation to $\pi$ that we can draw additional samples from; we can merely estimate expectations. We therefore turn our attention to Markov Chain Monte Carlo (MCMC) algorithms, which can be used to draw samples from $\pi$ directly, and later, we see how we can consider an Importance Sampling viewpoint of MCMC algorithms that allow us to accurately estimate expectations as well.
@@ -136,7 +136,7 @@ The marginal proposal density $q_t(x_t)$ at an intermediate step $t$ is then giv
 \end{equation}
 However, computing $q_t(x_t)$ for $t \geq 1$ via this recursive integration is generally intractable, rendering the direct calculation of $w_{\text{mar}}(x_T)$ infeasible. AIS circumvents this issue by operating in the extended path space, defining a corresponding extended target distribution as follows:\label{ntn:ais_extended_target}
 \begin{equation}
-    \Gamma\left(x_{0: T}\right)=\hat{\pi}\left(x_T\right) \prod_{t=1}^{T} B_{t+1}\left(x_t \mid x_{t+1}\right) \label{eq:ais_extended_target}
+    \Gamma\left(x_{0: T}\right)=\hat{\pi}\left(x_T\right) \prod_{t=1}^{T} B_{t+1}\left(x_t \mid x_{t+1}\right), \label{eq:ais_extended_target}
 \end{equation}
 where $B_{t+1}(x_t | x_{t+1})$ are backward Markov transition kernels, typically chosen such that $B_t$ leaves $\pi_t$ invariant when run in reverse (i.e., sampling $x_t$ from $x_{t+1}$). The importance weight for the entire path $x_{0:T}$ is then defined, similar to \Cref{eq:is_weights} as
 \begin{equation}
@@ -187,7 +187,7 @@ AIS offers considerable flexibility in choosing the sequence of intermediate dis
     \]
     where the arrows signify the direction in time of the evolution of the corresponding SDE. Similarly, the importance sampling weights in \Cref{eq:ais_weights} converge to the density ratio between the forwards and backwards path measures in \Cref{eq:ais_path_measures}, which in turn is defined as a quantity called the Radon-Nikodym derivative:
     \[
-        w(x_{0:T}) \rightarrow \frac{\rightP_{\text{fwd}}(x_{0:T})}{\leftP_{\text{bwd}}(x_{0:T})} \rightarrow \frac{\dd \rightP_{\text{fwd}}}{\dd \leftP_{\text{bwd}}}
+        w(x_{0:T}) \rightarrow \frac{\rightP_{\text{fwd}}(x_{0:T})}{\leftP_{\text{bwd}}(x_{0:T})} \rightarrow \frac{\dd \rightP_{\text{fwd}}}{\dd \leftP_{\text{bwd}}}.
     \]
     We will see in \Cref{chapter:sde} that the Radon-Nikodym derivative is not well-defined for the density ratio of a forward path measure w.r.t a backward path measure, and will therefore motivate us to develop a novel theorem defining this quantity in \Cref{chapter:cmcd}.
 \end{lightgraybox}
