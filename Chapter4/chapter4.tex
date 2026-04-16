@@ -55,7 +55,7 @@ where $D$ is a divergence between the forward and backward path measures. This l
     \label{framework:unifying_framework_discrete}
     Let $D$ be an arbitrary divergence, and assume that $\mathcal{L}_D(\phi, \theta)=0$ in \Cref{eq:unifying_framework_loss}. Then we have  
     \[
-        \mu(x) = \int p_{\theta}(x \mid z) \dd \nu(z), \quad \nu(z) = \int q_{\phi}(z \mid x) \dd \mu(x). \label{eq:unifying_framework_discrete_result}
+        \mu(x) = \int p_{\theta}(x \mid z) \dd \nu(z), \quad \nu(z) = \int q_{\phi}(z \mid x) \dd \mu(x), \label{eq:unifying_framework_discrete_result}
     \]
     that is, $\nu(z)$ is transformed into $\mu(x)$ by $p_{\theta}(x \mid z)$, and $\mu(x)$ is transformed into $\nu(z)$ by $q_{\phi}(z \mid x)$.
 \end{selfframework}
@@ -70,25 +70,25 @@ We can therefore recover $q_{\phi}(z \mid x)$ and $p_{\theta}(x \mid z)$ by marg
 \begin{subequations}
 \begin{align}
 q_{\phi_{t-1}}\left(x_t \mid x_{t-1}\right) &= \mathcal{N}\left(x_t \mid x_{t-1}+\delta a_{\phi_{t-1}}\left(x_{t-1}\right), \delta \sigma^2 I\right), \label{eq:gaussian_fwd}\\
-p_{\theta_t}\left(x_{t-1} \mid x_t\right) &= \mathcal{N}\left(x_{t-1} \mid x_t+\delta b_{\theta_t}\left(x_t\right), \delta \sigma^2 I\right) \label{eq:gaussian_rev}
+p_{\theta_t}\left(x_{t-1} \mid x_t\right) &= \mathcal{N}\left(x_{t-1} \mid x_t+\delta b_{\theta_t}\left(x_t\right), \delta \sigma^2 I\right), \label{eq:gaussian_rev}
 \end{align}
 \end{subequations}
 where $\sigma>0$ controls the standard deviation, and $\delta>0$ is small\label{ntn:std_dev_gaussian_latent}\label{ntn:small_delta}. The vector fields $a_{\phi_t}\left(x_t\right)$ and $b_{\theta_t}\left(x_t\right)$ introduced in \Cref{eq:gaussian_fwd,eq:gaussian_rev} are parameterised by $\phi$ and $\theta$, but we will suppress this explicit dependence if it is clear from the context\label{ntn:vector_fields}. We further define notation for the joint forward and backward probability distributions,
 \[
-q_{\mu, \phi}\left(x_{0:T}\right):=q_{\phi}\left(x_{1:T} \mid x_0\right) \mu\left(x_0\right) \quad \text{and} \quad p_{\nu, \theta}\left(x_{0:T}\right):=p_{\theta}\left(x_{0:T-1} \mid x_T\right) \nu\left(x_T\right)
+q_{\mu, \phi}\left(x_{0:T}\right):=q_{\phi}\left(x_{1:T} \mid x_0\right) \mu\left(x_0\right) \quad \text{and} \quad p_{\nu, \theta}\left(x_{0:T}\right):=p_{\theta}\left(x_{0:T-1} \mid x_T\right) \nu\left(x_T\right),
 \]
 and think of those implied joint distributions as emanating from $\mu(x)=\mu\left(x_0\right)$ and $\nu(z)=\nu\left(x_T\right)$, respectively, moving 'forwards' or 'backwards' according to the specific choices for $\phi$ and $\theta$. The model in \Cref{eq:hierarchical_latent} is equivalently defined via the Markov chains
 \begin{subequations}
 \begin{align}
-x_{t+1} &\leftarrow x_t+\delta a_{\phi_t}\left(x_t\right)+ \sqrt{\delta}\sigma_t \varepsilon_{t+1}, & x_0 \sim \mu \Longrightarrow x_{0: T} \sim q_{\mu, \phi}\left(x_{0: T}\right) \label{eq:mc_framework_fwd_ch4} \\
-x_{t-1} &\leftarrow x_t+ \delta b_{\theta_t}\left(x_t\right)+ \sqrt{\delta}\sigma_t \varepsilon_t, & x_T \sim \nu \Longrightarrow x_{0: T} \sim p_{\nu, \theta}\left(x_{0: T}\right) \label{eq:mc_framework_rev_ch4}
+x_{t+1} &\leftarrow x_t+\delta a_{\phi_t}\left(x_t\right)+ \sqrt{\delta}\sigma_t \varepsilon_{t+1}, & x_0 \sim \mu \Longrightarrow x_{0: T} \sim q_{\mu, \phi}\left(x_{0: T}\right), \label{eq:mc_framework_fwd_ch4} \\
+x_{t-1} &\leftarrow x_t+ \delta b_{\theta_t}\left(x_t\right)+ \sqrt{\delta}\sigma_t \varepsilon_t, & x_T \sim \nu \Longrightarrow x_{0: T} \sim p_{\nu, \theta}\left(x_{0: T}\right), \label{eq:mc_framework_rev_ch4}
 \end{align}
 \end{subequations}
 where $\left\{\varepsilon_t\right\}_{t=1}^T$ are i.i.d. standard normal random variables. We note that in this hierarchical setup, the transition densities of interest, i.e. $p_{\theta}(x \mid z)$ and $q_{\phi}(z \mid x)$, are not available in closed form. However, generalising slightly from \Cref{framework:unifying_framework_discrete}, we could instead minimise the extended loss
 \[
-\mathcal{L}_D^{\operatorname{ext}}(\phi, \theta)=D\left(q_{\mu, \phi}\left(x_{0:T}\right) \| p_{\nu, \theta}\left(x_{0: T}\right)\right)
+\mathcal{L}_D^{\operatorname{ext}}(\phi, \theta)=D\left(q_{\mu, \phi}\left(x_{0:T}\right) \| p_{\nu, \theta}\left(x_{0: T}\right)\right),
 \]
-where here, $D$ is a divergence on the ``discrete path space'' $\left\{x_{0:T}\right\}$. Clearly, $\mathcal{L}_D^{\text {ext }}(\phi, \theta)=0$ still implies \Cref{eq:unifying_framework_discrete_result}, but is no longer equivalent. More specifically, in the case when $D=D_{\mathrm{KL}}$, the data processing inequality \parencite{cover1999elements} yields
+where here, $D$ is a divergence on the \textit{discrete path space} $\left\{x_{0:T}\right\}$. Clearly, $\mathcal{L}_D^{\text {ext }}(\phi, \theta)=0$ still implies \Cref{eq:unifying_framework_discrete_result}, but is no longer equivalent. More specifically, in the case when $D=D_{\mathrm{KL}}$, the data processing inequality \parencite{cover1999elements} yields
 \[
     D_{\mathrm{KL}}\left(q_{\mu, \phi}\left(x_{0:T}\right) \| p_{\nu, \theta}\left(x_{0: T}\right)\right) \geq D_{\mathrm{KL}}\left(q_{\phi}(z \mid x) \mu(x) \| p_{\theta}(x \mid z) \mu(z)\right),
 \]
@@ -99,8 +99,8 @@ so that $\mathcal{L}_{D_{\mathrm{KL}}}^{\text {ext}}(\phi, \theta)$ provides an 
 Taking inspiration from \textcite{tzen2019neural, li2020scalable, huang2021variational}, we consider the infinite-depth limit of the hierarchical VAEs, where the number of layers $T$ goes to infinity. The discrete paths $\{x_{0:T}\}$ give rise to continuous paths $\left(X_t\right)_{0 \leq t \leq T} \in$ $C\left([0, T] ; \mathbb{R}^d\right)$\footnote{Here, $C\left([0, T] ; \mathbb{R}^d\right)$ denotes the space of continuous functions from the interval $[0, T]$ to $\mathbb{R}^d$.}. To complete the set-up, we think of $a_{\phi} = (a_{\phi_0}, \ldots, a_{\phi_{T-1}})$ and $b_{\theta} = (b_{\theta_1}, \ldots, b_{\theta_T})$ in \Cref{eq:mc_framework_fwd_ch4,eq:mc_framework_rev_ch4} as arising from time-dependent vector fields $a, b \in C^{\infty}\left([0, T] \times \mathbb{R}^d ; \mathbb{R}^d\right)$. Taking the limit $\delta \rightarrow 0$, while keeping $T>0$ fixed, transforms the Markov chains in \Cref{eq:mc_framework_fwd_ch4,eq:mc_framework_rev_ch4} into continuous-time dynamics described by the SDEs \parencite{tzen2019neural}:
 \begin{subequations}
 \begin{align}
- \dd X_t = a_t(X_t) \dd t + \sigma \dd W_t, \quad X_0 \sim \mu \Longrightarrow (X_t)_{0 \leq t \leq T} \sim \overrightarrow{\mathbb{P}}^{\mu, a} \label{eq:forward_diffusion_process} \\
- \dd X_t = b_t(X_t) \dd t + \sigma \dd \overleftarrow{W}_t, \quad X_T \sim \nu \Longrightarrow (X_t)_{0 \leq t \leq T} \sim \overleftarrow{\mathbb{P}}^{\nu, b} \label{eq:backward_diffusion_process}
+ \dd X_t = a_t(X_t) \dd t + \sigma \dd W_t, \quad X_0 \sim \mu \Longrightarrow (X_t)_{0 \leq t \leq T} \sim \overrightarrow{\mathbb{P}}^{\mu, a}, \label{eq:forward_diffusion_process} \\
+ \dd X_t = b_t(X_t) \dd t + \sigma \dd \overleftarrow{W}_t, \quad X_T \sim \nu \Longrightarrow (X_t)_{0 \leq t \leq T} \sim \overleftarrow{\mathbb{P}}^{\nu, b}, \label{eq:backward_diffusion_process}
 \end{align}
 \end{subequations}
 where $W_t$ and $\overleftarrow{W}_t$ are standard Brownian motions in the forward and backward directions, respectively (see \Cref{def:nelson-reversal} for notation and definitions). Therefore, from \Cref{def:path_measure_of_ito_process}, we see that \Cref{eq:forward_diffusion_process} and \Cref{eq:backward_diffusion_process} induce the path measures $\overrightarrow{\mathbb{P}}^{\mu, a}$ and $\overleftarrow{\mathbb{P}}^{\nu, b}$ on the path space $C\left([0, T] ; \mathbb{R}^d\right)$. 
@@ -121,13 +121,13 @@ where $W_t$ and $\overleftarrow{W}_t$ are standard Brownian motions in the forwa
     \end{enumerate}
     Further, we will refer to the time-marginal and conditional distributions of the path measure as \label{ntn:path_measure_time_marginal}\label{ntn:path_measure_conditional_distribution}
     \[
-        \overrightarrow{\mathbb{P}}_t^{\mu, f} =: \rho_t^{\mu, f} \\
-        \overrightarrow{\mathbb{P}}(X_t \mid X_s = x) =: \rho_{t \mid s}^{\mu, f}(\cdot \mid x)
+        \overrightarrow{\mathbb{P}}_t^{\mu, f} =: \rho_t^{\mu, f}, \\
+        \overrightarrow{\mathbb{P}}(X_t \mid X_s = x) =: \rho_{t \mid s}^{\mu, f}(\cdot \mid x).
     \]
 \end{lightgraybox}
 We maintain the relations $X_0=x$ and $X_T=z$, and the transitions are parameterised by the vector fields $a_{\phi}, b_{\theta}$, in the following sense: 
 \[
-    p_{\theta}(x \mid z) &= \overleftarrow{\mathbb{P}}_0^{\nu, b_{\theta}}\left(x \mid X_T=z\right) := \rho_{0|T}^{\nu, b_{\theta}} (x \mid z) \\
+    p_{\theta}(x \mid z) &= \overleftarrow{\mathbb{P}}_0^{\nu, b_{\theta}}\left(x \mid X_T=z\right) := \rho_{0|T}^{\nu, b_{\theta}} (x \mid z), \\
     q_{\phi}(z \mid x) &= \overrightarrow{\mathbb{P}}_T^{\mu, a_{\phi}}\left(z \mid X_0=x\right) := \rho_{T|0}^{\mu, a_{\phi}}(z \mid x).
 \]
 We rewrite \Cref{def:nelson-reversal} \parencite{anderson1982reverse,nelson2020dynamical} in terms of path measures that is more convenient for our purposes:
@@ -186,7 +186,7 @@ See Appendix \ref{sec:proof-fbrnd-app}.
     The distinction between forward and backward integration in \Cref{eq:fbrnd} is related to the time points at which the integrands $\left(a_t-\gamma_t^{+}\right)\left(X_t\right)$ and $\left(b_t-\gamma_t^{-}\right)\left(X_t\right)$ would be evaluated in discrete-time approximations. We discuss this thoroughly in \Cref{prop:solutions-for-forward-and-reverse-processes}, especially in \Cref{eq:forward-ito-integral-limit} and \Cref{eq:reverse-ito-integral-limit}. Using those equations gives us
     \[
     &\int_0^T a_t\left(X_t\right) \cdot \mathrm{d} X_t \approx \sum_i a_{t_i}\left(X_{t_i}\right) \cdot\left(X_{t_{i+1}}-X_{t_i}\right), \\
-    &\int_0^T a_t\left(X_t\right) \cdot \mathrm{d} \overleftarrow{X}_t \approx \sum_i a_{t_{i+1}}\left(X_{t_{i+1}}\right) \cdot\left(X_{t_{i+1}}-X_{t_i}\right)
+    &\int_0^T a_t\left(X_t\right) \cdot \mathrm{d} \overleftarrow{X}_t \approx \sum_i a_{t_{i+1}}\left(X_{t_{i+1}}\right) \cdot\left(X_{t_{i+1}}-X_{t_i}\right).
     \]
     Similarly, forward and backward integrals can be transformed into each other using the conversion formulas in \Cref{eq:forward-reverse-ito-conversion} and \Cref{eq:reverse-forward-ito-conversion}.
 \end{selfremark}
@@ -207,7 +207,7 @@ Considering the generative modelling setting discussed in \Cref{sec:gen_modellin
     \label{prop:score_matching_from_framework}
     The implicit score matching loss from \textcite[Theorem 1, Equation (4)]{hyvarinen2005estimation} is equivalent to the KL divergence between a forward noising diffusion path measure and its time reversal under \Cref{prop:time_reversal_of_sdes}:
 \[
-\mathcal{L}_{\mathrm{ISM}}(s) &:= D_{\mathrm{KL}}\left(\overrightarrow{\mathbb{P}}^{\mu, a}| | \overleftarrow{\mathbb{P}}^{\nu, a - s_{\theta}}\right) \\
+\mathcal{L}_{\mathrm{ISM}}(s) &:= D_{\mathrm{KL}}\left(\overrightarrow{\mathbb{P}}^{\mu, a}| | \overleftarrow{\mathbb{P}}^{\nu, a - s_{\theta}}\right), \\
 &= \mathbb{E}_{X \sim \overrightarrow{\mathbb{P}}^{\mu, a}}\left[\frac{1}{2} \int_0^T s_{\theta, t}^2\left(X_t\right) \mathrm{d} t+\int_0^T\left(\nabla \cdot s_{\theta, t}\right)\left(X_t\right) \mathrm{d} t\right]+\text { const.} \label{eq:ism_loss_equivalence}
 \]
 \end{selfproposition}
@@ -220,7 +220,7 @@ Considering the generative modelling setting discussed in \Cref{sec:gen_modellin
  D_{\text{KL}}(\fwdP{\mu}{a} \| \bwdP{\nu}{a-s}) = \E_{X \sim \fwdP{\mu}{a}} \left[ \frac{1}{2 \sigma^2} \int_0^T \|  s_{\theta, t}(X_t) - \nabla \rho_{t \mid 0}^{\mu, a} (X_t \mid X_0)\|^2 \mathrm{d} t \right] + \text{const.}
 \]
 We can even accommodate modifications of \Cref{eq:ism_loss_equivalence}; in particular the divergence term in \Cref{eq:ism_loss_equivalence} can be replaced by a backward integral, using the conversion formula from \Cref{cor:relating-forward-and-reverse-ito-integrals-through-divergence}. We also note that the settings discussed in this section are similar to the formulations in \textcite{kingma2021variational, huang2021variational}.
-Finally, we highlight that this framework is not limited to ergodic models and can in fact accommodate finite time models\footnote{Models where the forward drift is guaranteed to hit $\nu$ at a finite time $T$ and not merely in an ergodic sense with large $T \to \infty$} by using a Doob's $h$-transform based SDE for $\overrightarrow{\mathbb{P}}^{\mu, a}$ as opposed to the classical VP-SDE (see \textcite[Example 2.4, Pg. 3]{ye2022first} and \textcite{rogers2000diffusions}).
+Finally, we highlight that this framework is not limited to ergodic models and can in fact accommodate finite time models\footnote{Models where the forward drift is guaranteed to hit $\nu$ at a finite time $T$ and not merely in an ergodic sense with large $T \to \infty$.} by using a Doob's $h$-transform based SDE for $\overrightarrow{\mathbb{P}}^{\mu, a}$ as opposed to the classical VP-SDE (see \textcite[Example 2.4, Pg. 3]{ye2022first} and \textcite{rogers2000diffusions}).
 
 \subsection{Unnormalised Density Sampling}
 \label{sec:unnormalised_density_sampling_cmcd}
@@ -230,7 +230,7 @@ Considering the unnormalised density sampling setting discussed in \Cref{sec:unn
 \begin{selfproposition}[DDS and DIS from \Cref{framework:unifying_framework_diffusion}]
 The loss function $\mathcal{L}_{\mathrm{DDS}}$ from \textcite[Equation (10)]{vargas2023denoising} is equivalent to the KL divergence between the path measure of an SDE parametrised by a forward drift $a_t := b_t + \sigma^2 s_{\theta, t}$ and a reverse path measure parametrised by drift $b_t$:
 \[
-\mathcal{L}_{\mathrm{DDS}}(s) &:=D_{\mathrm{KL}}\left(\overrightarrow{\mathbb{P}}^{\mu, b + \sigma^2 s_{\theta}} \| \overleftarrow{\mathbb{P}}^{\nu, b}\right) \\
+\mathcal{L}_{\mathrm{DDS}}(s) &:=D_{\mathrm{KL}}\left(\overrightarrow{\mathbb{P}}^{\mu, b + \sigma^2 s_{\theta}} \| \overleftarrow{\mathbb{P}}^{\nu, b}\right), \\
 &= \mathbb{E}_{X \sim \overrightarrow{\mathbb{P}}^{\mu, b+\sigma^2 s_{\theta}}}\left[\sigma^2 \int_0^T s_{\theta, t}^2\left(X_t\right) \mathrm{d} t+\ln \left(\frac{\mathrm{d} \Gamma_T}{\mathrm{~d} \nu}\right)\left(X_T\right)\right]. \label{eq:kl_sampling}
 \]
 \end{selfproposition}
@@ -253,7 +253,7 @@ For further details, see \textcite{follmer2005entropy,vargas2023bayesian, huang2
 
 \textbf{Reinforce Gradient Estimators.} As an alternative to the KL-divergence, \textcite{nusken2021solving} investigated the family of log-variance divergences\label{ntn:log_variance_divergence}
 \[
-D_{\operatorname{Var}}^{\mathbb{U}}\left(\mathbb{Q} \| \mathbb{P}\right)=\operatorname{Var}_{x \sim \mathbb{U}}\left(\ln \frac{\mathrm{~d} \mathbb{Q}}{\mathrm{~d} \mathbb{P}}(x)\right) \label{eq:logvar}
+D_{\operatorname{Var}}^{\mathbb{U}}\left(\mathbb{Q} \| \mathbb{P}\right)=\operatorname{Var}_{x \sim \mathbb{U}}\left(\ln \frac{\mathrm{~d} \mathbb{Q}}{\mathrm{~d} \mathbb{P}}(x)\right), \label{eq:logvar}
 \]
 parameterised by an auxiliary \emph{reference} path measure $\mathbb{U}$. The fact that gradients of \Cref{eq:logvar} do not have to be taken with respect to $\mathbb{Q}$ or $\mathbb{P}$ (see \textcite{nusken2021solving, richter2020vargrad}) reduces the computational cost and provides additional flexibility in the choice of $\mathbb{U}$, but the gradient estimates potentially suffer from higher variance. The latter drawback is alleviated somewhat by the fact that particular choices of $\mathbb{U}$ can be linked to control variate enhanced reinforce gradient estimators \parencite{richter2020vargrad} that are particularly useful when reparameterisation is not available (such as in discrete models). We note that the same divergence has also been used as a variational inference objective in \textcite{el2012bayesian}. We can replace $D_{\mathrm{KL}}$ in \Cref{eq:kl_sampling} by the log-variance divergence from \Cref{eq:logvar}, which directly leads to an objective from \textcite[Section 3.2]{nusken2021solving}.
 
@@ -283,8 +283,8 @@ AIS algorithms (\Cref{sec:ais}) are considered as an improvement over Langevin d
 % NOTE: Other distributions can exist, cite MAxence Noble paper.
 and then define a forward Markov process (with a corresponding joint distribution called the \emph{extended proposal distribution}) that transforms samples from $\pi_0$ to $\hpi$ iteratively, and simultaneously, a backward Markov process (with a corresponding joint distribution called the \emph{extended target distribution}) that transforms samples from $\hpi$ to $\pi_0$. Finally, the importance weights are defined as the ratio of the probability densities of the extended target distribution over the extended proposal distribution. In the continuous limit, both the forward and backward Markov processes in \Cref{eq:ais_extended_proposal} and \Cref{eq:ais_extended_target} converge to forward and backward SDEs with corresponding path measures $\fwdP{\pi_0}{a_t}$ and $\bwdP{\hpi}{b_t}$, as seen in
 \[
-\pi_0\left(x_0\right) \prod_{t=1}^T F_t\left(x_t \mid x_{t-1}\right) \rightarrow \dd X_t = a_t(X_t) \dd t + \sigma \sqrt{2} \dd W_t, \quad Q(x_{0:T}) \rightarrow \fwdP{\pi_0}{a_t} \\
-\hpi\left(x_T\right) \prod_{t=1}^T B_{t+1}\left(x_{t} \mid x_{t+1}\right) \rightarrow \dd X_t = b_t(X_t) \dd t + \sigma \sqrt{2} \dd \overleftarrow{W}_t, \quad \Gamma(x_{0:T}) \rightarrow \bwdP{\hpi}{b_t}
+\pi_0\left(x_0\right) \prod_{t=1}^T F_t\left(x_t \mid x_{t-1}\right) \rightarrow \dd X_t = a_t(X_t) \dd t + \sigma \sqrt{2} \dd W_t, \quad Q(x_{0:T}) \rightarrow \fwdP{\pi_0}{a_t}, \\
+\hpi\left(x_T\right) \prod_{t=1}^T B_{t+1}\left(x_{t} \mid x_{t+1}\right) \rightarrow \dd X_t = b_t(X_t) \dd t + \sigma \sqrt{2} \dd \overleftarrow{W}_t, \quad \Gamma(x_{0:T}) \rightarrow \bwdP{\hpi}{b_t}.
 \]
 We can readily see that the importance weights from \Cref{eq:ais_weights} converge to the Radon-Nikodym derivative between the forward and backward path measures. We can finally use \Cref{prop:fbrnd} to calculate the Radon-Nikodym derivative in closed-form, giving us
 \[
@@ -325,7 +325,7 @@ First, we fix a prescribed curve of distributions $(\pi_t)_{t \in [0,T]}$, whose
 \]
 such that \Cref{eq:controlled annealing} has the annealed distributions as the marginal distribution and $\pi_T$ as the terminal distribution, i.e., $\ora{\P}^{\pi_0,\sigma^2\nabla \ln \pi + \nabla \phi}_t = \pi_t$, for all $t \in [0,T]$\footnote{Note that if $\pi_t$ were constant in time ($\pi_t = \pi_0$), then $\phi = 0$ would reduce \Cref{eq:controlled annealing} to equilibrium Langevin dynamics, preserving $\pi_0$.}. With $\pi_t$ varying in time, $\nabla \phi_t$ can be thought of as a \emph{control} that enables transitions between neighbouring densities $\pi_t$ and $\pi_{t + \delta t}$ such that \Cref{eq:controlled annealing} has the correct marginal and terminal distributions.\label{ntn:control_term}
 
-To learn the parameters for $\nabla \phi_t$ we invoke \Cref{framework:unifying_framework_diffusion}, but restrict $\ola{\P}^{\pi_T,b}$ to retain uniqueness. Specifically, we use \Cref{prop:time_reversal_of_sdes} to motivate our choice of $b_t$ as the exact time-reversal of \Cref{eq:controlled annealing}, giving us\footnote{We note that the additional factor of $2$ in Nelson's relation is due to the noise scaling $\sigma\sqrt{2} \d W_t$ in \Cref{eq:controlled annealing}}: 
+To learn the parameters for $\nabla \phi_t$ we invoke \Cref{framework:unifying_framework_diffusion}, but restrict $\ola{\P}^{\pi_T,b}$ to retain uniqueness. Specifically, we use \Cref{prop:time_reversal_of_sdes} to motivate our choice of $b_t$ as the exact time-reversal of \Cref{eq:controlled annealing}, giving us\footnote{We note that the additional factor of $2$ in Nelson's relation is due to the noise scaling $\sigma\sqrt{2} \d W_t$ in \Cref{eq:controlled annealing}.}: 
 \[b_t := (\sigma^2 \nabla \ln \pi_t + \nabla \phi_t) - 2 \sigma^2 \nabla \ln \pi_t = - \sigma^2 \nabla \ln \pi_t + \nabla \phi_t.
 \]
 Therefore, the loss function for CMCD is given by
@@ -364,7 +364,7 @@ We therefore define the CMCD sampler as :
     \begin{subequations}
         \label{eq:cmcd_fbrnd}
     \[
-        \ln w_{\text{CMCD}} &= \ln \left(\frac{\d \bwdPcmcdstar{\pi_T}}{\d \fwdPcmcdstar{\pi_0}} \right) \\
+        \ln w_{\text{CMCD}} &= \ln \left(\frac{\d \bwdPcmcdstar{\pi_T}}{\d \fwdPcmcdstar{\pi_0}} \right), \\
         &= \ln \pi_0(X_0) - \ln \pi_T(X_T) \\
         & +\!\frac{1}{\sigma^2} \!\int_0^T \!\left(\sigma^2 \nabla \ln \pi_t\!+\!\nabla \phi^{\star}_t\right)\left(X_t\right) \!\cdot \!\mathrm{d} X_t\!-\!\frac{1}{2 \sigma^2} \!\int_0^T\! \!\|\!\left(\sigma^2 \nabla \ln \pi_t\!+\!\nabla \phi^{\star}_t\right)\!\left(X_t\right)\!\|^2 \!\mathrm{~d} t \\
         & -\!\frac{1}{\sigma^2} \!\int_0^T \!\left(\nabla \phi^{\star}_t\!-\!\sigma^2 \nabla \ln \pi_t\right)\left(X_t\right)\! \cdot \!\mathrm{d} \ola{X}_t\!+\!\frac{1}{2 \sigma^2} \!\int_0^T\!\!\|\!\left(\nabla \phi^{\star}_t\!-\!\sigma^2 \nabla \ln \pi_t\right)\!\left(X_t\right)\!\|^2 \!\mathrm{~d} t .
@@ -378,7 +378,7 @@ Given the optimal vector field $\nabla \phi_t^*$, we are now able to accomplish 
     \item We can produce samples from the unnormalised probability distribution $\hpi_T$ by simulating \Cref{eq:controlled annealing}. We write this in notation as $X_{0:T} \sim \ora{\P}^{\pi_0,\sigma^2 \nabla \ln \pi + \nabla \phi^*}$, where $X_T$ is a sample from $\hpi_T$.
     \item We can take expectations of any function $f$ with respect to an unnormalised density $\hpi_T$ by simulating \Cref{eq:controlled annealing} and taking the expectation with respect to the sample paths. We can compare directly to \Cref{eq:is_expectation_estimate} to obtain an unbiased estimator of the expectation, giving us
     \[
-        \mathbb{E}_{\pi_T}[f] = \mathbb{E}_{X_{0:T} \sim \fwdPcmcd{\pi_0}} \left[ f(X_T) \left( \frac{\d \bwdPcmcd{\hpi_T}}{\d \fwdPcmcd{\pi_0}} \right)(X_{0:T}) \right] / \hat{Z}
+        \mathbb{E}_{\pi_T}[f] = \mathbb{E}_{X_{0:T} \sim \fwdPcmcd{\pi_0}} \left[ f(X_T) \left( \frac{\d \bwdPcmcd{\hpi_T}}{\d \fwdPcmcd{\pi_0}} \right)(X_{0:T}) \right] / \hat{Z},
     \]
     where we assume that the backwards SDE has the unnormalised $\hpi_T$ as the initial distribution, and not $\pi_T$. Therefore, we define the expectation under this unnormalised FBRND by an estimate of the normalising constant, which we calculate below.
     \item We can estimate $Z$ in $\pi_T = \hat{\pi}_T/Z$ unbiasedly via
@@ -392,7 +392,7 @@ We have an important identity that shows that at optimality, CMCD results in a z
     \label{prop:zero_variance_normalising_constant}
     The estimator of $Z$ given by \Cref{eq:normalising_cmcd}, at optimality of $\nabla \phi^*_t$ yields a zero-variance estimator. That is:
     \[
-    Z = \mathbb{E}_{X_{0:T} \sim \fwdPcmcd{\pi_0}} \left[\frac{\d \bwdPcmcd{\hpi_T}}{\d \fwdPcmcd{\pi_0}} \right] = \frac{\d \bwdPcmcdstar{\hpi_T}}{\d \fwdPcmcdstar{\pi_0}} (X_{0:T})
+    Z = \mathbb{E}_{X_{0:T} \sim \fwdPcmcd{\pi_0}} \left[\frac{\d \bwdPcmcd{\hpi_T}}{\d \fwdPcmcd{\pi_0}} \right] = \frac{\d \bwdPcmcdstar{\hpi_T}}{\d \fwdPcmcdstar{\pi_0}} (X_{0:T}),
     \]
     where the right-hand side shows that optimality of $\nabla \phi^{\star}$ yields a zero-variance estimator for $Z$, as the statement holds almost surely in $X_{0:T}$, without taking the expectation.
     % 
@@ -426,7 +426,7 @@ In this section, we make specific choices for the divergence $D$ in order to der
     \end{align}
     Equivalently, writing $\delta = t_{i+1} - t_i$, we have that
     \begin{align}
-        \ln \left( \widehat{\frac{\d\ora{\P}^{\mu,a}}{\d\ola{\P}^{\nu,b}}}\right)(X) &= \ln \left[\frac{\mu(X_0)}{\nu(X_T)} \prod_{i=0}^{K-1} \frac{\mathcal{N}(X_{t_{i+1}} \mid X_{t_{i}} + a_{t_{i}}(X_{t_{i}}) \delta, 2 \sigma^2 \delta)}{\mathcal{N}(X_{t_{i}} \mid X_{t_{i+1}} - b_{t_{i+1}}(X_{t_{i+1}}) \delta, 2 \sigma^2 \delta)} \right] \label{eq:fbrnd_euler_discrete_2}
+        \ln \left( \widehat{\frac{\d\ora{\P}^{\mu,a}}{\d\ola{\P}^{\nu,b}}}\right)(X) &= \ln \left[\frac{\mu(X_0)}{\nu(X_T)} \prod_{i=0}^{K-1} \frac{\mathcal{N}(X_{t_{i+1}} \mid X_{t_{i}} + a_{t_{i}}(X_{t_{i}}) \delta, 2 \sigma^2 \delta)}{\mathcal{N}(X_{t_{i}} \mid X_{t_{i+1}} - b_{t_{i+1}}(X_{t_{i+1}}) \delta, 2 \sigma^2 \delta)} \right]. \label{eq:fbrnd_euler_discrete_2}
     \end{align}
     \end{selfproposition}
     \begin{proof}
@@ -445,7 +445,7 @@ In this section, we make specific choices for the divergence $D$ in order to der
         \]
         Upon discretisation of the time interval $[0, T]$ into $K$ subintervals such that $(t_0 = 0, t_1, \dots, t_K = T)$ and $\Delta t_k = (t_{k+1} - t_k)$, the discretisation of the loss function is given by
         \[
-            \mathcal{L}^{\mathrm{CMCD}}_{\mathrm{KL}}\!(\phi) \!= \!\E\!\left[\ln\! \frac{{\pi}_0(X_0)}{\hat{\pi}(X_T)} \!\prod_{k=0}^{K-1} \!\frac{\mathcal{N}(X_{t_{k+1}} | X_{t_{k}} + (\sigma^2\nabla \ln \pi_{t_k} + \nabla \phi_{t_k}) (X_{t_{k}})\Delta t_k, 2 \sigma^2 \Delta t_k )}{\mathcal{N}\!(X_{t_{k}} | X_{t_{k+1}}\!\! \!+ \!(\sigma^2 \nabla\! \ln \pi_{t_{k+1}}\! \!- \!\!\nabla\! \phi_{t_{k+1}})(X_{t_{k+1}})\Delta t_k, 2 \sigma^2 \Delta t_k )}\!\right]\!\! \label{eq:cmcd_kl_loss}
+            \mathcal{L}^{\mathrm{CMCD}}_{\mathrm{KL}}\!(\phi) \!= \!\E\!\left[\ln\! \frac{{\pi}_0(X_0)}{\hat{\pi}(X_T)} \!\prod_{k=0}^{K-1} \!\frac{\mathcal{N}(X_{t_{k+1}} | X_{t_{k}} + (\sigma^2\nabla \ln \pi_{t_k} + \nabla \phi_{t_k}) (X_{t_{k}})\Delta t_k, 2 \sigma^2 \Delta t_k )}{\mathcal{N}\!(X_{t_{k}} | X_{t_{k+1}}\!\! \!+ \!(\sigma^2 \nabla\! \ln \pi_{t_{k+1}}\! \!- \!\!\nabla\! \phi_{t_{k+1}})(X_{t_{k+1}})\Delta t_k, 2 \sigma^2 \Delta t_k )}\!\right].\!\! \label{eq:cmcd_kl_loss}
         \]
     \end{selfdefinition}
     \begin{proof}
@@ -453,7 +453,7 @@ In this section, we make specific choices for the divergence $D$ in order to der
     \end{proof}
     From \Cref{eq:cmcd_fbrnd}, we can see that there is a direct relationship between the importance weights and the term within the expectation in \Cref{eq:cmcd_kl_loss}, giving us
     \[
-        \mathcal{L}^{\mathrm{CMCD}}_{\mathrm{KL}}(\phi) = \mathbb{E}_{X_{0:T} \sim \fwdPcmcd{\pi_0}} \left[ \ln \left( \frac{\d \fwdPcmcd{\pi_0}}{\d \bwdPcmcd{\pi_T}} \right) \right] = \mathbb{E}_{X_{0:T} \sim \fwdPcmcd{\pi_0}} \left[ - \ln W_{\text{CMCD}} \right]
+        \mathcal{L}^{\mathrm{CMCD}}_{\mathrm{KL}}(\phi) = \mathbb{E}_{X_{0:T} \sim \fwdPcmcd{\pi_0}} \left[ \ln \left( \frac{\d \fwdPcmcd{\pi_0}}{\d \bwdPcmcd{\pi_T}} \right) \right] = \mathbb{E}_{X_{0:T} \sim \fwdPcmcd{\pi_0}} \left[ - \ln W_{\text{CMCD}} \right].
     \]
     Therefore, working with the discretised KL divergence loss in \Cref{eq:cmcd_kl_loss}, we define \Cref{alg:kl_cmcd} for training, sampling and estimating the normalising constant.
     \begin{algorithm}[t]  
@@ -481,11 +481,11 @@ In this section, we make specific choices for the divergence $D$ in order to der
         \label{def:cmcd_var_loss}
         Plugging in the Log-Variance divergence in \Cref{eq:cmcd_divergence_loss} and using \Cref{prop:fbrnd}, we obtain the loss function
         \[
-            \mathcal{L}^{\mathrm{CMCD}}_{\mathrm{Var}}(\phi) = \mathbb{V}_{X_{0:T} \sim \mathbb{U}} \left[ \ln \left( \frac{\d \fwdPcmcd{\pi_0}}{\d \bwdPcmcd{\pi_T}} \right) \right]
+            \mathcal{L}^{\mathrm{CMCD}}_{\mathrm{Var}}(\phi) = \mathbb{V}_{X_{0:T} \sim \mathbb{U}} \left[ \ln \left( \frac{\d \fwdPcmcd{\pi_0}}{\d \bwdPcmcd{\pi_T}} \right) \right],
         \]
         where $\mathbb{U}$ is any auxiliary measure that we can take samples from. In practice, we make the choice $\mathbb{U} = \ora{\P}^{\pi_0, \sigma^2 \nabla \ln \pi + \nabla \operatorname{detach}(\phi)}$, which is a detached version of the forward process, meaning that we do not backpropagate through the samples. Plugging in the FBRND from \Cref{eq:fbrnd}, and discretising the time interval $[0, T]$ into $K$ subintervals such that $(t_0 = 0, t_1, \dots, t_K = T)$ and $\Delta t_k = (t_{k+1} - t_k)$, the discretised loss function is given by
         \[
-            \mathcal{L}^{\mathrm{CMCD}}_{\mathrm{Var}}\!(\phi)\! \approx \!\mathbb{V} \!\!\left[\ln\! \frac{{\pi}_0(X_0)}{\hat{\pi}(X_T)} \!\prod_{k=0}^{K-1} \!\frac{\mathcal{N}(X_{t_{k+1}} | X_{t_{k}} + (\sigma^2\nabla \ln \pi_{t_k} + \nabla \phi_{t_k}) (X_{t_{k}})\Delta t_k, 2 \sigma^2 \Delta t_k )}{\mathcal{N}\!(X_{t_{k}} | X_{t_{k+1}}\!\! \!+ \!(\sigma^2 \nabla\! \ln \pi_{t_{k+1}}\! \!- \!\nabla\! \phi_{t_{k+1}})(X_{t_{k+1}})\Delta t_k, 2 \sigma^2 \Delta t_k )}\!\right]\!\! \label{eq:cmcd_var_loss_discrete}
+            \mathcal{L}^{\mathrm{CMCD}}_{\mathrm{Var}}\!(\phi)\! \approx \!\mathbb{V} \!\!\left[\ln\! \frac{{\pi}_0(X_0)}{\hat{\pi}(X_T)} \!\prod_{k=0}^{K-1} \!\frac{\mathcal{N}(X_{t_{k+1}} | X_{t_{k}} + (\sigma^2\nabla \ln \pi_{t_k} + \nabla \phi_{t_k}) (X_{t_{k}})\Delta t_k, 2 \sigma^2 \Delta t_k )}{\mathcal{N}\!(X_{t_{k}} | X_{t_{k+1}}\!\! \!+ \!(\sigma^2 \nabla\! \ln \pi_{t_{k+1}}\! \!- \!\nabla\! \phi_{t_{k+1}})(X_{t_{k+1}})\Delta t_k, 2 \sigma^2 \Delta t_k )}\!\right].\!\! \label{eq:cmcd_var_loss_discrete}
         \]
     \end{selfdefinition}
 
@@ -500,7 +500,7 @@ In this section, we make specific choices for the divergence $D$ in order to der
 
     We now empirically demonstrate the performance of the CMCD sampler in both the standard Langevin dynamics sense, which is considered the overdamped setting (CMCD) vs. our extension to underdamped Langevin dynamics (CMCD (UD), detailed in \Cref{app:cmcd}, \Cref{sec:underdamped}) on a series of sampling benchmarks. We first replicate the benchmarks from \textcite{geffner2023langevin} on 6 standard target benchmark distributions. We compare against two standard baselines, Unadjusted Langevin Annealing (ULA) \parencite{wu2020stochastic, thin2021monte} and Monte Carlo Diffusion (MCD) \parencite{doucet2022annealed}; and two underdamped baselines, Uncorrected Hamiltonian Annealing (UHA) \parencite{geffner2021mcmc, ZhangAIS2021} and Langevin Diffusion Variational Inference (LDVI) \parencite{geffner2023langevin}. Furthermore, we include comparisons of $\ln Z$ estimation on two datasets with known normalising constant, the \texttt{funnel} and \texttt{gmm}, and compare against PIS \parencite{barr2020quantum, vargas2021bayesian, zhang2021path}; DDS \parencite{vargas2023denoising}; and Sequential Monte Carlo Sampler (SMC) \parencite{del2006sequential, zhou2016toward}.
 
-    We report the mean ELBO achieved by each method over 30 seeds of sampling, for Euler discretisation steps $K \in \{8, 16, 32, 64, 128, 256\}$, comparing the underdamped and overdamped baselines to their respective CMCD counterparts in Figure \ref{fig:cmcd_exps}. We see that both overdamped and underdamped CMCD consistently outperform all baseline methods, especially at low $K$,  and in fact, across most targets even the standard CMCD algorithm outperforms the overdamped baselines. Figure \ref{fig:cmcd_exps} also reports $\ln Z$ for two target distributions with known $Z$, comparing against PIS, DDS, and SMC. Again, CMCD recovers the log-partition more consistently, even at low $K$. Finally, as another measure of sample quality, we report the entropy-regularised OT distance ($\mathcal{W}_2^{\gamma}$) between obtained samples and samples from the target for \texttt{funnel} and \texttt{gmm}. Hyperparameter tuning and other experimental details can be found in Appendix \ref{app:cmcd} and we provide a GitHub repository to reproduce our results\footnote{\url{https://github.com/shreyaspadhy/CMCD}}.
+    We report the mean ELBO achieved by each method over 30 seeds of sampling, for Euler discretisation steps $K \in \{8, 16, 32, 64, 128, 256\}$, comparing the underdamped and overdamped baselines to their respective CMCD counterparts in Figure \ref{fig:cmcd_exps}. We see that both overdamped and underdamped CMCD consistently outperform all baseline methods, especially at low $K$,  and in fact, across most targets even the standard CMCD algorithm outperforms the overdamped baselines. Figure \ref{fig:cmcd_exps} also reports $\ln Z$ for two target distributions with known $Z$, comparing against PIS, DDS, and SMC. Again, CMCD recovers the log-partition more consistently, even at low $K$. Finally, as another measure of sample quality, we report the entropy-regularised OT distance ($\mathcal{W}_2^{\gamma}$) between obtained samples and samples from the target for \texttt{funnel} and \texttt{gmm}. Hyperparameter tuning and other experimental details can be found in Appendix \ref{app:cmcd} and we provide a GitHub repository to reproduce our results\footnote{\url{https://github.com/shreyaspadhy/CMCD}.}.
 
     For the \texttt{seeds}, \texttt{log\_ionosphere}, \texttt{log\_sonar}, \texttt{lgcp}, \texttt{lorenz} and \texttt{brownian} targets, we first pre-train the source distribution to a mean-field Gaussian distribution trained for $150,000$ steps with ADAM and a learning rate of $10^{-2}$. Following \textcite{zhang2021path, geffner2023langevin} we parametrise our curve of bridging densities $\pi_t = \pi_0^{1 - \beta_t} \pi_T^{\beta_t}$, where $\beta_t$ are a parametrised grid between 0 and 1 that are also trained jointly with other parameters. We then train for $150,000$ iterations with a batch size of $5$, tuning learning rate between $[10^{-5}, 10^{-4}, 10^{-3}]$ picking the best one based on mean ELBO after training. For all methods, during training the mean-field source distribution is continued to be trained, as well as the discretisation step size and $\varepsilon = \delta t\sigma$. For the overdamped methods we also train the damping coefficient $\gamma$, and for methods involving a score network, i.e. MCD, LDVI, CMCD and CMCD (UD), we train the networks which are chosen to be fully-connected residual networks with layer sizes of $[20, 20]$. In order to report the mean ELBO after training, we obtain 500 samples with 30 seeds and report an averaged value over them.
 
@@ -512,7 +512,7 @@ In this section, we make specific choices for the divergence $D$ in order to der
         \label{fig:cmcd_exps} \vspace{-0.5cm}
     \end{figure}
 
-    For the \texttt{lgcp}, \texttt{gmm} and \texttt{funnel} targets, we follow the hyperparameter setup from \textcite{vargas2023denoising} from their code repository\footnote{\url{https://github.com/franciscovargas/denoising_diffusion_samplers}} for the baseline methods of DDS and PIS, and replicate them as closely as possible for CMCD. Unlike the previous targets, we don't pretrain the mean-field Gaussian source distribution $\mathcal{N}(0, \sigma_{\text{init}}^2 I)$. We select the optimal learning rate in $[10^{-3}, 10^{-4}, 10^{-5}]$, the optimal standard deviation of the source distribution $\sigma_{\text{init}}$ in $[1, 2, 3, 4, 5]$ and the optimal $\alpha$ in $[0.1, 0.5, 1, 1.5, 2]$. Instead of training $\varepsilon = \delta t \sigma$, we sweep over an optimal value in $[10^{-2}, 10^{-1}, 1]$. The models are trained with a batch size of $300$ for $11000$ steps, where we keep the source distribution parameters fixed, as well as $\varepsilon$. For evaluation, we use 30 seeds with a batch size of 2000, and report average performance over the seeds. DDS and PIS use a 128-dimensional positional embedding, along with an additional network for the time parameters, however CMMD uses a regular score network. In order to make exact comparisons, we select differing network architecture sizes that result in an equivalent number of parameters for \texttt{funnel} and \texttt{gmm}. For \texttt{lgcp}, due to the high dimensionality of the dataset, we choose a small network for CMCD. For \texttt{gmm} and \texttt{funnel}, it is possible to sample from the target distribution, and we report an OT-regularised distance ($\mathcal{W}_2^{\gamma}$) with a regularisation $\gamma = 10^{-2}$. Similar to the mean ELBO, we draw 2000 samples from the models and the targets, and average $\mathcal{W}_2^{\gamma}$ over 30 seeds. We use the Python Optimal Transport\footnote{\url{https://pythonot.github.io/}} library's default implementation of entropy-regularised distance. Results for comparisons to DNF can be found in Table \ref{tab:dnf}.
+    For the \texttt{lgcp}, \texttt{gmm} and \texttt{funnel} targets, we follow the hyperparameter setup from \textcite{vargas2023denoising} from their code repository\footnote{\url{https://github.com/franciscovargas/denoising_diffusion_samplers}.} for the baseline methods of DDS and PIS, and replicate them as closely as possible for CMCD. Unlike the previous targets, we don't pretrain the mean-field Gaussian source distribution $\mathcal{N}(0, \sigma_{\text{init}}^2 I)$. We select the optimal learning rate in $[10^{-3}, 10^{-4}, 10^{-5}]$, the optimal standard deviation of the source distribution $\sigma_{\text{init}}$ in $[1, 2, 3, 4, 5]$ and the optimal $\alpha$ in $[0.1, 0.5, 1, 1.5, 2]$. Instead of training $\varepsilon = \delta t \sigma$, we sweep over an optimal value in $[10^{-2}, 10^{-1}, 1]$. The models are trained with a batch size of $300$ for $11000$ steps, where we keep the source distribution parameters fixed, as well as $\varepsilon$. For evaluation, we use 30 seeds with a batch size of 2000, and report average performance over the seeds. DDS and PIS use a 128-dimensional positional embedding, along with an additional network for the time parameters, however CMMD uses a regular score network. In order to make exact comparisons, we select differing network architecture sizes that result in an equivalent number of parameters for \texttt{funnel} and \texttt{gmm}. For \texttt{lgcp}, due to the high dimensionality of the dataset, we choose a small network for CMCD. For \texttt{gmm} and \texttt{funnel}, it is possible to sample from the target distribution, and we report an OT-regularised distance ($\mathcal{W}_2^{\gamma}$) with a regularisation $\gamma = 10^{-2}$. Similar to the mean ELBO, we draw 2000 samples from the models and the targets, and average $\mathcal{W}_2^{\gamma}$ over 30 seeds. We use the Python Optimal Transport\footnote{\url{https://pythonot.github.io/}.} library's default implementation of entropy-regularised distance. Results for comparisons to DNF can be found in Table \ref{tab:dnf}.
 
     \subsection{Comparisons with the log-variance loss}
 
