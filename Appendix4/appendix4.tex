@@ -114,19 +114,19 @@
 \begin{proof}
 That $\alpha^{\star}(b)$ minimises both $L$ and $L^{\star}$ can be established from the first order optimality conditions. Now, for the duality, observe that we can write $\min _{\alpha \in \mathbb{R}^n} L(\alpha)$ equivalently as the constrained optimisation problem
 $$
-\min _{u \in \mathbb{R}^n} \min _{\alpha \in \mathbb{R}^n} \frac{1}{2}\|u\|^2+\frac{\lambda}{2}\|\alpha\|_K^2 \quad \text { subject to } \quad u=K \alpha-b
+\min _{u \in \mathbb{R}^n} \min _{\alpha \in \mathbb{R}^n} \frac{1}{2}\|u\|^2+\frac{\lambda}{2}\|\alpha\|_K^2 \quad \text { subject to } \quad u=K \alpha-b.
 $$
 
 
 Observe that this is quadratic in both $u$ and $\alpha$. Introducing Lagrange multipliers $\beta \in \mathbb{R}^n$, in the form $\lambda \beta$, where we recall that $\lambda>0$, the solution of the above is equal to that of
 
 $$
-\min _{u \in \mathbb{R}^n} \min _{\alpha \in \mathbb{R}^n} \sup _{\beta \in \mathbb{R}^n} \frac{1}{2}\|u\|^2+\frac{\lambda}{2}\|\alpha\|_K^2+\lambda \beta^{\top}(b-K \alpha-u)
+\min _{u \in \mathbb{R}^n} \min _{\alpha \in \mathbb{R}^n} \sup _{\beta \in \mathbb{R}^n} \frac{1}{2}\|u\|^2+\frac{\lambda}{2}\|\alpha\|_K^2+\lambda \beta^{\top}(b-K \alpha-u).
 $$
 
 This is a finite-dimensional quadratic problem, and thus we have strong duality (see, e.g., Examples 5.2.4 in Boyd and Vandenberghe, 2004). We can therefore exchange the order of the minimum operators and the supremum, yielding the again equivalent problem
 $$
-\sup _{\beta \in \mathbb{R}^n}\left\{\min _{u \in \mathbb{R}^n} \frac{1}{2}\|u\|^2-\lambda \beta^{\top} u\right\}+\left\{\min _{\alpha \in \mathbb{R}^n} \frac{\lambda}{2}\|\alpha\|_K^2-\lambda \beta^{\top} K \alpha\right\}+\lambda \beta^{\top} b
+\sup _{\beta \in \mathbb{R}^n}\left\{\min _{u \in \mathbb{R}^n} \frac{1}{2}\|u\|^2-\lambda \beta^{\top} u\right\}+\left\{\min _{\alpha \in \mathbb{R}^n} \frac{\lambda}{2}\|\alpha\|_K^2-\lambda \beta^{\top} K \alpha\right\}+\lambda \beta^{\top} b.
 $$
 
 Noting that the two inner minimisation problems are quadratic, we solve these analytically using the first order optimality conditions, that is $\alpha=\beta$ and $u=\lambda \beta$, to obtain that the above is equivalent to
@@ -142,7 +142,7 @@ The result follows by chaining the above equalities.
 
 To show the uniform approximation bound, we first need to define reproducing kernel Hilbert spaces (RKHSes). Let $\mathcal{H}$ be a Hilbert space of functions $\mathcal{X} \rightarrow \mathbb{R}$ with inner product $\langle\cdot, \cdot\rangle$ and corresponding norm $\|\cdot\|_{\mathcal{H}}$. We say $\mathcal{H}$ is the RKHS associated with a bounded kernel $k$ if the reproducing property holds:
 \[
-\forall x \in \mathcal{X}, \forall h \in \mathcal{H}, \quad\langle k(x, \cdot), h\rangle=h(x)
+\forall x \in \mathcal{X}, \forall h \in \mathcal{H}, \quad\langle k(x, \cdot), h\rangle=h(x).
 \]
 That is, $k(x, \cdot)$ is the evaluation functional (at $x \in \mathcal{X}$ ) on $\mathcal{H}$. For observations $X$, let $\Phi: \mathcal{H} \rightarrow \mathbb{R}^n$ be the linear operator mapping $h \mapsto h(X)$, where $h(X)=\left(h\left(x_1\right), \ldots, h\left(x_n\right)\right)$. We will write $\Phi^*$ for the adjoint of $\Phi$, and observe that $K$ is the matrix of the operator $\Phi \Phi^*$ with respect to the standard basis.
 \begin{proof}
@@ -152,7 +152,7 @@ First, observe that,
 \|h_\alpha-h_{\alpha^{\prime}}\|_{\infty} & =\sup _{x \in \mathcal{X}}\left|h_\alpha(x)-h_{\alpha^{\prime}}(x)\right| \\
 & =\sup _{x \in \mathcal{X}}\left|\left\langle k(x, \cdot), h_\alpha-h_{\alpha^{\prime}}\right\rangle\right| \\
 & \leq \sup _{x \in \mathcal{X}}\|k(x, \cdot)\|_{\mathcal{H}}\|h_\alpha-h_{\alpha^{\prime}}\|_{\mathcal{H}} \\
-& \leq \sqrt{\kappa}\|h_\alpha-h_{\alpha^{\prime}}\|_{\mathcal{H}}
+& \leq \sqrt{\kappa}\|h_\alpha-h_{\alpha^{\prime}}\|_{\mathcal{H}}.
 \end{aligned}
 \]
 Now, observe that $h_\alpha=\Phi^* \alpha$ and $h_{\alpha^{\prime}}=\Phi^* \alpha^{\prime}$, and so we have the equalities
@@ -160,7 +160,7 @@ Now, observe that $h_\alpha=\Phi^* \alpha$ and $h_{\alpha^{\prime}}=\Phi^* \alph
 \begin{aligned}
 \|h_\alpha-h_{\alpha^{\prime}}\|_{\mathcal{H}}^2 & =\left\langle\Phi^*\left(\alpha-\alpha^{\prime}\right), \Phi^*\left(\alpha-\alpha^{\prime}\right)\right\rangle \\
 & =\left\langle\alpha-\alpha^{\prime}, \Phi \Phi^*\left(\alpha-\alpha^{\prime}\right)\right\rangle \\
-& =\|\alpha-\alpha^{\prime}\|_K^2
+& =\|\alpha-\alpha^{\prime}\|_K^2,
 \end{aligned}
 \]
 where for the final equality, we note that $K$ is the matrix of the operator $\Phi \Phi^*$ with respect to the standard basis. Combining the above two displays yields the claim.
@@ -170,11 +170,11 @@ where for the final equality, we note that $K$ is the matrix of the operator $\P
 \label{app:proof_pathwise_dist}
 We consider the generic linear system $H_\theta u=b$ and measure the RKHS distance between the initialisation $u_{\text {init }}$ and the solution $u=H_{\varphi}^{-1} b$ as $\|u_{\text {init }}-u\|_{H_{\varphi}}^2$. With $u_{\text {init }}=0$, which is standard \cite{gardner18,WangPGT2019exactgp,wu2024largescale}:
 \[
-\|u_{\text {init }}-u\|_{H_{\varphi}}^2=\|u\|_{H_{\varphi}}^2=u^{\top} H_{\varphi} u=b^{\top} H_{\varphi}^{-1} H_{\varphi} H_{\varphi}^{-1} b=b^{\top} H_{\varphi}^{-1} b \label{eq:RKHS_distance}
+\|u_{\text {init }}-u\|_{H_{\varphi}}^2=\|u\|_{H_{\varphi}}^2=u^{\top} H_{\varphi} u=b^{\top} H_{\varphi}^{-1} H_{\varphi} H_{\varphi}^{-1} b=b^{\top} H_{\varphi}^{-1} b \label{eq:RKHS_distance}.
 \]
 Since $b$ is a random vector ($z$ in \Cref{eq:linear_system_trace_estimation} and $\xi$ in \Cref{eq:pathwise_trace_linear_system}), we analyse the expected squared distance
 \[
-\mathbb{E}\left[b^{\top} H_{\varphi}^{-1} b\right]=\mathbb{E}\left[\operatorname{tr}\left(b^{\top} H_{\varphi}^{-1} b\right)\right]=\mathbb{E}\left[\operatorname{tr}\left(b b^{\top} H_{\varphi}^{-1}\right)\right]=\operatorname{tr}\left(\mathbb{E}\left[b b^{\top}\right] H_{\varphi}^{-1}\right)
+\mathbb{E}\left[b^{\top} H_{\varphi}^{-1} b\right]=\mathbb{E}\left[\operatorname{tr}\left(b^{\top} H_{\varphi}^{-1} b\right)\right]=\mathbb{E}\left[\operatorname{tr}\left(b b^{\top} H_{\varphi}^{-1}\right)\right]=\operatorname{tr}\left(\mathbb{E}\left[b b^{\top}\right] H_{\varphi}^{-1}\right).
 \]
 For the standard estimator (6), we substitute $b:=z$ with $\mathbb{E}\left[z z^{\top}\right]=I$, yielding
 \[
@@ -191,20 +191,20 @@ For the pathwise estimator (9), we substitute $b:=\xi$ with $\mathbb{E}\left[\xi
 \begin{proof}
 Consider the first-order derivative of \Cref{eq:vi_fixed_cov_A} in \Cref{def:fixed_cov_elbo} w.r.t $A$:
 \[
-\frac{\partial \mathcal{M}(\theta_q; A)}{\partial A} = -\frac{1}{2} \left[ \nabla \| \theta_q \|_{A}^2 + \nabla_A \log \det (A + \Phi \Sigma^{-1} \Phi^T)  - \nabla_A \log \det A\right] \label{eq:mackay_first_order_derivative}
+\frac{\partial \mathcal{M}(\theta_q; A)}{\partial A} = -\frac{1}{2} \left[ \nabla \| \theta_q \|_{A}^2 + \nabla_A \log \det (A + \Phi \Sigma^{-1} \Phi^T)  - \nabla_A \log \det A\right] \label{eq:mackay_first_order_derivative}.
 \]
 Taking derivatives and setting to zero, we obtain the following condition:
 \[
-    \theta_q \theta_q^T = \left(I-\left(I+A^{-1} (\Phi \Sigma^{-1} \Phi^T)\right)^{-1}\right) A^{-1}
+    \theta_q \theta_q^T = \left(I-\left(I+A^{-1} (\Phi \Sigma^{-1} \Phi^T)\right)^{-1}\right) A^{-1}.
 \]
 Post-multiplying with $A$ and applying the push-forward identity, we obtain:
 \[
-    \theta_q \theta_q^T A=(\Phi \Sigma^{-1} \Phi^T)(A+\Phi \Sigma^{-1} \Phi^T)^{-1}
+    \theta_q \theta_q^T A=(\Phi \Sigma^{-1} \Phi^T)(A+\Phi \Sigma^{-1} \Phi^T)^{-1}.
 \]
 For the above to hold, the traces on both sides must be equal. Therefore we have:
 \[
     \|\theta_q\|_A^2&=\Tr\left\{\theta_q \theta_q^T A\right\}=\Tr\left\{(\Phi \Sigma^{-1} \Phi^T)(A+\Phi \Sigma^{-1} \Phi^T)^{-1}\right\} \\
-    &= \Tr\left\{(\Phi \Sigma^{-1} \Phi^T)A_{\star}^{-1}\right\}
+    &= \Tr\left\{(\Phi \Sigma^{-1} \Phi^T)A_{\star}^{-1}\right\},
 \]
 which is the stated first order optimality condition, up to a cyclic permutation.
 \end{proof}
@@ -214,7 +214,7 @@ which is the stated first order optimality condition, up to a cyclic permutation
 \begin{proof}
     We begin from \Cref{eq:pathwise_conditioning_gp} and plug in the form of the kernel $K_{XX} = \Phi A^{-1} \Phi^T$ and $K_{(\cdot)X} = \phi(\cdot) A^{-1} \Phi^T$. We also have $f(X) = \Phi \theta$ from \Cref{eq:linear-model-functional-space} and $(f \mid Y)(\cdot) = \phi(\cdot) \theta$ from \Cref{eq:linear-model-posterior-functional-space}. We then have:
     \[
-        \phi(\cdot) (\theta \mid \rmY) &= \phi(\cdot) \theta + \phi(\cdot) A^{-1} \Phi^T\left(\Phi A^{-1} \Phi^T + \Sigma\right)^{-1}\left(Y-\Phi \theta - \varepsilon\right) \nonumber
+        \phi(\cdot) (\theta \mid \rmY) &= \phi(\cdot) \theta + \phi(\cdot) A^{-1} \Phi^T\left(\Phi A^{-1} \Phi^T + \Sigma\right)^{-1}\left(Y-\Phi \theta - \varepsilon\right). \nonumber
     \]
     Removing the multiplicative factor of $\phi(\cdot)$ from both sides, we obtain \Cref{eq:matheron_rule_linear_model_1}.
     \[
@@ -239,7 +239,7 @@ which is the stated first order optimality condition, up to a cyclic permutation
     \end{align*}
     Now, comparing the form of \Cref{eq:linear-model-posterior-mean}, we can see that the term above is the posterior mean of a linear model with a prior specified as $\theta \sim \mathcal{N}(A \theta_0, A^{-1})$ and targets given by $\varepsilon$ instead of $\rmY$. Therefore, we can write down a maximum a-posteriori loss function similar to \Cref{eq:linear-model-posterior-log-density} for this linear model instead as:
     \[
-    L(\theta) = \frac{1}{2} \| \Phi \theta - \varepsilon\|^2_{\Sigma^{-1}} + \frac{1}{2} \| \theta - \theta_0 \|^2_{A}
+    L(\theta) = \frac{1}{2} \| \Phi \theta - \varepsilon\|^2_{\Sigma^{-1}} + \frac{1}{2} \| \theta - \theta_0 \|^2_{A}.
     \]
 \end{proof}
 
@@ -253,7 +253,7 @@ which is the stated first order optimality condition, up to a cyclic permutation
 \end{equation}
 and 
 \begin{align}
-  \nabla L' (\bar{\theta}') &= \Phi^T\Sigma^{-1}\Phi \bar{\theta}' + A(\bar{\theta}' - A^{-1}\Phi^T\Sigma^{-1}\varepsilon - \theta^0) \\&= \Phi^T\Sigma^{-1} (\Phi \bar{\theta}' - \varepsilon) + A(\bar{\theta}' - \theta^0)
+  \nabla L' (\bar{\theta}') &= \Phi^T\Sigma^{-1}\Phi \bar{\theta}' + A(\bar{\theta}' - A^{-1}\Phi^T\Sigma^{-1}\varepsilon - \theta^0) \\&= \Phi^T\Sigma^{-1} (\Phi \bar{\theta}' - \varepsilon) + A(\bar{\theta}' - \theta^0).
 \end{align}
 Thus $\bar{\theta} = \bar{\theta}'$ almost surely. Moreover, $L'(\theta)=L(\theta)+C$ for all $\theta$, for $C$ a constant independent of $\theta$.
 
@@ -277,7 +277,7 @@ And so $\bar{\theta} \sim \mathcal{N}(0, A_{\star}^{-1})$ as claimed.
 \begin{proof}
     Taking $j \sim \text{Unif}(\{1, \dotsc, n\})$, the gradient estimators for the data-dependent terms of $L$ and $L'$ are
 \begin{equation}
-  \hat g = n \nabla \|\phi(x_j) \theta - \varepsilon_j\|^2_{\Sigma_j^{-1}} = n\phi(x_j)^T \Sigma_j^{-1} (\phi(x_j) \theta - \varepsilon_j)
+  \hat g = n \nabla \|\phi(x_j) \theta - \varepsilon_j\|^2_{\Sigma_j^{-1}} = n\phi(x_j)^T \Sigma_j^{-1} (\phi(x_j) \theta - \varepsilon_j),
 \end{equation}
 and
 \begin{equation}
@@ -288,11 +288,11 @@ respectively. Their variances are related as
   \Var (\hat g)
   &= \Var(n \phi(x_j)^T \Sigma_j^{-1} (\phi(x_j)\theta - \varepsilon_j))  \\
   &= \Var(n\phi(x_j)^T\Sigma_j^{-1}\phi(x_j)\theta) + \Var(n\phi(x_j)^T\Sigma_j^{-1}\varepsilon_j) \nonumber\\ &\quad- 2 \Cov(n\phi(x_j)^T\Sigma_j^{-1}\phi(x_j)\theta,\,\, n \phi(x_j)^T \Sigma_j^{-1}\varepsilon_j)\\
-  &= \Var (\hat g') + \Var(n\phi(x_j)^T\Sigma_j^{-1}\varepsilon_j) - 2 \Cov(n\phi(x_j)^T\Sigma_j^{-1}\phi(x_j)\theta,\,\, n\phi(x_j)^T\Sigma_j^{-1} \varepsilon_j)
+  &= \Var (\hat g') + \Var(n\phi(x_j)^T\Sigma_j^{-1}\varepsilon_j) - 2 \Cov(n\phi(x_j)^T\Sigma_j^{-1}\phi(x_j)\theta,\,\, n\phi(x_j)^T\Sigma_j^{-1} \varepsilon_j).
 \end{align}
 Evaluating the variance and covariance, we have
 \begin{equation}
-  \Var \left(n \phi(x_j)^T\Sigma_j^{-1}\varepsilon_j \right) = n\Var(\Phi^T\Sigma^{-1} \varepsilon)
+  \Var \left(n \phi(x_j)^T\Sigma_j^{-1}\varepsilon_j \right) = n\Var(\Phi^T\Sigma^{-1} \varepsilon),
 \end{equation}
 and
 \begin{equation}
@@ -320,7 +320,7 @@ Proceeding to rearrange the condition at $\theta=\bar{\theta}$,
   &= \Tr\{\E \Phi^T\Sigma^{-1} \varepsilon (\Phi^T\Sigma^{-1} \varepsilon - 2 \Phi^T \Sigma^{-1}\Phi H^{-1}(\Phi^T\Sigma^{-1}\varepsilon + A\E[\theta_0]))^T \}\\
   &= \Tr\{\E \Phi^T \Sigma^{-1}\varepsilon (\Phi^T\Sigma^{-1} \varepsilon - 2 \Phi^T \Sigma^{-1}\Phi H^{-1}\Phi^T \Sigma^{-1}\varepsilon)^T \}, \\
   &= \Tr\{ \Phi^T \Sigma^{-1} \E[\varepsilon \varepsilon^T] (\Sigma^{-1} \Phi - 2 \Sigma^{-1} \Phi H^{-1} \Phi^T \Sigma^{-1} \Phi) \}, \\
-  &= \Tr\{ \Phi^T \Sigma^{-1} \Phi(I - 2H^{-1}\Phi^T \Sigma^{-1} \Phi)\}
+  &= \Tr\{ \Phi^T \Sigma^{-1} \Phi(I - 2H^{-1}\Phi^T \Sigma^{-1} \Phi)\},
  \end{align}
  where we substituted in the definition of $\bar{\theta}$, then used that $\varepsilon$ and $\theta_0$ are independent, and that $\E[\theta_0] = 0$, and finally that $\E[\varepsilon\varepsilon^T] = \Sigma$.
  
@@ -352,7 +352,7 @@ and thus it is sufficient for $\operatorname{Tr} \Delta>0$ to hold at convergenc
 
 \textcite{antoran2022linearised} show that for NNs with normalisation layers, the Jacobian features $\phi(\cdot) = \nabla_{\theta}f(\hat{\theta}, \cdot)$ corresponding to each NN layer are scaled arbitrarily. To illustrate this, we divide the NN linearisation point into the concatenation of two weight vectors $\hat{\theta} = [\hat{\theta}_{0}, \hat{\theta}_{1}]$. We assume the layer containing $\hat{\theta}_{0}$ is followed by a normalisation layer, but not that containing $\hat{\theta}_{1}$, which leads to the invariance 
 \begin{equation}
-    f([k \hat{\theta}_{0}, \hat{\theta}_{1}], \cdot) = f([\hat{\theta}_{0}, \hat{\theta}_{1}], \cdot)
+    f([k \hat{\theta}_{0}, \hat{\theta}_{1}], \cdot) = f([\hat{\theta}_{0}, \hat{\theta}_{1}], \cdot),
 \end{equation}
 for all $k>0$.
 
@@ -364,7 +364,7 @@ While $f$ is invariant to this scaling, the Jacobian feature embeddings $\phi(\c
 
 One way to resolve this is to assign the weights $\hat{\theta}_0$ and $\hat{\theta}_1$ separate regularisation parameters and learn these using the EM procedure. However, instead, consider using the g-prior normalised features $\phi'$ introduced in \cref{sec:g-prior}, and specifically, the scaling vector corresponding to normalised and non-normalised components $s = [s_{0}, s_{1}]$. For a reference pair $([\hat{\theta}_{0}, \hat{\theta}_{1}], [s_{0}, s_{1}])$ and for $\hat{\theta}_{0}$ normalised, the k-scaled pair is $([ k \hat{\theta}_{0}, \hat{\theta}_{1}]$ and 
 \begin{equation*}
-   [ \text{diag}(k^{-1} \Phi_{0}^T\mathrm{B} \Phi_{0} k^{-1})^{\odot -\frac{1}{2}},\,\, \text{diag}(\Phi_{1}^T\mathrm{B} \Phi_{1})^{\odot-\frac{1}{2}} ] = [k s_{0}, s_{1}]
+   [ \text{diag}(k^{-1} \Phi_{0}^T\mathrm{B} \Phi_{0} k^{-1})^{\odot -\frac{1}{2}},\,\, \text{diag}(\Phi_{1}^T\mathrm{B} \Phi_{1})^{\odot-\frac{1}{2}} ] = [k s_{0}, s_{1}],
 \end{equation*}
 where $\odot$ denotes an elementwise power. Since the $k$-scaled features are $[k^{-1} \phi_{0}(\cdot), \phi_{1}(\cdot)]$, when applying the g-prior normalisation we recover a feature vector independent of $k$. This resolves the aforementioned pathology.
 
@@ -419,7 +419,7 @@ for $f$ the model being evaluated and $\Pi$ its posterior distribution over mode
 We extend this evaluation approach to larger $\kappa$ and $\tau$ values without increasing computational cost. 
 We randomly sample $\kappa$ integers $\{b_1, \ldots, b_{\kappa}\}$ such that they sum to $\tau$, i.e $\sum_i^{\kappa} k_i = \tau$. The joint log-likelihood over the batch of size $\tau$ with $\kappa$ unique datapoints can then be estimated as 
 \begin{gather*}
-    \log  \frac{1}{k} \sum_{j \leq k} \exp\left(\sum_{l \leq \kappa} b_{l} \ell(y_{l}, f(\zeta_{j}, x_{l})) \right).
+    \log  \frac{1}{k} \sum_{j \leq k} \exp\left(\sum_{l \leq \kappa} b_{l} \ell(y_{l}, f(\zeta_{j}, x_{l})) \right),
 \end{gather*}
 where the inner sum is over the $\kappa$ distinct elements in the batch instead of the ``total batch size'' $\tau$.
 This is equivalent to the formulation proposed in \textcite{osband2022evaluating} for dyadic sampling, when $\kappa=2$ and $\tau = 10$. We note that it is not possible to achieve \textit{augmented dyadic} sampling, as described in \textcite{Osband2021epistemic}, with this approach. However the authors mention that there is not a significant difference in the relative performance of methods when using augmented dyadic sampling compared to regular dyadic sampling. We introduce a final step however, which is to repeat the computation for multiple shuffles (10) of the test dataset. This eliminates variance in our results from the choice of the $\kappa$ observations which get grouped together in each batch. 

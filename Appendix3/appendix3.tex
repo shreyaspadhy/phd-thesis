@@ -13,7 +13,7 @@
 \begin{proof}
     Starting from the unconditioned reverse SDE
     \begin{align} 
-        \dd X_t &=  b_t(X_t) \,\dd t + \sigma_t\; { \dd \ola{W}}_t,  \quad X_T \sim  \pi_T = \ora{\P}^{\pi, f_t}_T
+        \dd X_t &=  b_t(X_t) \,\dd t + \sigma_t\; { \dd \ola{W}}_t,  \quad X_T \sim  \pi_T = \ora{\P}^{\pi, f_t}_T,
     \end{align}
     we consider its reversal, the forward SDE, but we change its initial from distribution $\pi(x_0)$ to the target posterior $p(x_0 | y)$, i.e.,
     \begin{align} 
@@ -24,11 +24,11 @@
     Now let us use $p_{t|y}(x|y) = \int p(x_t |x_0) \dd p(x_0|y)$ to denote the marginal of the above SDE and as before $p_t$ to denote the marginal of the reference starting at the data distribution. Then it follows that
     \begin{align}
         p_{t|y}(x |y) &= p_t(x)p(y)^{-1} \int {\frac{\ora{p}_{t|0}(x| x_0)}{p_t(x)}} p(y |x_0) {\pi}(x_0) dx_0 \label{eq:post1}\\
-        &=  p_t(x)p(y)^{-1} \int {{\ola{p}_{0|t}(x_0| x)}} p(y |x_0)  dx_0 \label{eq:post2}
+        &=  p_t(x)p(y)^{-1} \int {{\ola{p}_{0|t}(x_0| x)}} p(y |x_0)  dx_0, \label{eq:post2}
     \end{align}
     and thus the score of the reference starting at the posterior is given by:
     \begin{align}
-       \nabla_x \ln  p_{t|y}(x|y) = \nabla_x \ln  p_t(x) + \nabla_x \ln \int \ola{p}_{0|t}(x_0| x) p(y |x_0)  dx_0  %= \nabla_x \ln  p_{t|y}(x |y)
+       \nabla_x \ln  p_{t|y}(x|y) = \nabla_x \ln  p_t(x) + \nabla_x \ln \int \ola{p}_{0|t}(x_0| x) p(y |x_0)  dx_0.  %= \nabla_x \ln  p_{t|y}(x |y)
     \end{align}
     Now that we have the score of the SDE in Equation \ref{eq:forpost} we can reverse it yet another time to obtain the  conditional backwards SDE:
     \begin{align} 
@@ -46,7 +46,7 @@
 \begin{proof}
 Via the mean squared error property of the conditional expectation, the minimiser is given by:
 \begin{align}
-    h^*_t(x, \m) &= \E \left[ \nabla_{H_t}\ln \ora{p}_{t|0}(X_t|X_0) | Y = \m, H_t =x  \right]
+    h^*_t(x, \m) &= \E \left[ \nabla_{H_t}\ln \ora{p}_{t|0}(X_t|X_0) | Y = \m, H_t =x  \right].
 \end{align}
 Then:
 \begin{align}
@@ -71,7 +71,7 @@ where we use that $\ora{p}_{t|0}(H_t = x | x_0, Y = y) = \ora{p}_{t|0}(H_t = x| 
     \end{align*}
     Via the mean squared error property of the conditional expectation we get the minimiser as 
     \begin{align*}
-       \mathbb{E}\left[ \nabla_{H_t} \ln \ora{p}_{t|0}(H_t | X_0) - \nabla_{H_t} \ln p_t(H_t) \Big| Y = y, H_t = x  \right]
+       \mathbb{E}\left[ \nabla_{H_t} \ln \ora{p}_{t|0}(H_t | X_0) - \nabla_{H_t} \ln p_t(H_t) \Big| Y = y, H_t = x  \right].
     \end{align*}
     Then
     \begin{align*}
@@ -89,12 +89,12 @@ where we use that $\ora{p}_{t|0}(H_t = x | x_0, Y = y) = \ora{p}_{t|0}(H_t = x| 
     
     Let $\ora{\P}^{\pi, f}$ denote the path measure for the forward SDE in Eqn.~\eqref{eq:forward_sde_doobs}. By Nelson's reversal, we know that this path measure is equal to the path measure of the reverse SDE in Eqn.~\eqref{eq:back_sde}, which we denote as $\ola{P}$ (for brevity). Now consider the following variational problem termed a half-bridge \citep{bernton2019schr,de2021diffusion, vargas2021solving}.
     \begin{align}\label{eq:half}
-       \ola{\Q}^*= \argmin_{\ola{\Q}: \ola{\Q}_{0} = p(x_0|y)} D_{\text{KL}}(\ola{\Q} || \ola{\P})
+       \ola{\Q}^*= \argmin_{\ola{\Q}: \ola{\Q}_{0} = p(x_0|y)} D_{\text{KL}}(\ola{\Q} || \ola{\P}),
     \end{align}
     where the constraint enforces that at time $0$ we hit the target posterior $p(x|y)$ then via standard results in half bridges we know that the above optimisation problem has an unconstrained formulation (e.g. see \cite{vargas2023denoising}) that is $\dd\ora{\Q}^* = \dd\ora{\P} \frac{\dd p(x|y)}{\dd \ora{\P}_0} $
     Now following \citep{vargas2021bayesian} we notice that we can cancel the $\pi$ prior in the posterior term:
     \begin{align}
-     \dd \ola{\P}   \frac{\dd p(x|y)}{\dd \ola{\P}_0}  = \dd\ola{\P} \frac{\dd p(x|y)}{\dd \pi} = \dd \ola{\P} \frac{\dd p(y | x)}{\dd p(y)}
+     \dd \ola{\P}   \frac{\dd p(x|y)}{\dd \ola{\P}_0}  = \dd\ola{\P} \frac{\dd p(x|y)}{\dd \pi} = \dd \ola{\P} \frac{\dd p(y | x)}{\dd p(y)},
     \end{align}
     and thus:
     \begin{align}\label{eq:contkl}
@@ -138,7 +138,7 @@ where we use that $\ora{p}_{t|0}(H_t = x | x_0, Y = y) = \ora{p}_{t|0}(H_t = x| 
     \end{align}
     where $\alpha_k = 1- \exp\left(\int_{t_{k-1}}^{t_k}\beta_s \dd s\right)$. We denote the distribution of the above discrete time chain as $q_\phi$. Now if we follow the sketch in Proposition 3 of \textcite{vargas2023denoising} the discretised objective then becomes:
     \begin{align}
-      \argmin_\phi  \E_{\bH \sim q_\phi}\left[2 \sum_{k=1}^K \frac{\lambda_k^2}{\alpha_k}|| h_{\phi}(k, \bH_{t_k})||^{2} -\ln p(\vy|\bH_{0})\right] \label{eq:objdisc}
+      \argmin_\phi  \E_{\bH \sim q_\phi}\left[2 \sum_{k=1}^K \frac{\lambda_k^2}{\alpha_k}|| h_{\phi}(k, \bH_{t_k})||^{2} -\ln p(\vy|\bH_{0})\right] \label{eq:objdisc},
     \end{align}
     where $\lambda_k = 1-\sqrt{1-\alpha_k}$. For a more stable/simple objective following \textcite{vargas2023denoising} we can make the approximation $\lambda_k = 1-\sqrt{1-\alpha_k}\approx \alpha_k / 2$ for small time steps, which results in our objective.    
 \end{proof}
