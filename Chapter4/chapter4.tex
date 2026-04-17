@@ -77,7 +77,7 @@ where $\sigma>0$ controls the standard deviation, and $\delta>0$ is small\label{
 \[
 q_{\mu, \phi}\left(x_{0:T}\right):=q_{\phi}\left(x_{1:T} \mid x_0\right) \mu\left(x_0\right) \quad \text{and} \quad p_{\nu, \theta}\left(x_{0:T}\right):=p_{\theta}\left(x_{0:T-1} \mid x_T\right) \nu\left(x_T\right),
 \]
-and think of those implied joint distributions as emanating from $\mu(x)=\mu\left(x_0\right)$ and $\nu(z)=\nu\left(x_T\right)$, respectively, moving 'forwards' or 'backwards' according to the specific choices for $\phi$ and $\theta$. The model in \Cref{eq:hierarchical_latent} is equivalently defined via the Markov chains
+and think of those implied joint distributions as emanating from $\mu(x)=\mu\left(x_0\right)$ and $\nu(z)=\nu\left(x_T\right)$, respectively, moving \textit{forwards} or \textit{backwards} according to the specific choices for $\phi$ and $\theta$. The model in \Cref{eq:hierarchical_latent} is equivalently defined via the Markov chains
 \begin{subequations}
 \begin{align}
 x_{t+1} &\leftarrow x_t+\delta a_{\phi_t}\left(x_t\right)+ \sqrt{\delta}\sigma_t \varepsilon_{t+1}, & x_0 \sim \mu \Longrightarrow x_{0: T} \sim q_{\mu, \phi}\left(x_{0: T}\right), \label{eq:mc_framework_fwd_ch4} \\
