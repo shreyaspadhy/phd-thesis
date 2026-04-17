@@ -212,7 +212,7 @@ One issue with \Cref{def:mackay_first_order_solution} is that the variational me
         \]
         \item (M step) We lower bound the log-probability density of the observed data, i.e. the evidence, for the model with posterior $\hat{P}$ and precision $A$ as
         \[
-            \log p\left(Y ; A\right) \geq-\frac{1}{2}\|\theta_{\star}\|_{A}^2-\frac{1}{2} \log \operatorname{det}\left(\frac{A_{\star}}{A}\right)+\text{const}=: \mathcal{M}\left(A\right).
+            \log p\left(Y ; A\right) \geq-\frac{1}{2}\|\theta_{\star}\|_{A}^2-\frac{1}{2} \log \operatorname{det}\left(\frac{A_{\star}}{A}\right)+\text{const.} =: \mathcal{M}\left(A\right).
         \]
         for a constant independent of $A$. We choose an $A$ that improves this lower bound, usually through a first-order update rule as in \Cref{def:mackay_first_order_solution}.
     \end{itemize}
