@@ -288,7 +288,7 @@ Interestingly, \textcite{song2020score} showed that in the continuous limit, the
 \end{lightgraybox}
 
 
-\section{Towards Unification: A hierarchical Variational Perspective}
+\section{Towards Unification: A Hierarchical Variational Perspective}
 
 \label{sec:unifying_framework_discrete}
 
@@ -336,7 +336,7 @@ where $\{\varepsilon_t\}_{t=1}^{T}$ are i.i.d. standard normal random variables,
 \nomenclature[z-sde]{$SDE$}{Stochastic Differential Equation}
 \begin{lightgraybox}{Remark: The Continuous Limit}
     \label{sec:continuous_limit}
-    In the limit of infinite steps, where $T \to \infty$, the transition densities governing the mappings between latent variables $t$ and $t+1$ can be written down as the solutions to a pair of stochastic differential equations (SDEs)\footnote{This remark is a brief introduction to the continuous limit of the mappings $p_{\theta_t}$ and $q_{\phi_t}$. We introduce the notation and terminology more rigorously in \Cref{chapter:sde}.} given by
+    In the limit of infinite steps, where $T \to \infty$, the transition densities governing the mappings between latent variables $t$ and $t+1$ can be written down as the solutions to a pair of stochastic differential equations (SDEs)\footnote{This remark is a brief introduction to the continuous limit of the mappings $p_{\theta_t}$ and $q_{\phi_t}$. We introduce the notation and terminology more rigorously in \Cref{chapter:sde}.}. As we will discuss in further detail in \Cref{chapter:cmcd} and \Cref{chapter:deft}, the continuous-time viewpoint with SDEs allows us to reason about boundary conditions and obtain finite-time guarantees of converging to source, target and conditioned distributions. Simultaneously, we maintain these guarantees when we then discretise these continuous processes, allowing us to develop discretised algorithms with better guarantees stemming from the continuous-time viewpoint. These SDEs are given by
     \[
         \mathrm{d}X_t = f_{\theta_t}(X_t) \mathrm{d}t + \sigma_t \mathrm{d}W_t, \quad \mathrm{d}X_t = b_{\phi_t}(X_t) \mathrm{d}t + \sigma_t \mathrm{d} \overleftarrow{W}_t, \label{eq:fwd_bwd_sde_sketch}
     \]
