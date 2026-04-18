@@ -209,18 +209,18 @@ Finally, we mention a really important property of stochastic processes: \emph{q
 \begin{definition}[Total Variation and Quadratic Variation of Processes]
     The total variation of a stochastic process along the partition $\Pi$ is defined as\label{ntn:total_variation}
     \[
-    V_t^{\Pi}(X):=\sum_{i=0}^{n-1}\left|X_{t_{i+1}}-X_{t_i}\right|, \quad \text { where } t_n=t
+    V_t^{\Pi}(X):=\sum_{i=0}^{n-1}\left|X_{t_{i+1}}-X_{t_i}\right|, \quad \text { where } t_n=t.
     \]
     Similarly, the quadratic variation of a stochastic process along the partition $\Pi$ is defined as\label{ntn:quadratic_variation}
     \[
-    \langle X \rangle_t^{\Pi} :=\sum_{i=0}^{n-1}\left(X_{t_{i+1}}-X_{t_i}\right)^2, \quad \text { where } t_n=t
+    \langle X \rangle_t^{\Pi} :=\sum_{i=0}^{n-1}\left(X_{t_{i+1}}-X_{t_i}\right)^2, \quad \text { where } t_n=t.
     \]
 \end{definition}    
 Finally, we state a well known identity:
 \begin{definition}[Finite Quadratic Variation of Brownian Motion]
 The quadratic variation of Brownian motion is finite, and regardless of the choice of partition $\Pi$, we have:
 \[
-    \langle W \rangle_t^{\Pi} \rightarrow \langle W \rangle_t = t
+    \langle W \rangle_t^{\Pi} \rightarrow \langle W \rangle_t = t.
 \]
 \end{definition}
 
@@ -240,7 +240,7 @@ Unfortunately, we hit a second roadblock when we try to define the noise as $\ma
 
 Let us rewrite \Cref{eq:sde_with_dW} as an integral equation, giving us
 \[
-    X_t=X_0+\int_0^t \mu\left(X_s\right) \mathrm{d} s+\int_0^t \sigma\left(X_s\right) \mathrm{d} W_s \label{eq:integral_form_of_sde}
+    X_t=X_0+\int_0^t \mu\left(X_s\right) \mathrm{d} s+\int_0^t \sigma\left(X_s\right) \mathrm{d} W_s. \label{eq:integral_form_of_sde}
 \]
 The first integral on the right-hand side is a standard Riemann-Stieltjes integral \citep{stieltjes1894recherches}, and can be defined using standard rules of integration. The second integral, however, is undefined in the traditional sense, since the integrand itself is a "noisy process" and has unbound total variation. As a simple example, consider discretising the integral of Brownian Motion itself over the interval $[0, t]$, giving us
 \[
@@ -272,11 +272,11 @@ We have defined the Itô integral for Brownian motion, having decided which poin
 \begin{lightgraybox}{Remark: Notation of Itô and Stratanovich integrals}
 We denote Itô integrals of a stochastic process $X_t \in \mathcal{V}$ as:\label{ntn:ito_integral}
 \[
-I_{\text{ito}} := \int_{s}^t X_u \d W_u = \lim_{\Delta t \rightarrow 0} \sum_{t_i = s}^{t} X_{t_i} (W_{t_{i+1}} - W_{t_i}) 
+I_{\text{ito}} := \int_{s}^t X_u \d W_u = \lim_{\Delta t \rightarrow 0} \sum_{t_i = s}^{t} X_{t_i} (W_{t_{i+1}} - W_{t_i}), 
 \]
 and Stratanovich integrals as:\label{ntn:stratanovich_integral}
 \[
-I_{\text{str}} := \int_s^t X_u \circ \d W_u = \lim_{\Delta t \rightarrow 0} \sum_{t_i = s}^t X_{t_{i+1}} (W_{t_{i+1}} - W_{t_i}) 
+I_{\text{str}} := \int_s^t X_u \circ \d W_u = \lim_{\Delta t \rightarrow 0} \sum_{t_i = s}^t X_{t_{i+1}} (W_{t_{i+1}} - W_{t_i}) .
 \]
 \end{lightgraybox}
 The choice of the Itô integral enables us to derive and use a very powerful identity:
@@ -333,7 +333,7 @@ Can we calculate what the stochastic process $f\left(X_t\right)$ would look like
 \begin{definition}[Stochastic Chain Rule]
     Suppose $f \in C^2([0, \infty) \times \mathbb{R})$ (i.e. $f(t, x)$ is twice continuously differentiable in $\left.x\right)$. Then $Y_t:=f\left(W_t\right)$ is an Itô process, and\label{ntn:continuous_domain}
     \[
-        \mathrm{d} Y_t=\frac{1}{2} \frac{\partial^2 f}{\partial x^2}\left(W_t\right) \mathrm{d} t+\frac{\partial f}{\partial x}\left(W_t\right) \mathrm{d} W_t
+        \mathrm{d} Y_t=\frac{1}{2} \frac{\partial^2 f}{\partial x^2}\left(W_t\right) \mathrm{d} t+\frac{\partial f}{\partial x}\left(W_t\right) \mathrm{d} W_t.
     \]
 \end{definition}
 
@@ -346,7 +346,7 @@ We can extend this to the general case where $X_t$ is an Itô process given by \
     \]
     Alternatively, we can write this as
     \[
-        \mathrm{d} Y_t=\frac{\partial f}{\partial t}\left(t, X_t\right) \mathrm{d} t+\frac{\partial f}{\partial x}\left(t, X_t\right) \mathrm{d} X_t+\frac{1}{2} \frac{\partial^2 f}{\partial x^2}\left(t, X_t\right)\left(\mathrm{d} X_t\right)^2
+        \mathrm{d} Y_t=\frac{\partial f}{\partial t}\left(t, X_t\right) \mathrm{d} t+\frac{\partial f}{\partial x}\left(t, X_t\right) \mathrm{d} X_t+\frac{1}{2} \frac{\partial^2 f}{\partial x^2}\left(t, X_t\right)\left(\mathrm{d} X_t\right)^2.
     \]
 \end{theorem}
 
@@ -424,7 +424,7 @@ We first state the original theorem, which is stated in a more general form that
     \]
     Suppose there exist $u(t, x)$ and $v(t, x)$ such that
     \[
-        u(t, x) \sigma(t, x) = a(t, x) - v(t, x), \quad \forall \ t \in [0, T], \ x \in \mathbb{R}^n.
+        u(t, x) \sigma(t, x) = a(t, x) - v(t, x), \quad \forall \ t \in [0, T], \ x \in \mathbb{R}^n,
     \]
     and $u(t, x)$ satisfies Novikov's condition, given by
     \[
@@ -436,7 +436,7 @@ We first state the original theorem, which is stated in a more general form that
     \]
     Then,the process 
     \[
-        \hat{W}_t = W_t + \int_0^t u(s, X_s) \d s
+        \hat{W}_t = W_t + \int_0^t u(s, X_s) \d s,
     \]
     is a Wiener process under $\mathbb{Q}$, and in terms of the process $\hat{W}_t$, the process $X_t$ can be written as
     \[
@@ -557,7 +557,7 @@ Let us define these in more detail.
     \]
     we introduce a re-indexed stochastic process $Z_t := X_{T-t}, t \in [0, T]$ adapted to the same ``forward-time'' filtration $\mathcal{F}_t$. Then, $Z_t$ is the solution to the following SDE
     \[
-        \d Z_t = \left[ -a_{T-t}(Z_t) + \sigma_{T-t}^2 \nabla_{Z_t} \ln P_{T-t}(Z_t) \right] \d t + \sigma_{T-t}(Z_t) \d W_t, \quad Z_0 \sim \pi_T
+        \d Z_t = \left[ -a_{T-t}(Z_t) + \sigma_{T-t}^2 \nabla_{Z_t} \ln P_{T-t}(Z_t) \right] \d t + \sigma_{T-t}(Z_t) \d W_t, \quad Z_0 \sim \pi_T.
     \]
 \end{definition}
 
@@ -661,11 +661,11 @@ In this section, we turn to F{\"o}llmer's Itô calculus \parencite{follmer2006ca
     \label{def:ito-formula-without-probability}
     (\textcite[Theorem 6.6, Pg. 122]{eberle2011introduction}, \textcite{follmer2006calcul}) Suppose that $X: [0, T) \to \mathbb{R}^d$ is a continuous function with continuous quadratic variation $\langle X \rangle_t$ w.r.t a partition $(\pi_n)$. Then, for any $f \in C^2([0, t) \times \mathbb{R}^d)$, and for any $t \in [0, T)$, the Itô integral
     \[
-        \int_0^t \nabla f(s, X_s) \d X_s := \lim_{n \to \infty} \sum_{s \in \pi_n, s < t} \nabla f(s, X_s) (X_{s^{\prime} \wedge t} - X_s) \label{eq:ito-integral-forward}
+        \int_0^t \nabla f(s, X_s) \d X_s := \lim_{n \to \infty} \sum_{s \in \pi_n, s < t} \nabla f(s, X_s) (X_{s^{\prime} \wedge t} - X_s), \label{eq:ito-integral-forward}
     \]
     exists, and Itô's formula
     \[
-        f(X_t) = f(X_0) + \int_0^t \nabla f(s, X_s) \d X_s + \frac{1}{2} \nabla^2 f(s, X_s) \d \langle X \rangle_s
+        f(X_t) = f(X_0) + \int_0^t \nabla f(s, X_s) \d X_s + \frac{1}{2} \nabla^2 f(s, X_s) \d \langle X \rangle_s,
     \]
     holds. 
 \end{definition}
@@ -678,11 +678,11 @@ In F{\"o}llmer's framework, defining the ``reverse-time'' Itô integral is done 
     \label{def:ito-formula-without-probability-reverse}
     (\textcite[Theorem 6.7, Pg. 123]{eberle2011introduction}, \textcite{follmer2006calcul,kunitha1982backward}) Suppose that $X: [0, T) \to \mathbb{R}^d$ is a continuous function with continuous quadratic variation $\langle X \rangle_t$ w.r.t a partition $(\pi_n)$. Then, for any $f \in C^2([0, t) \times \mathbb{R}^d)$, and for any $t \in [0, T)$, the backward Itô integral
     \[
-        \int_0^t \nabla f(s, X_s) \d \overleftarrow{X}_s := \lim_{n \to \infty} \sum_{s \in \pi_n, s < t} \nabla f(s^{\prime} \wedge t, X_s) (X_{s^{\prime} \wedge t} - X_s) \label{eq:ito-integral-reverse}
+        \int_0^t \nabla f(s, X_s) \d \overleftarrow{X}_s := \lim_{n \to \infty} \sum_{s \in \pi_n, s < t} \nabla f(s^{\prime} \wedge t, X_s) (X_{s^{\prime} \wedge t} - X_s), \label{eq:ito-integral-reverse}
     \]
     exists, and Itô's formula
     \[
-        f(X_t) = f(X_0) + \int_0^t \nabla f(s, X_s) \d \overleftarrow{X}_s - \frac{1}{2} \nabla^2 f(s, X_s) \d \langle X \rangle_s
+        f(X_t) = f(X_0) + \int_0^t \nabla f(s, X_s) \d \overleftarrow{X}_s - \frac{1}{2} \nabla^2 f(s, X_s) \d \langle X \rangle_s,
     \]
     holds. 
 \end{definition}
@@ -695,8 +695,8 @@ Finally, we make note of a very useful identity in F{\"o}llmer's framework, whic
     \label{thm:relating-forward-and-reverse-ito-integrals}
     (\textcite[Theorem 6.18, Pg. 134]{eberle2011introduction}) Suppose that the Itô integral $\int_0^t Y_s \d X_s$ and the covariation $\langle Y, X \rangle_t$ exists w.r.t a partition $(\pi_n)$. Then, by \Cref{def:ito-formula-without-probability-reverse}, the reverse Itô integral $\int_0^t Y_s \d \overleftarrow{X}_s$ and the forward Stratonovich integral $\int_0^t Y_s \circ \d X_s$ exists, and we have that
     \[
-        \int_0^t Y_s \d \overleftarrow{X}_s  - \int_0^t Y_s \d X_s &= \langle Y, X \rangle_t \label{eq:diff-reverse-ito-integral} \\
-        \int_0^t Y_s \d \overleftarrow{X}_s + \int_0^t Y_s \d X_s &= 2 \int_0^t Y_s \circ \d X_s \label{eq:sum-reverse-ito-integral}
+        \int_0^t Y_s \d \overleftarrow{X}_s  - \int_0^t Y_s \d X_s &= \langle Y, X \rangle_t, \label{eq:diff-reverse-ito-integral} \\
+        \int_0^t Y_s \d \overleftarrow{X}_s + \int_0^t Y_s \d X_s &= 2 \int_0^t Y_s \circ \d X_s. \label{eq:sum-reverse-ito-integral}
     \]
 \end{theorem}
 \begin{proof}
@@ -707,7 +707,7 @@ Finally, we make note of a very useful identity in F{\"o}llmer's framework, whic
     \label{cor:relating-forward-and-reverse-ito-integrals-through-divergence}
     Suppose that the forward and backward Itô integrals exist, then we have that
     \[
-        \int_0^T a_t(X_t) \d \overleftarrow{X}_t = \int_0^T a_t(X_t) \d X_t - \sigma_t^2 \int_0^T \nabla \cdot a_t(X_t) \d t
+        \int_0^T a_t(X_t) \d \overleftarrow{X}_t = \int_0^T a_t(X_t) \d X_t - \sigma_t^2 \int_0^T \nabla \cdot a_t(X_t) \d t.
     \]
 \end{corollary}
 \begin{proof}
@@ -766,8 +766,8 @@ In practise, unless we consider very specific forms of drift and diffusion coeff
     Given the forward and backward SDEs defined as in \Cref{eq:forward-sde} and \Cref{eq:reverse-sde} respectively, the Euler-Maruyama method discretises the forward and backward processes as follows:
     \begin{subequations}
     \[
-        \hat{X}_0 \sim \mu, \quad \hat{X}_{i+1} = \hat{X}_i + a_{t_i}(\hat{X}_i) \delta + \sigma_{t_i}(\hat{X}_i) \sqrt{\delta}~ \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, 1) \\
-        \hat{X}_T \sim \nu, \quad \hat{X}_{i-1} = \hat{X}_i + b_{t_i}(\hat{X}_i) \delta + \sigma_{t_i}(\hat{X}_i) \sqrt{\delta}~ \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, 1)
+        \hat{X}_0 \sim \mu, \quad \hat{X}_{i+1} = \hat{X}_i + a_{t_i}(\hat{X}_i) \delta + \sigma_{t_i}(\hat{X}_i) \sqrt{\delta}~ \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, 1), \\
+        \hat{X}_T \sim \nu, \quad \hat{X}_{i-1} = \hat{X}_i + b_{t_i}(\hat{X}_i) \delta + \sigma_{t_i}(\hat{X}_i) \sqrt{\delta}~ \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, 1),
     \]
     \end{subequations}
     where $\delta = t_{i+1} - t_i$ is the step size.

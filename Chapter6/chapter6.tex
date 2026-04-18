@@ -54,7 +54,7 @@ First, let us reason about the properties of our function on different subsets o
     \label{def:projection_map}
     The projection map $\pi_{U \rightarrow V}$ is defined as:
     $$
-    \pi_{U \rightarrow V}: \mathbb{R}^U \mapsto \mathbb{R}^V:\{f(x)\}_{x \in U} \mapsto \{f(x)\}_{x \in V}
+    \pi_{U \rightarrow V}: \mathbb{R}^U \mapsto \mathbb{R}^V:\{f(x)\}_{x \in U} \mapsto \{f(x)\}_{x \in V}.
     $$
 \end{definition}
 
@@ -64,7 +64,7 @@ We remember that the Borel $\sigma$-algebra is the canonical algebra for real sp
     \label{def:cylinder_set}
     A cylinder set is defined as:
     $$
-    \pi_{\mathcal{X} \rightarrow V}^{-1}(B)=\left\{f \in \mathbb{R}^{\mathcal{X}}: \pi_{\mathcal{X} \rightarrow V}(f) \in B\right\}
+    \pi_{\mathcal{X} \rightarrow V}^{-1}(B)=\left\{f \in \mathbb{R}^{\mathcal{X}}: \pi_{\mathcal{X} \rightarrow V}(f) \in B\right\}.
     $$
     Therefore, the cylinder set $\pi_{\mathcal{X} \rightarrow V}^{-1}(B)$ is the set of all functions whose values on the finite set $V$ lie within the Borel set $B$.
 \end{definition}
@@ -82,11 +82,11 @@ Having set up these definitions, we can now state the Kolmogorov extension theor
     \label{thm:kolmogorov_extension}
     If a family of probability measures $\mu_V$ corresponding to a finite index set $V$ obeys the following consistency relation for all $V \subset \mathcal{X}$ and all second finite index sets with $U \supset V$:
     $$
-    \mu_U\left(\pi_{U \rightarrow V}^{-1}(B)\right)=\mu_V(B)
+    \mu_U\left(\pi_{U \rightarrow V}^{-1}(B)\right)=\mu_V(B),
     $$
     then there is a unique probability measure on the product $\sigma$-algebra, $\mathbb{P}_{\mathcal{X}}$ with the property:
     $$
-    \mathbb{P}_{\mathcal{X}}\left(\pi_{\mathcal{X} \rightarrow V}^{-1}(B)\right)=\mu_V(B) \quad \forall B \in \mathcal{B}\left(\mathbb{R}^V\right)
+    \mathbb{P}_{\mathcal{X}}\left(\pi_{\mathcal{X} \rightarrow V}^{-1}(B)\right)=\mu_V(B) \quad \forall B \in \mathcal{B}\left(\mathbb{R}^V\right).
     $$
 \end{theorem}
 
@@ -101,13 +101,13 @@ Let us revisit Bayes' Theorem for the infinite-dimensional objects that we are c
 \]
 where the quantity $p(Y)$ is the marginal likelihood, defined as 
 \[
-    p(Y) := \int p(Y \mid f_X) \d \mathbb{P}(f_X)
+    p(Y) := \int p(Y \mid f_X) \d \mathbb{P}(f_X).
 \]
 Since we are dealing with probability measures over infinite-dimensional spaces, instead of writing down density ratios like we usually do, we instead must use the Radon-Nikodym derivative, which we have defined and discussed extensively in \Cref{chapter:sde}. The likelihood function $p(Y \mid f_X)$ is the probability of the observed data $Y$ given the function $f$ on the subset $X$.
 
 Finally, we can consider the case where we are interested in calculating the posterior distribution over a finite subset of evaluation points $(\cdot)\subset \mathcal{X}$ of the index set. In this situation, we have the joint posterior density over the function values $f_X$ and $f_{(\cdot)}$ given the observations $Y$ as follows:
 \[
-    p\left(f_X, f_{(\cdot)} \mid Y\right) & =\frac{p\left(Y \mid f_X\right) p\left(f_{(\cdot)}, f_X\right)}{p(Y)} \\
+    p\left(f_X, f_{(\cdot)} \mid Y\right) & =\frac{p\left(Y \mid f_X\right) p\left(f_{(\cdot)}, f_X\right)}{p(Y)}, \\
     & =\frac{p\left(y \mid f_X\right) p\left(f_X\right) p\left(f_{(\cdot)} \mid f_X\right)}{p(Y)}, \label{eq:joint_posterior_density_functions}
 \]
 where the quantities $p(f_X)$ and $p(f_{(\cdot)}, f_X)$ are explicitly the probability densities w.r.t the Lebesgue measure. It is not necessary that these have a simple form w.r.t the Lebesgue measure, but for Gaussian processes, these will simplify to simple Gaussian densities.
@@ -126,7 +126,7 @@ Despite this simple assumption, Gaussian processes still provide highly expressi
     \label{def:gaussian_process}
     A Gaussian process on a domain $\mathcal{X}$ is a stochastic process $\{f(x)\}_{x \in \mathcal{X}}$ such that the joint distribution of any finite subset $X \subset \mathcal{X}$ of the function is a multivariate Gaussian distribution specified through a mean function $m( \cdot)$ and a covariance function $k( \cdot, \cdot^{\prime})$ which is positive definite. Therefore, the joint distribution of the function values $f_X$ is a multivariate Gaussian distribution defined by the mean vector $m_X$ and the covariance matrix $K_{XX} = k(X, X)$ as follows:
     \[
-        f_X \sim \mathcal{N}\left(m_X, K_{XX}\right)
+        f_X \sim \mathcal{N}\left(m_X, K_{XX}\right),
     \]
     where the covariance matrix $K_{XX}$ is a symmetric positive semi-definite matrix. We denote this GP as $f \sim \operatorname{GP}(m, k)$.
 \end{definition}
@@ -140,8 +140,8 @@ Let us revisit our Bayesian inference framework from \Cref{sec:bayes_theorem_fun
 For the purpose of this thesis, we will always make the assumption that we are dealing with a Gaussian likelihood, i.e. $p(y \mid f_X) = \mathcal{N}(y \mid f_X, \Sigma)$\footnote{We will discuss the case of non-Gaussian likelihoods more in \Cref{chapter:bnn_sampling}, and in the discussion of this chapter}. Using simple linear algebra and properties of the Gaussian distribution, we see that the posterior distribution is also Gaussian, resulting in the posterior distribution being defined by another GP which we denote $f \mid y \sim \operatorname{GP}(m_{\star}, k_{\star})$, with the following mean and covariance functions:\label{ntn:noise_covariance}\label{ntn:posterior_gp}
 \begin{subequations}
 \[
-    m_{{\star}}(\cdot) &= K_{(\cdot)X} \left(K_{XX} + \Sigma\right)^{-1} y \label{eq:m_posterior_gp} \\
-    k_{\star}(\cdot, \cdot^{\prime}) &= k_{(\cdot, \cdot^{\prime})} - K_{(\cdot)X} \left(K_{XX} + \Sigma\right)^{-1} K_{X(\cdot^{\prime})} \label{eq:sigma_posterior_gp}
+    m_{{\star}}(\cdot) &= K_{(\cdot)X} \left(K_{XX} + \Sigma\right)^{-1} y, \label{eq:m_posterior_gp} \\
+    k_{\star}(\cdot, \cdot^{\prime}) &= k_{(\cdot, \cdot^{\prime})} - K_{(\cdot)X} \left(K_{XX} + \Sigma\right)^{-1} K_{X(\cdot^{\prime})}. \label{eq:sigma_posterior_gp}
 \]
 \end{subequations}
 
@@ -161,8 +161,8 @@ In particular, we study the \textit{inducing points} method, which can be framed
 \]
 Following \textcite{titsias2009variational}, we obtain the posterior mean and covariance function of the approximate, variational posterior as follows:\label{ntn:variational_posterior_gp}
 \[
-    m^{(Z)}_{\star}(\cdot) &= K_{(\cdot)Z} \left(K_{ZZ} + K_{ZX} \Sigma^{-1} K_{XZ}\right)^{-1} \Sigma^{-1}y \label{eq:m_posterior_gp_variational} \\
-    k^{(Z)}_{\star}(\cdot, \cdot^{\prime}) &= k_{(\cdot, \cdot^{\prime})} + K_{(\cdot)Z} \left(\left(K_{ZZ} + K_{ZX} \Sigma^{-1} K_{XZ}\right)^{-1} - K_{ZZ}^{-1}\right) K_{Z(\cdot^{\prime})} \label{eq:sigma_posterior_gp_variational}
+    m^{(Z)}_{\star}(\cdot) &= K_{(\cdot)Z} \left(K_{ZZ} + K_{ZX} \Sigma^{-1} K_{XZ}\right)^{-1} \Sigma^{-1}y, \label{eq:m_posterior_gp_variational} \\
+    k^{(Z)}_{\star}(\cdot, \cdot^{\prime}) &= k_{(\cdot, \cdot^{\prime})} + K_{(\cdot)Z} \left(\left(K_{ZZ} + K_{ZX} \Sigma^{-1} K_{XZ}\right)^{-1} - K_{ZZ}^{-1}\right) K_{Z(\cdot^{\prime})}. \label{eq:sigma_posterior_gp_variational}
 \]
 where $K_{ZZ} = k(Z, Z)$ is the kernel matrix evaluated on the inducing points $Z$. As we can see, the computational cost of the variational posterior is $\mathcal{O}(|Z|^3)$, which is significantly lower than the $\mathcal{O}(n^3)$ cost of the exact posterior.
 
@@ -176,8 +176,8 @@ Similarly, for \Cref{eq:sigma_posterior_gp}, we must solve $n$ linear systems pe
 
 \emph{Conjugate gradients} (CG) are the most widely used algorithm to solve such problems, both in the context of GPs \cite{Gibbs_MacKay97a,gardner18,Artemev21} and more generally \cite{numerical07,BoydVandenberghe2014}. CG reduces GP posterior inference to a series of matrix-vector products, each of $\mathcal{O}(n^2)$ cost. Given the system $(K_{XX} + \Sigma)^{-1} y$, the number of matrix-vector products needed to guarantee convergence of CG to within a tolerance of $\varepsilon$ \cite{terenin23}, is
 \[
-    \mathcal{O}\left(\sqrt{\operatorname{cond}((K_{XX} + \Sigma))} \log \frac{\operatorname{cond}((K_{XX} + \Sigma))\|y\|}{\varepsilon}\right) \\
-    \text{where }\operatorname{cond}((K_{XX} + \Sigma))=\frac{\lambda_{\max }((K_{XX} + \Sigma))}{\lambda_{\min }((K_{XX} + \Sigma))} \nonumber
+    \mathcal{O}\left(\sqrt{\operatorname{cond}((K_{XX} + \Sigma))} \log \frac{\operatorname{cond}((K_{XX} + \Sigma))\|y\|}{\varepsilon}\right), \\
+    \text{where }\operatorname{cond}((K_{XX} + \Sigma))=\frac{\lambda_{\max }((K_{XX} + \Sigma))}{\lambda_{\min }((K_{XX} + \Sigma))}, \nonumber
 \]
 where $\lambda_{\max}((K_{XX} + \Sigma))$ and $\lambda_{\min}((K_{XX} + \Sigma))$ are the maximum and minimum eigenvalues of $(K_{XX} + \Sigma)$.
 CG performs well in many GP use cases \citep{gardner18,WangPGT2019exactgp}.
@@ -204,15 +204,15 @@ For a Gaussian likelihood with 1-dimensional outputs $y$, and denoting $H_{\varp
 \]
 with corresponding gradient:
 \[
-\nabla \mathcal{L}(\varphi) = \frac{1}{2} \left(H_{\varphi}^{-1} y\right)^T \frac{\partial H_{\varphi}}{\partial \varphi} \left(H_{\varphi}^{-1} y\right) - \frac{1}{2} \text{tr}\left(H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi}\right) \label{eq:gradient_marginal_likelihood}
+\nabla \mathcal{L}(\varphi) = \frac{1}{2} \left(H_{\varphi}^{-1} y\right)^T \frac{\partial H_{\varphi}}{\partial \varphi} \left(H_{\varphi}^{-1} y\right) - \frac{1}{2} \text{tr}\left(H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi}\right). \label{eq:gradient_marginal_likelihood}
 \]
 If $n$ were small enough, we could compute both $\mathcal{L}(\varphi)$ and $\nabla \mathcal{L}(\varphi)$ in $\mathcal{O}(n^3)$ time through a Cholesky decomposition. However, for large $n$, we need to use approximate methods to compute these quantities.
 
 \paragraph{Approximate Gradients with Trace Estimation.}
 
-While calculating the marginal likelihood itself can be quite challenging in many cases, it may still be possible to optimise it with respect to the hyperparameters $\varphi$ through a gradient-based approach. In this case, we need to approximate the gradient of the marginal likelihood with respect to the hyperparameters $\varphi$. The gradient $\nabla \mathcal{L}(\varphi)$ involves two computationally expensive operations: inverse matrix-vector products of the form $\alpha = H_{\varphi}^{-1} b$ and the trace term. The inverse matrix-vector products can be approximated using linear system solvers (such as conjugate gradients) and the trace term can also be reduced into inverse matrix-vector products using stochastic trace estimation, e.g. Hutchinson's trace estimator \cite{hutchinson1989stochastic}, as follows:
+While calculating the marginal likelihood itself can be quite challenging in many cases, it may still be possible to optimise it with respect to the hyperparameters $\varphi$ through a gradient-based approach. In this case, we need to approximate the gradient of the marginal likelihood with respect to the hyperparameters $\varphi$. The gradient $\nabla \mathcal{L}(\varphi)$ involves two computationally expensive operations: inverse matrix-vector products of the form $\alpha = H_{\varphi}^{-1} b$ and the trace term. The inverse matrix-vector products can be approximated using linear system solvers (such as conjugate gradients) and the trace term can also be reduced into inverse matrix-vector products using stochastic trace estimation, e.g. Hutchinson's trace estimator \cite{hutchinson1989stochastic, skilling1989eigenvalues}, as follows:
 \[
-    \text{tr}\left(H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi}\right) = \mathbb{}E_{z} \left[ z^T H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi} z \right] \approx \frac{1}{s} \sum_{j=1}^s z_j^T H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi} z_j
+    \text{tr}\left(H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi}\right) = \mathbb{}E_{z} \left[ z^T H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi} z \right] \approx \frac{1}{s} \sum_{j=1}^s z_j^T H_{\varphi}^{-1} \frac{\partial H_{\varphi}}{\partial \varphi} z_j,
 \]
 where $s$ probe vectors $z_j$ of length $n$ are introduced and $\forall j : \mathbb{E}[z_j z_j^T] = I$ is required for the estimator to be unbiased. Common choices for the distribution of $z_j$ are standard Gaussian, $z_j \sim \mathcal{N}(0, I)$, or Rademacher, $z_j \sim \mathcal{U}(\{-1, 1\})^n$. In theory, the latter exhibit lower estimator variance. Additionally, more advanced trace estimators have also been developed \citep{Hutch++, XTrace}. However, in practice, standard Gaussian probes with Hutchinson's trace estimator seem to work well.
 
@@ -235,7 +235,7 @@ Let $f \sim \operatorname{GP}(m, k)$ be a Gaussian process, $f_X$ be the functio
 \]
 Equivalently, we can write the posterior sample in terms of the posterior mean from \Cref{eq:m_posterior_gp} as:
 \[
- (f \mid y)(\cdot) = m_{\star}(\cdot) + \underbrace{f(\cdot) - K_{(\cdot)X} (K_{XX} + \Sigma)^{-1} (f_X + \varepsilon)}_{\text{zero-mean sample from the posterior}} \label{eq:pathwise_conditioning_gp_2}
+ (f \mid y)(\cdot) = m_{\star}(\cdot) + \underbrace{f(\cdot) - K_{(\cdot)X} (K_{XX} + \Sigma)^{-1} (f_X + \varepsilon)}_{\text{zero-mean sample from the posterior}}. \label{eq:pathwise_conditioning_gp_2}
 \]
 \end{theorem}
 \begin{proof}
@@ -255,11 +255,11 @@ So, while we were aiming to reduce the computational cost of posterior inference
 
 The \emph{exact} approach to sampling from multivariate Gaussian distributions $\mathcal{N}(\mu, \Sigma)$ is to use the Cholesky decomposition of the covariance matrix to modify a sample from the standard Gaussian distribution $\mathcal{N}(0, I)$, using the following transformation:
 \[
-    \varepsilon \sim \mathcal{N}(0, I) \quad \Rightarrow \quad x \leftarrow \mu + L \varepsilon
+    \varepsilon \sim \mathcal{N}(0, I) \quad \Rightarrow \quad x \leftarrow \mu + L \varepsilon,
 \]
 where $L$ is the Cholesky factor of the covariance matrix $\Sigma$. Therefore, we can write samples from the GP prior over the test points $(.)$ as follows:
 \[
-    \varepsilon \sim \mathcal{N}(0, I) \quad \Rightarrow \quad f(\cdot) \leftarrow m(.) + L_{\star} \varepsilon
+    \varepsilon \sim \mathcal{N}(0, I) \quad \Rightarrow \quad f(\cdot) \leftarrow m(.) + L_{\star} \varepsilon,
 \]
 where $L_{\star}$ is the Cholesky factor of the covariance matrix $K_{(.)(.)}$.
 
@@ -276,32 +276,32 @@ The Random Feature approximation is an alternate technique that allows us to obt
 \begin{theorem}[Bochner's theorem for stationary kernels]
     \citep{rudin2017fourier} A continuous function $k(x-y)$ is \label{ntn:spectral_measure}positive-definite if and only if it can be expressed as the Fourier transform of a finite non-negative measure $\rho$ :
     \[
-        k(x-y) &= \int_{-\infty}^{\infty} e^{i(x-y) \omega} d \rho(\omega) \label{eq:bochner_theorem}
+        k(x-y) &= \int_{-\infty}^{\infty} e^{i(x-y) \omega} d \rho(\omega). \label{eq:bochner_theorem}
     \]
 \end{theorem}
 Putting these two theorems together, we can see that for the choice of stationary kernels, where $k(x, x') = k(x - x')$, we can write \Cref{eq:bochner_theorem} as:
 \[
     k(x, x') &= \int_{-\infty}^{\infty} e^{i \omega x} e^{i \omega x'} d \rho(\omega) \label{eq:bochner_theorem_2} \\
-    &= \mathbb{E}_{\omega \sim \rho} \left[ e^{i \omega x} e^{i \omega x'} \right]
+    &= \mathbb{E}_{\omega \sim \rho} \left[ e^{i \omega x} e^{i \omega x'}. \right]
 \]
 For every choice of stationary kernel that we will consider in this work (Matern, RBF, etc.), the probability distribution $\rho(\omega)$ and the kernel $k$ are real, and the integral in \Cref{eq:bochner_theorem_2} converges when the complex exponentials are replaced with cosines. Therefore, we can write the following 
 \[
 k(x, x') &= \mathbb{E}_{\omega \sim \rho} \left[ e^{i \omega x} e^{i \omega x'} \right] = \mathbb{E}_{\omega \sim \rho} \left[ \phi(x) \phi(x') \right] \\
-&\approx \frac{1}{L} \sum_{l=1}^L \phi_{\ell}(x) \phi_{\ell}(x')
+&\approx \frac{1}{L} \sum_{l=1}^L \phi_{\ell}(x) \phi_{\ell}(x'),
 \]
 where $\phi_{\ell}(x)=L^{-1 / 2} \cos \left(2 \pi\left\langle\omega_{\ell}, x\right\rangle\right)$ for $\ell$ odd, and $\phi_{\ell}(x)=$ $L^{-1 / 2} \sin \left(2 \pi\left\langle\omega_{\ell}, x\right\rangle\right)$ for $\ell$ even, and $\omega_{\ell} \sim \rho$ \citep{rahimi2007random}. \label{ntn:random_feature_approximation}\label{ntn:random_feature}Therefore, writing $\Phi = [\phi_1, \ldots, \phi_L]$ as a \emph{Random Fourier Features} (RFF) matrix, we can approximate the kernel matrix $K_{XX}$ as:
 \[
-    K_{XX} \approx \Phi^T \Phi
+    K_{XX} \approx \Phi^T \Phi,
 \]
 where $\Phi$ is a $L \times n$ matrix. We can then estimate samples from a GP prior in a Monte Carlo fashion as follows:
 \[
-    f(\cdot) \approx \tilde{f}(\cdot)={\varepsilon}^T {\Phi}(\cdot)=\sum_{\ell=1}^L \varepsilon_{\ell} \phi_{\ell}(\cdot) \quad \varepsilon \sim \mathcal{N}(0, I) \label{eq:random_feature_approximation}
+    f(\cdot) \approx \tilde{f}(\cdot)={\varepsilon}^T {\Phi}(\cdot)=\sum_{\ell=1}^L \varepsilon_{\ell} \phi_{\ell}(\cdot) \quad \varepsilon \sim \mathcal{N}(0, I), \label{eq:random_feature_approximation}
 \]
 where $\varepsilon$ is a vector of random variables drawn from the standard Gaussian distribution. The approximation error in this approximation decays as $L$ goes to infinity. 
 
 \textcite{wilson2021pathwise} use Random Fourier features to approximate the ``pathwise'' conditioning update for posterior samples as:
 \[
-    (f \mid y)(\cdot) = \tilde{f}(\cdot) + \underbrace{{\Phi}(\cdot)^T {\Phi}({x})}_{\text {replaces } {K}_{(\cdot)X}} (\underbrace{{\Phi}({x})^T {\Phi}({x})}_{\text {replaces } {K}_{XX}}+{\Sigma})^{-1}(y-\tilde{f}_D-{\varepsilon}) \label{eq:random_feature_conditioning}
+    (f \mid y)(\cdot) = \tilde{f}(\cdot) + \underbrace{{\Phi}(\cdot)^T {\Phi}({x})}_{\text {replaces } {K}_{(\cdot)X}} (\underbrace{{\Phi}({x})^T {\Phi}({x})}_{\text {replaces } {K}_{XX}}+{\Sigma})^{-1}(y-\tilde{f}_D-{\varepsilon}), \label{eq:random_feature_conditioning}
 \]
 where $\tilde{f}_X$ is evaluating \Cref{eq:random_feature_approximation} at the training points $X$ and $\varepsilon$ is a vector of random variables drawn from the standard Gaussian distribution.
 
@@ -333,7 +333,7 @@ In order to apply SGD to the problem of sampling from the GP posterior, we need 
 
 Given a training dataset $\mathcal{D}_{\text{train}} = \{(x_i, y_i)\}_{i=1}^n$, the kernel $K_{XX}$, an assumption of a Gaussian likelihood with isotropic noise $\Sigma = \lambda I$, we can write the form of linear system that we need to solve as follows:
 \[
-    \alpha^\star(b) = (K_{XX} + \lambda I)^{-1} b, \quad \alpha \in \R^n \label{eq:alpha_star}
+    \alpha^\star(b) = (K_{XX} + \lambda I)^{-1} b, \quad \alpha \in \R^n. \label{eq:alpha_star}
 \]
 Now, let us define the following function:\label{ntn:representer_function}
 \[
@@ -342,13 +342,13 @@ Now, let us define the following function:\label{ntn:representer_function}
 Then we can see how we obtain the following
 \[
     h(\cdot\, ; \, y) &= \sum_{i=1}^n \alpha^{\star}_{i}(y) k(x_i,\cdot) \label{eq:posterior_mean_sgd} \\
-    &= (K_{(\cdot)X}) (K_{XX} + \lambda I)^{-1} y = m_{\star}(\cdot) \nonumber
+    &= (K_{(\cdot)X}) (K_{XX} + \lambda I)^{-1} y = m_{\star}(\cdot), \nonumber
 \]
 and similarly,
 \[
-f(\cdot) + h(\cdot\, ; \,y - f_X - \varepsilon) &= f(\cdot) + \sum_{i=1}^n \alpha^{\star}_{i}(y - f_X - \varepsilon) k(x_i,\cdot) \label{eq:posterior_sample_sgd} \\
-&= f(\cdot) + K_{(\cdot)X} (K_{XX} + \lambda I)^{-1} (y - f_X - \varepsilon) \nonumber \\
-&= (f \mid y)(\cdot) \nonumber
+f(\cdot) + h(\cdot\, ; \,y - f_X - \varepsilon) &= f(\cdot) + \sum_{i=1}^n \alpha^{\star}_{i}(y - f_X - \varepsilon) k(x_i,\cdot), \label{eq:posterior_sample_sgd} \\
+&= f(\cdot) + K_{(\cdot)X} (K_{XX} + \lambda I)^{-1} (y - f_X - \varepsilon), \nonumber \\
+&= (f \mid y)(\cdot). \nonumber
 \]
 Therefore, if we are able to obtain solutions to equations of the form in \Cref{eq:alpha_star}, we can obtain the posterior mean and samples.
 
@@ -367,13 +367,13 @@ Therefore, if we are able to obtain solutions to equations of the form in \Cref{
 The vector $\alpha^\star(b)$ of \cref{eq:alpha_star} is the minimiser of the following \textit{primal} kernel ridge regression objective,
 \begin{equation}
     \label{eq:primal_objective}
-L(\alpha; b) = \frac{1}{2}\norm{b - K_{XX} \alpha}^2 + \frac{\lambda}{2} \norm{\alpha}^2_{K_{XX}} 
+L(\alpha; b) = \frac{1}{2}\norm{b - K_{XX} \alpha}^2 + \frac{\lambda}{2} \norm{\alpha}^2_{K_{XX}} ,
 \end{equation}
 over $\alpha \in \R^n$ \cite{smola1998learning}. The \emph{primal} gradient and Hessian are
 \begin{equation}\label{eq:primal_gradient}
     \nabla L(\alpha; b) = K_{XX} (\lambda \alpha - b + K_{XX}\alpha)
     \spaced{and}
-    \nabla^2 L(\alpha; b) = K_{XX}(K_{XX}+\lambda I)
+    \nabla^2 L(\alpha; b) = K_{XX}(K_{XX}+\lambda I).
 \end{equation}
 respectively. We refer to the gradient descent algorithm that minimises it as \emph{Stochastic Gradient Descent (SGD)}.
 \end{selfdefinition}
@@ -396,12 +396,12 @@ where $\beta > 0$ is a step-size \label{ntn:step_size}and $\nabla L$ is the grad
 \label{ntn:minbatch_primal_objective}
 Let us rewrite the primal objective in explicit summation form:
 \[
-L(\alpha; b) = \frac{1}{2} \sum_{i=1}^n \left(b_i - \sum_{j=1}^n \alpha_j K_{(x_i)X}\right)^2 + \frac{\lambda}{2} \sum_{i=1}^n \alpha^T K_{XX} \alpha
+L(\alpha; b) = \frac{1}{2} \sum_{i=1}^n \left(b_i - \sum_{j=1}^n \alpha_j K_{(x_i)X}\right)^2 + \frac{\lambda}{2} \sum_{i=1}^n \alpha^T K_{XX} \alpha.
 \]
 Here, the first term is directly amenable to minibatching, giving us an unbiased estimator in $\mathcal{O}(n)$ terms. For the second term, we can use a random feature approximation for the kernel matrix to estimate the quantity in an unbiased fashion, i.e. $\|\alpha\|_{K_{XX}}^2 = \mathbb{E}_{\omega_i \sim \rho} [\alpha^T \Phi^T(x) \Phi(x) \alpha]$. Plugging in these two approximations and multiplying \Cref{eq:primal_objective} with $\lambda/2$, we therefore have the following linear-time estimator for the primal objective:
 \begin{selfdefinition}[Minibatched Primal Objective with Random Features]
     \[
-        \tilde{L}(\alpha; b) = \frac{n}{M} \sum_{i=1}^M \frac{\left(b_i - K_{(x_i)X} \alpha\right)^2}{\lambda} + \sum_{l=1}^L \left(\alpha^T \phi_{l}(X)\right)^2 \label{eq:linear_time_primal_objective}
+        \tilde{L}(\alpha; b) = \frac{n}{M} \sum_{i=1}^M \frac{\left(b_i - K_{(x_i)X} \alpha\right)^2}{\lambda} + \sum_{l=1}^L \left(\alpha^T \phi_{l}(X)\right)^2, \label{eq:linear_time_primal_objective}
     \]
 where $M$ is the minibatch size, $L$ is the number of random features used in the random feature approximation, and $\phi_l(x)$ is the $l$-th random feature evaluated on the entire training datapoints $X$.
 \end{selfdefinition}
@@ -582,7 +582,7 @@ To compute either the primal or the dual gradients, presented in \Cref{eq:primal
 
 For the sake of exposition\footnote{this is not an assumption of our algorithm and is purely for expositional purposes.}, assume that we are in an $M$-dimensional (finite) linear model setting, such that $K_{XX}$ is of the form $\sum_{j=1}^M \Zj \Zj\tran$, where $\Zj\in \R^n$ collects the values of the $j$th feature of the observations $x_1,\dots,x_n$. Then, for $j \sim \mathcal{U}{\{1, \ldots, M\}}$, we have that $\E[ M \Zj \Zj\tran] = K_{XX}$, and therefore 
 \begin{equation}
-    \widetilde g(\alpha) = \lambda\alpha - b + M \Zj \Zj\tran \alpha
+    \widetilde g(\alpha) = \lambda\alpha - b + M \Zj \Zj\tran \alpha,
 \end{equation}
 is an unbiased estimate of $g(\alpha)$; we call $\widetilde g$ the random feature estimate of $g$. \label{ntn:random_feature_estimate}The alternative we consider is random coordinates, where we take $i \sim \unif{\{1, \dotsc, N\}}$, and use   
 \begin{equation}
@@ -664,7 +664,7 @@ where $\forall j : \mathbb{E}[\hat{z}_j \hat{z}_j^T] = H_{\varphi}^{-1}$. We the
     \xi &:= f(x) + \varepsilon \\
     \hat{z} &:= H_{\varphi}^{-1} \xi
     \end{aligned}
-    \Longrightarrow \xi \sim \mathcal{N}\left(0, H_{\varphi}\right) \Longrightarrow \hat{z} \sim \mathcal{N}\left(0, H_{\varphi}^{-1}\right)
+    \Longrightarrow \xi \sim \mathcal{N}\left(0, H_{\varphi}\right) \Longrightarrow \hat{z} \sim \mathcal{N}\left(0, H_{\varphi}^{-1}\right).
 \]
 Solving the following linear system of equations obtains our samples:
 \[

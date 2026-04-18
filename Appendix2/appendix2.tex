@@ -120,11 +120,11 @@ To give a broader perspective, we give the following slight generalisation of a 
     \label{prop:controlled_crooks_fluctuation_theorem}
     Following \textcite{jarzynski1997nonequilibrium,chen2019stochastic}, define \emph{work} and \emph{free energy} as:
     \[
-        \mathcal{W}_T(X_{0:T}):=-\int_0^T \sigma^2 \partial_t \ln \hat{\pi}_t\left(X_t\right) \mathrm{d} t
+        \mathcal{W}_T(X_{0:T}):=-\int_0^T \sigma^2 \partial_t \ln \hat{\pi}_t\left(X_t\right) \mathrm{d} t,
     \]
     and
     \[
-        \mathcal{F}_t:=-\sigma^2 \ln Z_t:=\sigma^2 \ln \left(\hat{\pi}_t / \pi_t\right)
+        \mathcal{F}_t:=-\sigma^2 \ln Z_t:=\sigma^2 \ln \left(\hat{\pi}_t / \pi_t\right),
     \]
     respectively. Then, we have the controlled Crooks' identity:
     \[
@@ -136,14 +136,14 @@ To give a broader perspective, we give the following slight generalisation of a 
     \]
     By taking expectations and $\phi = 0$, we recover Jarzynski's equality:
     \[
-        \mathbb{E}_{\overrightarrow{\mathbb{P}}^{\pi_0, \sigma^2 \nabla \ln \pi}}\left[\exp \left(-\frac{1}{\sigma^2} \mathcal{W}_T\right)\right]=Z_T / Z_0
+        \mathbb{E}_{\overrightarrow{\mathbb{P}}^{\pi_0, \sigma^2 \nabla \ln \pi}}\left[\exp \left(-\frac{1}{\sigma^2} \mathcal{W}_T\right)\right]=Z_T / Z_0.
     \]
 \end{selfproposition}
 \begin{proof}
     Following the calculations in Appendix \ref{app:proof_cmcd_kl_loss_continuous} and using the forward-backward F{\"o}llmer-It{\^o} conversion formula from \Cref{eq:forward-reverse-ito-conversion} and \Cref{eq:reverse-forward-ito-conversion}, we have:
     \[
     &\ln \left( \frac{\d \bwdPcmcd{\hpi_T}}{\d \fwdPcmcd{\pi_0}}\right) (X_{0:T}) = \ln \mu(X_0) - \ln \nu (Y_T) \nonumber\\
-    &+ \int_0^T \nabla \ln \pi_t\left(X_t\right) \circ \mathrm{d} X_t-\frac{1}{\sigma^2} \int_0^T \nabla \phi_t\left(X_t\right) \cdot \sigma^2 \nabla \ln \pi_t\left(X_t\right) \mathrm{d} t -\int_0^T \Delta \phi\left(X_t\right) \mathrm{d} t \nonumber
+    &+ \int_0^T \nabla \ln \pi_t\left(X_t\right) \circ \mathrm{d} X_t-\frac{1}{\sigma^2} \int_0^T \nabla \phi_t\left(X_t\right) \cdot \sigma^2 \nabla \ln \pi_t\left(X_t\right) \mathrm{d} t -\int_0^T \Delta \phi\left(X_t\right) \mathrm{d} t. \nonumber
     \]
     Then via It{\^o}'s lemma applied to the unnormalised annealed log target $\ln \hat{\pi}_t = \ln \pi_t - \ln Z_t$, we have:
     \[
@@ -156,8 +156,8 @@ To give a broader perspective, we give the following slight generalisation of a 
     \]
     for arbitrary initial and final densities $\mu$ and $\nu$. Crooks' generalised fluctuation theorem \citep{crooks1999entropy} now follows from taking $\phi = 0$ and the controlled version in \Cref{prop:controlled_crooks_fluctuation_theorem} follows from $\mu = \pi_0$ and $\nu = \pi_T$. Finally, notice that:
     \[
-    1 &= \mathbb{E}_{\overrightarrow{\mathbb{P}}^{\pi_0, \sigma^2 \nabla \ln \pi}} \left[ \left( \frac{\d \bwdPcmcd{\hpi_T}}{\d \fwdPcmcd{\pi_0}}\right)^{-1}\right] \nonumber \\
-    &=\!\mathbb{E}_{\overrightarrow{\mathbb{P}}^{\pi_0, \sigma^2 \nabla \ln \pi}} \left[\!\exp \left(\!-\!\ln \mu\left(X_0\right)\!+\!\ln \nu\left(X_T\right)\!-\!\ln \hat{\pi}_T\left(X_T\right)\!+\!\ln \hat{\pi}_0\left(X_0\right)\!+\!\int_0^T \partial_t \ln \hat{\pi}_t\left(X_t\right)\! \mathrm{d} t\right) \!\right] \nonumber
+    1 &= \mathbb{E}_{\overrightarrow{\mathbb{P}}^{\pi_0, \sigma^2 \nabla \ln \pi}} \left[ \left( \frac{\d \bwdPcmcd{\hpi_T}}{\d \fwdPcmcd{\pi_0}}\right)^{-1}\right], \nonumber \\
+    &=\!\mathbb{E}_{\overrightarrow{\mathbb{P}}^{\pi_0, \sigma^2 \nabla \ln \pi}} \left[\!\exp \left(\!-\!\ln \mu\left(X_0\right)\!+\!\ln \nu\left(X_T\right)\!-\!\ln \hat{\pi}_T\left(X_T\right)\!+\!\ln \hat{\pi}_0\left(X_0\right)\!+\!\int_0^T \partial_t \ln \hat{\pi}_t\left(X_t\right)\! \mathrm{d} t\right) \!\right]. \nonumber
     \]
     which implies the Jarzynski equality when considering the boundaries $\mu = \pi_0$ and $\nu = \pi_T$.
 \end{proof}
@@ -302,14 +302,14 @@ To discretise the above processes we follow the exact same discretisation scheme
 \end{algorithmic}
 \end{algorithm}
 
-Now via Propostion 1 in \textcite{geffner2023langevin} it follows that
+Now via Proposition 1 in \textcite{geffner2023langevin} it follows that
 \begin{align}
 &\frac{\pi_0(X_0, Z_0)}{\pi_T(X_T, Z_T)}    \prod_{k=0}^{K-1} \frac{F_{t_k}(Z_{t_{k+1}}, X_{t_{k+1}} \vert Z_{t_{k}}, X_{t_{k}})}{B_{t_k}(Z_{t_{k}}, X_{t_{k}} \vert Z_{t_{k+1}}, X_{t_{k+1}})}  \nonumber \\
-&\;\;=\frac{\pi_0(X_0, Z_0)}{\pi_T(X_T, Z_T)} \prod_{k=0}^{K-1} \frac{\mathcal{N}\left(X_{t_{k}}' \mid X_{t_{k}}(1-\sigma \Delta {t_k}) + \nabla \phi_{t_k}( X_{t_{k}} ,Z_{t_{k}}) \Delta t_k , 2 \sigma \Delta t_{k} I\right)}{\mathcal{N}\left(X_{t_{k}} \mid X_{t_{k}}'(1-\sigma \Delta {t_k}) - \nabla \phi_{t_k}( X_{t_{k}}' ,Z_{t_{k}}) \Delta t_k , 2 \sigma \Delta t_{k} I\right)}
+&\;\;=\frac{\pi_0(X_0, Z_0)}{\pi_T(X_T, Z_T)} \prod_{k=0}^{K-1} \frac{\mathcal{N}\left(X_{t_{k}}' \mid X_{t_{k}}(1-\sigma \Delta {t_k}) + \nabla \phi_{t_k}( X_{t_{k}} ,Z_{t_{k}}) \Delta t_k , 2 \sigma \Delta t_{k} I\right)}{\mathcal{N}\left(X_{t_{k}} \mid X_{t_{k}}'(1-\sigma \Delta {t_k}) - \nabla \phi_{t_k}( X_{t_{k}}' ,Z_{t_{k}}) \Delta t_k , 2 \sigma \Delta t_{k} I\right)},
 \end{align}
 then we can use the above discrete time RND to approximate the KL divergence between SDEs (\Cref{eq:controlled annealing2}) and  (\Cref{eq:controlled annealing2rev}) yielding our objective for the under dampened setting:
 \begin{align}
-   \mathcal{L}^{\mathrm{CMCD-{UD}}}_{\text{KL}}(\!\phi\!) \!\approx\! \E\left[\!\ln\!\frac{\pi_0(X_0, Z_0)}{\pi_T(X_T, Z_T)} \!\!\prod_{k=0}^{K-1} \!\frac{\mathcal{N}\left(X_{t_{k}}'\! \!\mid \!\!X_{t_{k}}(1-\sigma \Delta {t_k}) + \nabla \!\phi_{t_k}\!( X_{t_{k}} ,Z_{t_{k}}) \Delta t_k , 2 \sigma \Delta t_{k} I\right)}{\mathcal{N}\left(X_{t_{k}} \!\!\mid \!\!X_{t_{k}}'(1-\sigma \Delta {t_k}) - \nabla \!\phi_{t_k}\!( X_{t_{k}}' ,Z_{t_{k}}) \Delta t_k , 2 \sigma \Delta t_{k} I\right)}\!\right]
+   \mathcal{L}^{\mathrm{CMCD-{UD}}}_{\text{KL}}(\!\phi\!) \!\approx\! \E\left[\!\ln\!\frac{\pi_0(X_0, Z_0)}{\pi_T(X_T, Z_T)} \!\!\prod_{k=0}^{K-1} \!\frac{\mathcal{N}\left(X_{t_{k}}'\! \!\mid \!\!X_{t_{k}}(1-\sigma \Delta {t_k}) + \nabla \!\phi_{t_k}\!( X_{t_{k}} ,Z_{t_{k}}) \Delta t_k , 2 \sigma \Delta t_{k} I\right)}{\mathcal{N}\left(X_{t_{k}} \!\!\mid \!\!X_{t_{k}}'(1-\sigma \Delta {t_k}) - \nabla \!\phi_{t_k}\!( X_{t_{k}}' ,Z_{t_{k}}) \Delta t_k , 2 \sigma \Delta t_{k} I\right)}\!\right].
 \end{align}
 Where the expectation is taken with respect to the discrete-time process in \Cref{alg:Fldvi}.
 

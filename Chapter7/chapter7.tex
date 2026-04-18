@@ -105,7 +105,7 @@ There are quite a few approaches that tune these hyperparameters, such as by tun
 Considering our model class $\mathbb{M}_{\varphi} = \{A, \Sigma, \phi\}$, and denoting $H_{\varphi} = \Phi A^{-1} \Phi^T + \Sigma$, we can write the marginal likelihood from the functional-space viewpoint exactly as before:
 \[
     \mathcal{L}(\varphi) &:= p(\rmY \mid \varphi) =-\frac{1}{2} \rmY^T H_{\varphi}^{-1} \rmY-\frac{1}{2} \log \operatorname{det}\left(H_{\varphi}\right)-\frac{n}{2} \log (2 \pi) \nonumber \\
-    &= \smash{-\frac{1}{2} \rmY^T \left(\Phi A^{-1} \Phi^T + \Sigma\right)^{-1} \rmY-\frac{1}{2} \log \operatorname{det}\left(\Phi A^{-1} \Phi^T + \Sigma\right)^{-1} - \frac{n}{2} \log (2 \pi)} \label{eq:marginal-likelihood-functional-space}
+    &= \smash{-\frac{1}{2} \rmY^T \left(\Phi A^{-1} \Phi^T + \Sigma\right)^{-1} \rmY-\frac{1}{2} \log \operatorname{det}\left(\Phi A^{-1} \Phi^T + \Sigma\right)^{-1} - \frac{n}{2} \log (2 \pi)}. \label{eq:marginal-likelihood-functional-space}
 \]
 We can then optimise this quantity with respect to the hyperparameters $A, \Sigma, \Phi$ using gradient descent. In practise, we use fixed feature maps $\phi$ and assume a fixed, known covariance matrix $\Sigma$. Therefore, our hyperparameter $A$ is the only one that we need to optimise. We can see that naive gradient descent of this quantity in the function-space viewpoint is $\mathcal{O}((nm)^3)$, which is quite expensive. 
 
@@ -113,7 +113,7 @@ We can then optimise this quantity with respect to the hyperparameters $A, \Sigm
 
 We can equivalently write the function-space marginal likelihood in \Cref{eq:marginal-likelihood-functional-space} in terms of the weight-space viewpoint as:
 \[
-    \mathcal{L}(\varphi) = - \frac{1}{2} \|\rmY - \Phi \theta_{\star}\|_{\Sigma^{-1}}^2 - \frac{1}{2} \| \theta_{\star} \|_A^2 + \frac{1}{2} \log \det B - \frac{1}{2} \log \det \frac{A_{\star}}{A} - \frac{n}{2} \log (2 \pi) \label{eq:marginal-likelihood-weight-space}
+    \mathcal{L}(\varphi) = - \frac{1}{2} \|\rmY - \Phi \theta_{\star}\|_{\Sigma^{-1}}^2 - \frac{1}{2} \| \theta_{\star} \|_A^2 + \frac{1}{2} \log \det B - \frac{1}{2} \log \det \frac{A_{\star}}{A} - \frac{n}{2} \log (2 \pi). \label{eq:marginal-likelihood-weight-space}
 \]
 \begin{proof}
 This identity follows naturally from \textcite[g. 167, Equation (3.86)]{Bishop2006-tu}.
@@ -137,7 +137,7 @@ where the first term is the \emph{evidence lower bound} (ELBO), and the second t
 \mathcal{M}(\theta_q, \Sigma_q; \mathbb{M}) &= \frac{1}{2} \mathbb{E}_Q \left[ -n \log (2 \pi) - \log \det \Sigma - \| \rmY - \Phi \theta \|_{\Sigma^{-1}}^2 \right. \nonumber \\
 &- \left. \log \det A^{-1} - \|\theta\|_A^2\right] + \log \det \Sigma_q + \frac{d'}{2} \\
 &= \frac{1}{2} \left( -n \log (2 \pi) - \log \det \Sigma - \| \rmY - \Phi \theta_q \|_{\Sigma^{-1}}^2 - \Tr(\Phi \Sigma_q \Phi^T \Sigma^{-1}) \right. \nonumber \\
-&\quad \left. - \log \det A^{-1} - \|\theta_q\|_A^2 - \Tr(\Sigma_q A) + \log \det \Sigma_q + d' \right) \label{eq:vi_full}
+&\quad \left. - \log \det A^{-1} - \|\theta_q\|_A^2 - \Tr(\Sigma_q A) + \log \det \Sigma_q + d' \right). \label{eq:vi_full}
 \end{align}
 
 Here, we can take gradient steps of the ELBO w.r.t $\theta_q$ and $\Sigma_q$ in order to calculate the optimal variational distribution $Q$. However, taking gradients w.r.t $\Sigma_q$ can be quite complicated in practise, and often slow to converge in practise due to $\mathcal{O}(n^2)$ degrees of freedom. Instead, we can consider a simpler variational problem where we fix a choice of $\Sigma_q$ and optimise only for $\theta_q$.\label{ntn:variational_parameters}
@@ -157,7 +157,7 @@ Specifically, we are interested in optimising the ELBO w.r.t $A$, keeping $\Sigm
 \begin{selfdefinition}[Fixed-Covariance ELBO]
     \label{def:fixed_cov_elbo}
 \[
-    \mathcal{M}(\theta_q; A) = - \frac{1}{2} \|\theta_q\|_A^2 - \frac{1}{2} \log \det \frac{A_{\star}}{A} + C \label{eq:vi_fixed_cov_A}
+    \mathcal{M}(\theta_q; A) = - \frac{1}{2} \|\theta_q\|_A^2 - \frac{1}{2} \log \det \frac{A_{\star}}{A} + \text{const}. \label{eq:vi_fixed_cov_A}
 \]
 \end{selfdefinition}
 Obviously, fixing $\Sigma_q = A_{\star}^{-1}$ introduces $\mathcal{O}(d'^3)$ operations into the ELBO, and this choice might seem unintuitive at first glance. However, in the next section we will see first-order iterative algorithms that can further approximate this simplified ELBO quite efficiently.
@@ -212,9 +212,9 @@ One issue with \Cref{def:mackay_first_order_solution} is that the variational me
         \]
         \item (M step) We lower bound the log-probability density of the observed data, i.e. the evidence, for the model with posterior $\hat{P}$ and precision $A$ as
         \[
-            \log p\left(Y ; A\right) \geq-\frac{1}{2}\|\theta_{\star}\|_{A}^2-\frac{1}{2} \log \operatorname{det}\left(\frac{A_{\star}}{A}\right)+C=: \mathcal{M}\left(A\right)
+            \log p\left(Y ; A\right) \geq-\frac{1}{2}\|\theta_{\star}\|_{A}^2-\frac{1}{2} \log \operatorname{det}\left(\frac{A_{\star}}{A}\right)+\text{const.} =: \mathcal{M}\left(A\right).
         \]
-        for $C$ independent of $A$. We choose an $A$ that improves this lower bound, usually through a first-order update rule as in \Cref{def:mackay_first_order_solution}.
+        for a constant independent of $A$. We choose an $A$ that improves this lower bound, usually through a first-order update rule as in \Cref{def:mackay_first_order_solution}.
     \end{itemize}
 \end{definition}
 
@@ -287,7 +287,7 @@ We have seen stochastic gradient descent algorithms be extremely useful in the G
     \label{def:zero_mean_posterior_samples}
     The minimiser $\bar{\theta}$ of the following loss function:
     \[
-    L(\theta) := \frac{1}{2} \| \Phi \theta - \varepsilon\|^2_{\Sigma^{-1}} + \frac{1}{2} \| \theta - \theta_0 \|^2_{A} \label{eq:zero_mean_posterior_samples_loss}, \quad \theta_0 \sim \mathcal{N}(0, A^{-1}), \varepsilon \sim \mathcal{N}(0, \Sigma)
+    L(\theta) := \frac{1}{2} \| \Phi \theta - \varepsilon\|^2_{\Sigma^{-1}} + \frac{1}{2} \| \theta - \theta_0 \|^2_{A} \label{eq:zero_mean_posterior_samples_loss}, \quad \theta_0 \sim \mathcal{N}(0, A^{-1}), \varepsilon \sim \mathcal{N}(0, \Sigma),
     \]
     satisfies $\bar{\theta} \sim \mathcal{N}(0, A_{\star}^{-1})$, i.e. $\bar{\theta} = \bar{\theta}_{\star}$.
 \end{selfdefinition}
@@ -321,11 +321,11 @@ Therefore, we can see that the mini-batch gradients of $L^{\prime}$ and $L$ are 
     \label{lem:gradient_variance_for_objectives}
     The single-datapoint stochastic gradient estimators for the data dependent terms of the loss functions $L$ and $L^{\prime}$ are given by:
     \[
-    \hat{g}=n \phi\left(X_j\right)^T\left(\phi\left(X_j\right) \theta - \varepsilon_j\right) \quad \text { and } \quad \hat{g}^{\prime}=n \phi\left(X_j\right)^T \phi\left(X_j\right) \theta
+    \hat{g}=n \phi\left(X_j\right)^T\left(\phi\left(X_j\right) \theta - \varepsilon_j\right) \quad \text { and } \quad \hat{g}^{\prime}=n \phi\left(X_j\right)^T \phi\left(X_j\right) \theta,
     \]
     where $\theta \in \mathbb{R}^{d^{\prime}}$, and we have a datapoint index $j \sim \operatorname{Unif}(\{1, \ldots, n\})$. We then see that:
     \[
-    \frac{1}{n}\left[\operatorname{Var} \hat{g}-\operatorname{Var} \hat{g}^{\prime}\right]=\operatorname{Var}\left(\Phi^T \Sigma^{-1} \varepsilon\right)-2 \operatorname{Cov}\left(\Phi^T \Sigma^{-1} \Phi \theta, \Phi^T \Sigma^{-1} \varepsilon\right)=: \Delta
+    \frac{1}{n}\left[\operatorname{Var} \hat{g}-\operatorname{Var} \hat{g}^{\prime}\right]=\operatorname{Var}\left(\Phi^T \Sigma^{-1} \varepsilon\right)-2 \operatorname{Cov}\left(\Phi^T \Sigma^{-1} \Phi \theta, \Phi^T \Sigma^{-1} \varepsilon\right)=: \Delta.
     \]
 \end{selflemma}
 \begin{proof}
@@ -377,7 +377,7 @@ In recent years, \textcite{khan2019approximate} have shown that the LLA has an e
 
 Let us consider the problem of $m$-output prediction using a neural network. Suppose that we have trained a neural network of the form $f \colon \R^{d'} \times \R^d \to \R^m$, obtaining weights $\hat{\theta}_{\text{nn}} \in \R^{d'}$, using a loss of the form\label{ntn:nn_fn}\label{ntn:nn_weights}\label{ntn:likelihood_loss_fn}\label{ntn:regularisation_fn}\label{ntn:loss_fn}
 \begin{gather}\label{eq:surrogate_loss}
-    \textstyle{\mathcal{L}(f(\theta, \cdot)) = \sum_{i=1}^n \ell(y_i, f(\theta, x_i)) + \mathcal{R}(\theta)}
+    \textstyle{\mathcal{L}(f(\theta, \cdot)) = \sum_{i=1}^n \ell(y_i, f(\theta, x_i)) + \mathcal{R}(\theta)},
 \end{gather}
 where $\ell$ is a data fit term (a negative log-likelihood) and $\mathcal{R}$ is a regulariser. We now show how to use linearised Laplace to quantify uncertainty in the network predictions $f(\hat{\theta}_{\text{nn}}, \cdot)$, where $\hat{\theta}_{\text{nn}}$ are the neural network weights obtained after standard neural network training. 
 
@@ -399,7 +399,7 @@ The linearised Laplace method consists of two consecutive approximations, the la
 \begin{selfremark}[Linearised Laplace results in a Gaussian Linear Model]
     For an L2-regularisation loss of the form $\mathcal{R}(\theta) = \frac{1}{2} \theta^T A \theta$, we have that
 \[
-    (\nabla_{\theta}^2 \mathcal{L})^{-1}(h(\hat{\theta}_{\text{lin}}, \cdot))= (A + \Phi^T \Sigma^{-1} \Phi) = A_{\star}
+    (\nabla_{\theta}^2 \mathcal{L})^{-1}(h(\hat{\theta}_{\text{lin}}, \cdot))= (A + \Phi^T \Sigma^{-1} \Phi) = A_{\star},
 \]
 with $\Sigma$ a block diagonal matrix with blocks $\Sigma_i^{-1} = \nabla^2_{\hat y_i} \ell(y_i, \hat y_i)$ evaluated at $\hat y_i = h(\hat{\theta}_{\text{lin}}, x_i)$.
 \end{selfremark}
@@ -417,7 +417,7 @@ Both of these departures are recommended within the literature \citep{antoran202
 The linearised Laplace predictive posterior at an input $x$ is $\mathcal{N}(f(\hat{\theta}_{\text{nn}}, x), \phi(x) A_{\star}^{-1} \phi(x)^T)$, which is $\mathcal{O}(d'^3)$. Even given $A_{\star}^{-1}$, evaluating this na\"ively requires instantiating $\phi(x) = \nabla_{\theta} f(\hat{\theta}_{\text{nn}}, x)$, at a cost of $m$ vector-Jacobian products (i.e. backward passes). This is prohibitive for large $m$.
 However, expectations of any function $r: \R^m \to \R$ under the predictive posterior can be approximated using only samples from $\mathcal{N}(\hat{\theta}_{\text{nn}}, A_{\star}^{-1})$ as
 \begin{equation}
-   \E[r] \approx \frac{1}{k} \sum_{j=1}^k r( \psi_j) \text{ for }  \psi_j = f(\hat{\theta}_{\text{nn}}, x) + \phi(x)\zeta_j \text{ with } \zeta_1, \dotsc, \zeta_k \sim \mathcal{N}(0, A_{\star}^{-1})
+   \E[r] \approx \frac{1}{k} \sum_{j=1}^k r( \psi_j) \text{ for }  \psi_j = f(\hat{\theta}_{\text{nn}}, x) + \phi(x)\zeta_j \text{ with } \zeta_1, \dotsc, \zeta_k \sim \mathcal{N}(0, A_{\star}^{-1}),
 \end{equation}
 requiring only $k$ Jacobian-vector products. In practice, we find $k$ much smaller than $m$ suffices.\label{ntn:sampling_is_efficient}
 
@@ -443,7 +443,7 @@ Further, in our sampling-based formulation, we can easily obtain a stochastic es
 \begin{selfdefinition}[Stochastic g-prior Estimation]
 From \Cref{eq:low_variance_objective_zero_mean_posterior_samples_loss}, we have $\theta_n = \theta_0 + \theta'$, with $\theta' := A^{-1} \Phi^T \Sigma^{-1} \varepsilon$. We can then estimate the scaling factor through the following stochastic estimate\footnote{$\odot$ refers to the elementwise product and to the elementwise power when used in an exponent.}:
 \[
-s = \alpha^{-1} \left( \mathbb{E}[ \theta' \odot \theta']\right)^{\odot-\nicefrac{1}{2}} \approx  \alpha^{-1} \left[ \frac{1}{k} \sum_{j=1}^k \theta'_j \odot \theta'_j \right]^{\odot-\nicefrac{1}{2}}
+s = \alpha^{-1} \left( \mathbb{E}[ \theta' \odot \theta']\right)^{\odot-\nicefrac{1}{2}} \approx  \alpha^{-1} \left[ \frac{1}{k} \sum_{j=1}^k \theta'_j \odot \theta'_j \right]^{\odot-\nicefrac{1}{2}}.
 \]
 \end{selfdefinition}
 
@@ -505,7 +505,7 @@ Now, having established the effective linear model corresponding to the LLA for 
  The regularised classification loss $\mathcal{L}$ is non-quadratic and thus Polyak averaging is no longer optimal \citep{Bach2014sgd}. Thus here we also employ a linear learning rate decay schedule. For optimising both the sampling and classification loss objectives we find that gradient clipping helps prevent oscillations at the start of training and as a result speeds up convergence.
  \end{selfremark}
 
-\subsection{Tomographic Reconstruction.}
+\subsection{Tomographic Reconstruction}
 
 \paragraph{Problem setup} Tomographic reconstruction consists in solving a linear inverse problem in imaging where we observe a set of measurements $y \in \R^{m}$, which we assume to be generated as $y \,{=}\, U x^* + \eta$ for $U \in \R^{m \times d}$ the discrete Radon transform\label{ntn:radon_transform}, $x^* \in \R^{d}$ the image to reconstruct and $\eta \sim \mathcal{N}(0, I)$ random noise. We have $m \ll d$, making the problem underconstrained. We assemble the Radon operator $U$ as a sparse matrix taking in an image of resolution $(501$px$)^2$ and outputting a measurement tensor coherent with the described geometry \cite{der2019cone,barbano2021deep, antoran2022tomography,barbano2023painless}. 
 
@@ -514,7 +514,7 @@ Now, having established the effective linear model corresponding to the LLA for 
 \item Tomographic reconstruction is a regression problem for which we use a Gaussian likelihood with fixed noise $\Sigma=I$.
 \item The linear model's loss function $\mathcal{L}$ is therefore quadratic and the Laplace approximation is not needed. Both the sample loss and the linear model's loss can be optimised in closed form by solving a linear system of equations given by the observation covariance, i.e. the kernel matrix for tomography as,\label{ntn:kernel_tom}
 \[
-K_{\text{tom}} := U\Phi ( \alpha^{-1} \text{diag}(s^{\odot 2}) ) \Phi^T U^T + \Sigma
+K_{\text{tom}} := U\Phi ( \alpha^{-1} \text{diag}(s^{\odot 2}) ) \Phi^T U^T + \Sigma,
 \]
 where the linear operator $U$ combines with the neural network Jacobian to build the feature embedding $U \Phi$. 
 \item Since we have closed-form solutions that can be calculated by solving linear system of equations, we  solve against the kernel matrix using the preconditioned conjugate gradient (CG) method described by \cite{gardner18}.

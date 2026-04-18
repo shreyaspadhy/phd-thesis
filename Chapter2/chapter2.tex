@@ -16,11 +16,11 @@
 \vspace{-0.3cm}\Cref{chapter:introduction} has highlighted the critical role of sampling from complex, high-dimensional probability distributions across modern machine learning, from generative modelling to large-scale Bayesian inference, and outlined this thesis's core contributions towards unifying frameworks and scalable algorithms. Before delving into our novel methodologies in subsequent chapters, this chapter provides a foundational overview of the sampling problem itself, establishing common terminology and reviewing key existing approaches. Further, we attempt to show how many existing algorithms are specific instantiations of an underlying stochastic differential equation, therefore motivating stochastic calculus as a building block for our unifying frameworks.
 
 \label{ntn:mapping_x_to_z}\label{ntn:base_distbn}
-The task of sampling in machine learning can be broadly divided into three distinct paradigms. In the first task of \emph{unnormalised density sampling}, (often termed simply \emph{sampling}), we can evaluate an unnormalised density $\hpi(x)$ and typically its gradient\footnote{The assumption is often made that one can evaluate the gradient of the log-density $\nabla_x \ln \hpi$. These are equivalent assumptions, as by the chain rule of calculus we can write $\nabla_x \ln \hpi(x) = \frac{1}{\hpi(x)} \nabla_x \hpi(x)$} $\nabla_x \hpi$, but lack access to direct samples from $\hpi(x)$. The objective then is to generate such samples to approximate expectations or estimate normalising constants, often by learning a parametrised mapping $p_{\theta}(x \mid z)$ that transforms samples from a simple base distribution $\mu(z)$ to samples from $\hpi(x)$ (\Cref{fig:sampling_paradigm}, (I.)).
+The task of sampling in machine learning can be broadly divided into three distinct paradigms. In the first task of \emph{unnormalised density sampling}, (often termed simply \emph{sampling}), we can evaluate an unnormalised density $\hpi(x)$ and typically its gradient\footnote{The assumption is often made that one can evaluate the gradient of the log-density $\nabla_x \ln \hpi$. These are equivalent assumptions, as by the chain rule of calculus we can write $\nabla_x \ln \hpi(x) = \frac{1}{\hpi(x)} \nabla_x \hpi(x)$.} $\nabla_x \hpi$, but lack access to direct samples from $\hpi(x)$. The objective then is to generate such samples to approximate expectations or estimate normalising constants, often by learning a parametrised mapping $p_{\theta}(x \mid z)$ that transforms samples from a simple base distribution $\mu(z)$ to samples from $\hpi(x)$ (\Cref{fig:sampling_paradigm}, (I.)).
 
 % In the first situation, we don't have any existing samples from an unnormalised probability distribution, and we are only able to evaluate the unnormalised density $\hpi(x)$ and the gradient of the density $\nabla_x \hpi(x)$The task of \textit{unnormalised density sampling} (\Cref{fig:sampling_paradigm}, I.) focuses on learning to draw samples from this probability distribution (and often-times using these samples to estimate the normalising constant). 
 \label{ntn:generative_modelling}\label{ntn:training_dataset}
-Secondly, \textit{generative modelling} (\Cref{fig:sampling_paradigm}, (II.)) addresses scenarios where we possess a dataset $\mathcal{D}_{\text{train}} = \{x^{(i)}\}_{i=1}^{N_{\text{train}}}$ drawn from $\pi(x)$, but cannot directly evaluate $\pi(x)$ or its gradients. The goal is then to learn a parametrised approximation $p_{\theta}(x \mid z)$ that approximates $\pi(x)$, enabling the generation of new samples by transforming samples from a base distribution $\mu(z)$ (\Cref{fig:sampling_paradigm}, (II.))
+Secondly, \textit{generative modelling} (\Cref{fig:sampling_paradigm}, (II.)) addresses scenarios where we possess a dataset $\mathcal{D}_{\text{train}} = \{x^{(i)}\}_{i=1}^{N_{\text{train}}}$ drawn from $\pi(x)$, but cannot directly evaluate $\pi(x)$ or its gradients. The goal is then to learn a parametrised approximation $p_{\theta}(x \mid z)$ that approximates $\pi(x)$, enabling the generation of new samples by transforming samples from a base distribution $\mu(z)$ (\Cref{fig:sampling_paradigm}, (II.)).
 
 \begin{figure}[!t]
     \centering
@@ -58,15 +58,15 @@ A related problem is that of \textit{partition function estimation}, which is a 
     \label{fig:is_worse_vs_better}
 \end{figure}
 
-Importance Sampling (IS) algorithms \citep{kloek1978bayesian}tackle the problem of estimating expectations under $\pi$ by using a simpler approximating distribution $q$ that is easy to sample from. By a simple manipulation of the expectation, we can write
+Importance Sampling (IS) algorithms \citep{kloek1978bayesian} tackle the problem of estimating expectations under $\pi$ by using a simpler approximating distribution $q$ that is easy to sample from. By a simple manipulation of the expectation, we can write
 \[
     \mathbb{E}_\pi[f] = \frac{1}{Z} \int f(x) \frac{\hpi(x)}{q(x)} q(x) \mathrm{d} x = \frac{1}{Z} \mathbb{E}_q[f(x) \underbrace{\frac{\hpi(x)}{q(x)}}_{w(x)}]. \label{eq:is_weights}
 \]
 Consequently, we can write expectations under $\hpi$ as expectations under $q$,\label{ntn:importance_dist} i.e. $\mathbb{E}_{\hpi}[f] = \mathbb{E}_q[f(x) w(x)]$. From \Cref{eq:partition_function}, we see that $Z$ is simply the expectation of the indicator function under $\hpi$, and so we can estimate $Z$ by drawing samples from $q$ and computing the empirical average of $w(x)$ over these samples, giving us the empirical estimate $\hat{Z}$ as:\label{ntn:importance_weights}\label{ntn:importance_weights_estimate}
 \begin{subequations}
 \begin{align}
-    \hat{Z} &= \frac{1}{N} \sum_{i=1}^{N} w(x^{(i)}), \quad x^{(i)} \sim q \label{eq:partition_function_estimate} \\ 
-    \mathbb{E}_\pi[f] &\approx \frac{1}{\hat{Z}} \frac{1}{N} \sum_{i=1}^{N} f(x^{(i)}) w(x^{(i)}) \label{eq:is_expectation_estimate}
+    \hat{Z} &= \frac{1}{N} \sum_{i=1}^{N} w(x^{(i)}), \quad x^{(i)} \sim q \label{eq:partition_function_estimate}, \\ 
+    \mathbb{E}_\pi[f] &\approx \frac{1}{\hat{Z}} \frac{1}{N} \sum_{i=1}^{N} f(x^{(i)}) w(x^{(i)}) \label{eq:is_expectation_estimate}.
 \end{align}
 \end{subequations}
 Unfortunately, IS approaches run into some issues. Firstly, the choice of $q$ is critical to the performance of the algorithm, and in general, it is difficult to choose a $q$ that has good coverage over the support of $\pi$ and is easy to sample from. Secondly, this approach doesn't provide us with a way to design an approximation to $\pi$ that we can draw additional samples from; we can merely estimate expectations. We therefore turn our attention to Markov Chain Monte Carlo (MCMC) algorithms, which can be used to draw samples from $\pi$ directly, and later, we see how we can consider an Importance Sampling viewpoint of MCMC algorithms that allow us to accurately estimate expectations as well.
@@ -136,7 +136,7 @@ The marginal proposal density $q_t(x_t)$ at an intermediate step $t$ is then giv
 \end{equation}
 However, computing $q_t(x_t)$ for $t \geq 1$ via this recursive integration is generally intractable, rendering the direct calculation of $w_{\text{mar}}(x_T)$ infeasible. AIS circumvents this issue by operating in the extended path space, defining a corresponding extended target distribution as follows:\label{ntn:ais_extended_target}
 \begin{equation}
-    \Gamma\left(x_{0: T}\right)=\hat{\pi}\left(x_T\right) \prod_{t=1}^{T} B_{t+1}\left(x_t \mid x_{t+1}\right) \label{eq:ais_extended_target}
+    \Gamma\left(x_{0: T}\right)=\hat{\pi}\left(x_T\right) \prod_{t=1}^{T} B_{t+1}\left(x_t \mid x_{t+1}\right), \label{eq:ais_extended_target}
 \end{equation}
 where $B_{t+1}(x_t | x_{t+1})$ are backward Markov transition kernels, typically chosen such that $B_t$ leaves $\pi_t$ invariant when run in reverse (i.e., sampling $x_t$ from $x_{t+1}$). The importance weight for the entire path $x_{0:T}$ is then defined, similar to \Cref{eq:is_weights} as
 \begin{equation}
@@ -187,7 +187,7 @@ AIS offers considerable flexibility in choosing the sequence of intermediate dis
     \]
     where the arrows signify the direction in time of the evolution of the corresponding SDE. Similarly, the importance sampling weights in \Cref{eq:ais_weights} converge to the density ratio between the forwards and backwards path measures in \Cref{eq:ais_path_measures}, which in turn is defined as a quantity called the Radon-Nikodym derivative:
     \[
-        w(x_{0:T}) \rightarrow \frac{\rightP_{\text{fwd}}(x_{0:T})}{\leftP_{\text{bwd}}(x_{0:T})} \rightarrow \frac{\dd \rightP_{\text{fwd}}}{\dd \leftP_{\text{bwd}}}
+        w(x_{0:T}) \rightarrow \frac{\rightP_{\text{fwd}}(x_{0:T})}{\leftP_{\text{bwd}}(x_{0:T})} \rightarrow \frac{\dd \rightP_{\text{fwd}}}{\dd \leftP_{\text{bwd}}}.
     \]
     We will see in \Cref{chapter:sde} that the Radon-Nikodym derivative is not well-defined for the density ratio of a forward path measure w.r.t a backward path measure, and will therefore motivate us to develop a novel theorem defining this quantity in \Cref{chapter:cmcd}.
 \end{lightgraybox}
@@ -288,13 +288,13 @@ Interestingly, \textcite{song2020score} showed that in the continuous limit, the
 \end{lightgraybox}
 
 
-\section{Towards Unification: A hierarchical Variational Perspective}
+\section{Towards Unification: A Hierarchical Variational Perspective}
 
 \label{sec:unifying_framework_discrete}
 
 The preceding sections have reviewed a diverse array of sampling and generative modelling techniques that follow a recurring theme, whether explicit or implicit: the concept of defining or learning a transformation (or \emph{mapping}) between a simple, tractable base distribution $\mu(z)$ (where $z$ can be considered a latent variable) and the more complex target data distribution $\pi(x)$. For instance, VAEs explicitly model a decoder $p_\theta(x|z)$ and an encoder $q_\phi(z|x)$. NFs learn an invertible mapping $x=f_\theta(z)$. DDPMs and SM models implicitly define a \emph{noising} process that transforms data $x$ to noise $z \sim \mu(z)$, and then learn to reverse this process, effectively learning $p_\theta(x|z)$ through iterative refinement. Even AIS, with its sequence of forward kernels $F_t$, can be viewed as constructing a path from $\mu(z)$ to $\pi(x)$, with backward kernels $B_t$ hinting at a reverse path. This common thread suggests the potential for a unifying perspective based on characterising and learning these transformations.
 
-A natural way to learn the parameters $\theta$ and $\phi$ is by minimizing a divergence between the joint distribution induced by the 'data $\to$ latent' and vice-versa. One general form for such an objective, connecting the forward and reverse processes, can be expressed by minimizing a divergence $\mathcal{D}$ between a "forward" joint $p_\theta(x,z) = p_\theta(x|z)\mu(z)$ and a "reverse" joint $q_\phi(x,z) = q_\phi(z|x)\pi(x)$:
+A natural way to learn the parameters $\theta$ and $\phi$ is by minimizing a divergence between the joint distribution induced by the ``data $\to$ latent'' and vice-versa. One general form for such an objective, connecting the forward and reverse processes, can be expressed by minimizing a divergence $\mathcal{D}$ between a "forward" joint $p_\theta(x,z) = p_\theta(x|z)\mu(z)$ and a "reverse" joint $q_\phi(x,z) = q_\phi(z|x)\pi(x)$:
 \begin{equation}
     \label{eq:divergence_loss_conceptual}
     \mathcal{L}_D(\theta, \phi) = \mathcal{D}\left( q_\phi(z|x)\pi(x) \mid\mid p_\theta(x|z)\mu(z) \right).
@@ -305,7 +305,7 @@ Specifically, we adopt a hierarchical latent variable model where the transforma
 \[
     p_{\theta}(x_T, \ldots, x_1 \mid x_0) = \prod_{t=0}^{T-1} p_{\theta_{t}}(x_{t+1} \mid x_{t}), \quad q_{\phi}(x_0, \ldots, x_{T-1} \mid x_T) = \prod_{t=0}^{T-1} q_{\phi_{t}}(x_{t} \mid x_{t+1}).
 \]
-While we can choose arbitrarily complex functions to define the intermediate mappings $p_{\theta_t}$ and $q_{\phi_t}$\label{ntn:discrete_mappings_intermediate}, as $T \to \infty$ and we consider the continuous limit, even a simple choice for $p_{\theta_t}$ and $q_{\phi_t}$ such as Gaussian distributions can yield highly flexible mappings. This allows us to write down the hierarchical mappings in the form of Markov chains where $p_{\theta_t}$ and $q_{\phi_t}$ represent the forward and backward transition kernels:
+While we can choose arbitrarily complex functions to define the intermediate mappings $p_{\theta_t}$ and $q_{\phi_t}$\label{ntn:discrete_mappings_intermediate}, as $T \to \infty$ and we consider the continuous limit, even a simple choice for $p_{\theta_t}$ and $q_{\phi_t}$ such as Gaussian distributions can yield highly flexible mappings. Furthermore, it has been shown that the forward and reverse mappings often require a difference in the complexity of the parametrised function \cite{barber2014implicit}, and this flexibility allows us to balance the relative parametrisation of forward and backwards processes relatively. This allows us to write down the hierarchical mappings in the form of Markov chains where $p_{\theta_t}$ and $q_{\phi_t}$ represent the forward and backward transition kernels:
 \begin{align}
     x_{t+1} \leftarrow x_{t} + f_{\theta_t}(x_t) + \sigma_t \varepsilon_{t+1}, \quad p_{\theta_t}(x_{t+1} \mid x_{t}) = \mathcal{N}(x_{t+1}; x_{t} + \frac{f_{\theta_t}(x_t)}{T}, \sigma_t^2 I), \\
     x_{t} \leftarrow x_{t+1} + b_{\phi_t}(x_{t+1}) + \sigma_t \varepsilon_{t}, \quad q_{\phi_t}(x_{t} \mid x_{t+1}) = \mathcal{N}(x_{t}; x_{t+1} + \frac{b_{\phi_t}(x_{t+1})}{T}, \sigma_t^2 I), \label{eq:framework_mc}
@@ -336,7 +336,7 @@ where $\{\varepsilon_t\}_{t=1}^{T}$ are i.i.d. standard normal random variables,
 \nomenclature[z-sde]{$SDE$}{Stochastic Differential Equation}
 \begin{lightgraybox}{Remark: The Continuous Limit}
     \label{sec:continuous_limit}
-    In the limit of infinite steps, where $T \to \infty$, the transition densities governing the mappings between latent variables $t$ and $t+1$ can be written down as the solutions to a pair of stochastic differential equations (SDEs)\footnote{This remark is a brief introduction to the continuous limit of the mappings $p_{\theta_t}$ and $q_{\phi_t}$. We introduce the notation and terminology more rigorously in \Cref{chapter:sde}.} given by
+    In the limit of infinite steps, where $T \to \infty$, the transition densities governing the mappings between latent variables $t$ and $t+1$ can be written down as the solutions to a pair of stochastic differential equations (SDEs)\footnote{This remark is a brief introduction to the continuous limit of the mappings $p_{\theta_t}$ and $q_{\phi_t}$. We introduce the notation and terminology more rigorously in \Cref{chapter:sde}.}. As we will discuss in further detail in \Cref{chapter:cmcd} and \Cref{chapter:deft}, the continuous-time viewpoint with SDEs allows us to reason about boundary conditions and obtain finite-time guarantees of converging to source, target and conditioned distributions. Simultaneously, we maintain these guarantees when we then discretise these continuous processes, allowing us to develop discretised algorithms with better guarantees stemming from the continuous-time viewpoint. These SDEs are given by
     \[
         \mathrm{d}X_t = f_{\theta_t}(X_t) \mathrm{d}t + \sigma_t \mathrm{d}W_t, \quad \mathrm{d}X_t = b_{\phi_t}(X_t) \mathrm{d}t + \sigma_t \mathrm{d} \overleftarrow{W}_t, \label{eq:fwd_bwd_sde_sketch}
     \]
